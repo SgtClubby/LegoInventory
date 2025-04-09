@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@tailwind utilities;
+
+:root {
+  --background: #ededed;
+  --foreground: #0a0a0a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+@layer components {
+  .blue-btn {
+    @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition;
+  }
+  .red-btn {
+    @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition;
+  }
+  .cancel-btn {
+    @apply text-gray-300 hover:text-gray-100 transition bg-none;
+  }
+}
