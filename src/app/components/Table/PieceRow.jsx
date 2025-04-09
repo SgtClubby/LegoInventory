@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 
 // Functions
-import bricklinkMap from "@/colors/bricklinkMap.js";
 import colors from "@/colors/colors.js";
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import useBreakpoint from "@/hooks/useBreakpoint";

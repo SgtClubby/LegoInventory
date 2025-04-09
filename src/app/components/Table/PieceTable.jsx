@@ -1,6 +1,5 @@
 // src/app/components/Table/PieceTable.jsx
-
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 // Icons
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
@@ -14,20 +13,13 @@ import TableDeleteModal from "../Modals/TableDeleteModal";
 import { useLego } from "@/Context/LegoContext";
 import { debounce } from "lodash";
 import { fetchPartDetails } from "@/lib/Pieces/PiecesManager";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import VirtualizedPieceTable from "./VirtualizedPieceTable";
+import VirtualTable from "./VirtualTable";
 
 import colors from "@/colors/colors";
-import {
-  fetchImageForPiece,
-  fetchPieceImagesForArray,
-} from "@/lib/Pieces/Images/fetchImages";
-import { patch } from "@mui/material";
+import { fetchImageForPiece } from "@/lib/Pieces/Images/fetchImages";
 
 export default function PieceTable() {
   const {
-    setPieceImages,
-    pieceImages,
     availableTables,
     setAvailableTables,
     selectedTable,
@@ -277,7 +269,7 @@ export default function PieceTable() {
   }, [filteredPieces, sortConfig]);
 
   return (
-    <div className="bg-slate-900 ">
+    <div>
       <div className="bg-slate-700 rounded-lg shadow overflow-hidden">
         <div className="flex items-center justify-between p-4 bg-slate-800 border-b">
           {/* Table control header (Table select / Piece search) */}
@@ -341,9 +333,9 @@ export default function PieceTable() {
             </div>
           </div>
         </div>
-        <VirtualizedPieceTable
+
+        <VirtualTable
           pieces={sortedPieces}
-          pieceImages={pieceImages}
           onChange={(field, id, value) => handleUpdatePiece(id, field, value)}
           onDelete={(id) => handleDeletePiece(id)}
           sort={sort}
@@ -370,90 +362,3 @@ export default function PieceTable() {
     </div>
   );
 }
-
-// <div className="overflow-auto max-h-[80vh]">
-//   <table className="w-full">
-//     <thead>
-//       <tr className="bg-slate-800 sticky top-0 z-10">
-//         <th className=" bg-slate-800 text-left font-semibold py-3 px-4 text-gray-100 md:text-sm text-xs w-12">
-//           Image
-//         </th>
-//         <th
-//           className=" bg-slate-800 text-left font-semibold py-3 px-4 text-gray-100 md:text-sm text-xs"
-//           onClick={() => sort("elementName")}
-//         >
-//           Name{" "}
-//           {sortConfig.key === "elementName" &&
-//             (sortConfig.direction === "ascending" ? " ↑" : " ↓")}
-//         </th>
-//         <th
-//           className="hidden lg:table-cell  bg-slate-800 text-left font-semibold py-3 px-4 text-gray-100 md:text-sm text-xs"
-//           onClick={() => sort("elementId")}
-//         >
-//           ID{" "}
-//           {sortConfig.key === "elementId" &&
-//             (sortConfig.direction === "ascending" ? " ↑" : " ↓")}
-//         </th>
-//         <th
-//           className=" bg-slate-800 text-left font-semibold py-3 px-4 text-gray-100 md:text-sm text-xs"
-//           onClick={() => sort("elementColor")}
-//         >
-//           Color{" "}
-//           {sortConfig.key === "elementColor" &&
-//             (sortConfig.direction === "ascending" ? " ↑" : " ↓")}
-//         </th>
-//         <th
-//           className=" bg-slate-800 text-left font-semibold py-3 px-4 text-gray-100 md:text-sm text-xs"
-//           onClick={() => sort("elementQuantityOnHand")}
-//         >
-//           On Hand{" "}
-//           {sortConfig.key === "elementQuantityOnHand" &&
-//             (sortConfig.direction === "ascending" ? " ↑" : " ↓")}
-//         </th>
-//         <th
-//           className=" bg-slate-800 text-left font-semibold py-3 px-4 text-gray-100 md:text-sm text-xs"
-//           onClick={() => sort("elementQuantityRequired")}
-//         >
-//           Required{" "}
-//           {sortConfig.key === "elementQuantityRequired" &&
-//             (sortConfig.direction === "ascending" ? " ↑" : " ↓")}
-//         </th>
-//         <th
-//           className="hidden md:table-cell  bg-slate-800 text-left font-semibold py-3 px-4 text-gray-100 md:text-sm text-xs"
-//           onClick={() => sort("countComplete")}
-//         >
-//           Complete{" "}
-//           {sortConfig.key === "countComplete" &&
-//             (sortConfig.direction === "ascending" ? " ↑" : " ↓")}
-//         </th>
-//         <th className=" bg-slate-800 text-left font-semibold py-3 px-4 text-gray-100 md:text-sm text-xs">
-//           Actions
-//         </th>
-//       </tr>
-//     </thead>
-//     <tbody>
-//       {sortedPieces.map((piece, index) => {
-//         const handleChange = (field, id, value) => {
-//           handleUpdatePiece(id, field, value);
-//         };
-
-//         const handleDelete = (id) => {
-//           handleDeletePiece(id);
-//         };
-
-//         return (
-//           <PieceRow
-//             key={piece.uuid}
-//             piece={piece}
-//             originalId={piece.uuid}
-//             base64image={
-//               pieceImages[`${piece.elementId}-${piece.elementColorId}`]
-//             }
-//             onChange={handleChange}
-//             onDelete={handleDelete}
-//           />
-//         );
-//       })}
-//     </tbody>
-//   </table>
-// </div>;
