@@ -1,5 +1,4 @@
 // src/app/components/Table/VirtualTableHeader.jsx
-
 import useBreakpoints from "@/hooks/useBreakpoint";
 
 export default function VirtualTableHeader({ sort, sortConfig, columnWidths }) {

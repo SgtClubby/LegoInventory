@@ -71,7 +71,7 @@ export default function VirtualTable({
 
       <div
         ref={tableContainerRef}
-        className="w-full overflow-auto"
+        className="w-full overflow-auto mt-0"
         style={{ height: `${containerHeight}px` }}
       >
         <div
