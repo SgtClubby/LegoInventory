@@ -1,4 +1,4 @@
-// /api/image/[pieceId]/[colorId]/route.js (GET)
+// src/app/api/image/[pieceId]/[colorId]/route.js
 
 export async function GET(_req, { params }) {
   const { pieceId, colorId } = await params;

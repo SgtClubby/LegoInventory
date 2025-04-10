@@ -1,3 +1,5 @@
+// src/app/components/Misc/Header.jsx
+
 export default function Header() {
   return (
     <header className="mb-6">

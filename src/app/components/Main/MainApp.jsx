@@ -27,11 +27,7 @@ const MainApp = () => {
   // ---------------------------
   // Initialization: Load Images & Tables
   // ---------------------------
-  const {
-    piecesByTable,
-    setPiecesByTable,
-    selectedTable,
-  } = useInit();
+  const { piecesByTable, setPiecesByTable, selectedTable } = useInit();
 
   // ---------------------------
   // Handle import modal

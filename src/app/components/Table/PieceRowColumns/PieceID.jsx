@@ -1,3 +1,5 @@
+// src/app/components/Table/PieceRowColumns/PieceID.jsx
+
 export default function PieceID({
   piece,
   colBase,

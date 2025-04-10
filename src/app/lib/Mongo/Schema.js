@@ -9,6 +9,12 @@ const brickSchema = new Schema({
   elementId: String,
   elementColor: String,
   elementColorId: String,
+  availableColors: [
+    {
+      color: String,
+      colorId: String,
+    },
+  ],
   elementQuantityOnHand: Number,
   elementQuantityRequired: Number,
   countComplete: Boolean,

@@ -1,3 +1,5 @@
+// src/app/components/Table/PieceRowColumns/PieceName.jsx
+
 export default function PieceName({
   piece,
   colBase,

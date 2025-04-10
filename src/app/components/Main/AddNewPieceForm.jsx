@@ -32,6 +32,7 @@ export default function AddNewPieceForm() {
     elementId: "",
     elementColor: "",
     elementColorId: "",
+    availableColors: [],
     elementImage: "",
     elementQuantityOnHand: 0,
     elementQuantityRequired: 0,

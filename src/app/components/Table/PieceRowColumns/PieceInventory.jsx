@@ -1,3 +1,5 @@
+// src/app/components/Table/PieceRowColumns/PieceInventory.jsx
+
 export default function PieceInventory({
   piece,
   colBase,

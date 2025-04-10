@@ -1,3 +1,5 @@
+// src/app/layout.js
+
 import "./globals.css";
 import { LegoProvider } from "@/Context/LegoContext";
 

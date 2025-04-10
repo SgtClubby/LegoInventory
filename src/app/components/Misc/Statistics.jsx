@@ -1,3 +1,5 @@
+// src/app/components/Misc/Statistics.jsx
+
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
 export default function Statistics({ pieces }) {

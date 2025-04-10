@@ -1,3 +1,5 @@
+// src/app/api/sets/parts/[setId]/route.js
+
 export async function GET(req, { params }) {
   const { setId } = await params;
   const results = await fetchAllSetParts(

@@ -1,3 +1,5 @@
+// src/app/api/table/tables/route.js
+
 import dbConnect from "@/lib/Mongo/Mongo";
 import { Brick, Table } from "@/lib/Mongo/Schema";
 

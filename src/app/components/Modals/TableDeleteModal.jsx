@@ -1,3 +1,5 @@
+// src/app/components/Modals/TableDeleteModal.jsx
+
 import { useEffect } from "react";
 
 export default function TableDeleteModal({ toggleModal, handleSubmit }) {

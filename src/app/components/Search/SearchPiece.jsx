@@ -1,3 +1,5 @@
+// src/app/components/Search/SearchPiece.jsx
+
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 
 export default function SearchPiece({ searchTerm, setSearchTerm }) {

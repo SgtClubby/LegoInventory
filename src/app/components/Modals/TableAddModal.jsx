@@ -1,3 +1,5 @@
+// src/app/components/Modals/TableAddModal.jsx
+
 import { useEffect } from "react";
 
 export default function TableAddModal({

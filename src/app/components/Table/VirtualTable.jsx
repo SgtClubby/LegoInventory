@@ -1,4 +1,4 @@
-// src/app/components/Table/BetterTable.jsx
+// src/app/components/Table/VirtualTable.jsx
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import VirtualTableHeader from "./VirtualTableHeader";

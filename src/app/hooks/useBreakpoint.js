@@ -1,4 +1,4 @@
-// hooks/useBreakpoints.js
+// src/app/hooks/useBreakpoint.js
 
 "use client";
 import { useEffect, useState } from "react";

@@ -1,3 +1,5 @@
+// src/app/api/search/part/[searchTerm]/route.js
+
 export async function GET(req, { params }) {
   const { searchTerm } = await params;
   const res = await fetch(

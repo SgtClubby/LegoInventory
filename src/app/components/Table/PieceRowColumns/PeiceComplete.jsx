@@ -1,12 +1,7 @@
+// src/app/components/Table/PieceRowColumns/PeiceComplete.jsx
 
-export default function PieceCompleted({
-  piece,
-  colBase,
-  columnWidths,
-}) {
-  const {
-    countComplete,
-  } = piece;
+export default function PieceCompleted({ piece, colBase, columnWidths }) {
+  const { countComplete } = piece;
 
   return (
     <div className={`${colBase} ${columnWidths.complete} flex-1`}>
