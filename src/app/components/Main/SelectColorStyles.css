@@ -1,0 +1,35 @@
+/* src/app/components/Main/SelectColorStyles.css */
+
+/* Styling for color select options */
+
+/* This will only work in some modern browsers, not in all */
+select option {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* For Firefox */
+@-moz-document url-prefix() {
+  select option {
+    background-color: inherit !important;
+  }
+}
+
+/* Helper classes to apply to select */
+.color-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+/* Color preview badge - can be added next to select */
+.color-preview {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-right: 8px;
+}

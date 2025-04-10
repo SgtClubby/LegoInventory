@@ -1,10 +1,7 @@
 // src/app/components/Main/MainApp.jsx
 
 "use client";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-
-// Color maps
-import colors from "@/colors/colors.js";
+import React, { useState, useEffect } from "react";
 
 // Components
 import Header from "@/components/Misc/Header";
@@ -15,7 +12,6 @@ import ImportModal from "@/components/Modals/ImportModal";
 import ImportExport from "@/components/Misc/ImportExport";
 
 // Functions & Helpers
-import { fetchPieceImagesForArray } from "@/lib/Pieces/Images/fetchImages";
 import { fetchPiecesFromTable } from "@/lib/Pieces/PiecesManager";
 import useInit from "@/hooks/useInit";
 import AddNewPieceForm from "./AddNewPieceForm";
@@ -32,8 +28,6 @@ const MainApp = () => {
   // Initialization: Load Images & Tables
   // ---------------------------
   const {
-    pieceImages,
-    setPieceImages,
     piecesByTable,
     setPiecesByTable,
     selectedTable,

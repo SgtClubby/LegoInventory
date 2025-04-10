@@ -27,9 +27,7 @@ export default function PieceImage({ piece, colBase, columnWidths }) {
   }, [elementImage]);
 
   return (
-    <div
-      className={`${colBase} ${columnWidths.image} flex items-center justify-center flex-shrink-0 relative`}
-    >
+    <div className={`${colBase} ${columnWidths.image}`}>
       {/* Placeholder/loader shown until image is loaded */}
       {!loaded && elementImage && (
         <div className="w-12 h-12 bg-gray-300 animate-pulse rounded" />
@@ -44,9 +42,10 @@ export default function PieceImage({ piece, colBase, columnWidths }) {
           onError={() => setLoaded(true)} // Don't keep showing loading state if image fails
           decoding="async"
           fetchPriority="low"
-          className={`w-12 h-12 object-cover rounded transition-opacity duration-200 ${
-            loaded ? "opacity-100" : "opacity-0"
-          }`}
+          // className={`opacity-50 w-12 h-12 object-cover rounded transition-opacity duration-200 ${
+          //   loaded ? "opacity-100" : "opacity-0"
+          // }`}
+          // className="{`"opacity-50 w-12 h-12 object-cover rounded transition-opacity duration-200"
         />
       ) : (
         <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center text-gray-400">

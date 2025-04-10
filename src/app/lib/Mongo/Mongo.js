@@ -2,12 +2,9 @@
 
 import mongoose from "mongoose";
 
-if (!process.env.MONGODB_URI || !process.env.DATABASE) {
+if (!process.env.MONGODB_URI) {
   throw new Error("Missing MongoDB connection string in env");
 }
-
-const MONGO_URL =
-  process.env.MONGODB_URI + process.env.DATABASE + "authSource=admin";
 
 let cached = global.mongoose;
 
@@ -20,7 +17,7 @@ async function dbConnect() {
 
   if (!cached.promise) {
     cached.promise = mongoose
-      .connect(MONGO_URL, {
+      .connect(process.env.MONGODB_URI, {
         bufferCommands: false,
       })
       .then((mongoose) => {

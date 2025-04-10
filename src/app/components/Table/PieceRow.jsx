@@ -53,10 +53,7 @@ const PieceRow = ({
     setIsExpanded(!isExpanded);
   };
 
-  const colBase =
-    "h-14 border-b border-gray-700 py-3 px-4 text-sm md:text-md text-gray-200";
-  const imgBase =
-    "border-b border-gray-700 py-3 px-4 text-sm md:text-md text-gray-200";
+  const colBase = `h-18 border-b border-gray-700 py-3 px-4 text-sm md:text-md text-gray-200 flex items-center justify-center flex-shrink-0 relative`;
 
   // Mobile view with dropdown
 
@@ -69,11 +66,11 @@ const PieceRow = ({
           : highlighted
           ? "bg-pink-900 hover:bg-pink-800"
           : "bg-slate-900 hover:bg-slate-800"
-      } transition duration-200 h-${rowOptions.height}`}
+      } transition duration-200`}
     >
       <PieceImage
         piece={piece}
-        colBase={imgBase}
+        colBase={colBase}
         columnWidths={columnWidths}
         onChange={onChange}
         originalId={originalId}
@@ -85,7 +82,6 @@ const PieceRow = ({
         onChange={onChange}
         originalId={originalId}
       />
-
       <PieceID
         piece={piece}
         colBase={colBase}
@@ -93,7 +89,6 @@ const PieceRow = ({
         onChange={onChange}
         originalId={originalId}
       />
-
       <PieceColor
         piece={piece}
         colBase={colBase}
@@ -108,7 +103,6 @@ const PieceRow = ({
         onChange={onChange}
         originalId={originalId}
       />
-
       <PieceCompleted
         piece={piece}
         colBase={colBase}
@@ -142,7 +136,7 @@ const PieceRow = ({
         <div className="flex items-center">
           <PieceImage
             piece={piece}
-            colBase={imgBase}
+            colBase={colBase}
             columnWidths={columnWidths}
             onChange={onChange}
             originalId={originalId}

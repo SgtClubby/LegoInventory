@@ -19,17 +19,17 @@ export default function VirtualTable({
   const columnWidths = {
     image: "w-20",
     name: "w-40 lg:w-64 xl:w-auto",
-    id: "hidden lg:table-cell w-28 xl:w-auto",
+    id: "hidden lg:block w-28 xl:w-auto",
     color: "w-32 lg:w-40 xl:w-auto",
     onHand: "w-24 xl:w-auto",
     required: "w-24 xl:w-auto",
-    complete: "w-24 hidden md:table-cell xl:w-auto",
+    complete: "w-24 hidden md:block xl:w-auto",
     actions: "w-28 xl:w-auto",
   };
 
   // Row options
   const rowOptions = {
-    height: 64,
+    height: 100,
   };
   console.log(pieces.length);
   // Update container height on mount and resize
@@ -62,7 +62,7 @@ export default function VirtualTable({
   const virtualRows = rowVirtualizer.getVirtualItems();
 
   return (
-    <div className="w-full bg-slate-700 overflow-hidden">
+    <div className="w-full bg-slate-900 overflow-hidden">
       <VirtualTableHeader
         sort={sort}
         sortConfig={sortConfig}

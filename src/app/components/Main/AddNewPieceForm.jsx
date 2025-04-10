@@ -13,6 +13,7 @@ import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import CustomColorDropdown from "./CustomColorDropdown";
 
 export default function AddNewPieceForm() {
   // ---------------------------
@@ -144,7 +145,7 @@ export default function AddNewPieceForm() {
         {/* Piece fields */}
         <div>
           <label className="block text-sm font-medium mb-1 text-gray-100">
-            Name <span className="text-red-400 ml-1">*</span>
+            Name <span className="text-red-400">*</span>
           </label>
           <input
             type="text"
@@ -161,7 +162,7 @@ export default function AddNewPieceForm() {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1 text-gray-100">
-            ID <span className="text-red-400 ml-1">*</span>
+            ID <span className="text-red-400 ml-[-2px] transform tra">*</span>
           </label>
           <input
             type="text"
@@ -176,38 +177,22 @@ export default function AddNewPieceForm() {
             placeholder="e.g. 3001"
           />
         </div>
-        <div>
+        <div className="">
           <label className="block text-sm font-medium mb-1 text-gray-100">
-            Color <span className="text-red-400 ml-1">*</span>
+            Color <span className="text-red-400 transform ">*</span>
           </label>
           <div className="relative">
-            <div
-              style={getColorStyle(newPiece.elementColor)}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            ></div>
-            <select
+            <CustomColorDropdown
+              colors={colors}
               value={newPiece.elementColor}
-              onChange={(e) =>
+              onChange={(colorName) =>
                 setNewPiece({
                   ...newPiece,
-                  elementColor: e.target.value,
+                  elementColor: colorName,
                 })
               }
-              className="w-full pl-10 py-2 pr-4 border border-gray-300 rounded text-gray-100"
-            >
-              <option value="" className="bg-slate-800">
-                Select color
-              </option>
-              {colors.map((color) => (
-                <option
-                  key={color.colorName}
-                  className="bg-slate-800"
-                  value={color.colorName}
-                >
-                  {color.colorName}
-                </option>
-              ))}
-            </select>
+              className="w-full"
+            />
           </div>
         </div>
         <div>
