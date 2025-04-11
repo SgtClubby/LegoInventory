@@ -8,12 +8,11 @@ import SearchNewPiece from "@/components/Search/SearchNewPiece";
 
 // Functions and Helpers
 import colors from "@/colors/colors.js";
-import getColorStyle from "@/lib/Misc/getColorStyle";
 import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import CustomColorDropdown from "./CustomColorDropdown";
+import CustomColorDropdown from "../Misc/CustomColorDropdown";
 
 export default function AddNewPieceForm() {
   // ---------------------------
@@ -45,44 +44,72 @@ export default function AddNewPieceForm() {
   useEffect(() => {
     if (searchNewPieceResult) {
       const { part_num, name, part_img_url } = searchNewPieceResult;
-      const elementColorId = colors.find(
-        (c) => c.colorName === newPiece.elementColor
-      )?.colorId;
-      setNewPiece({
-        ...newPiece,
+
+      // First update the basic information
+      setNewPiece((prev) => ({
+        ...prev,
         uuid: uuidv4(),
-        elementColorId,
         elementImage: part_img_url,
         elementId: part_num,
         elementName: name,
         countComplete: false,
-      });
+      }));
+
+      // Then fetch colors separately
+      const fetchColors = async () => {
+        try {
+          const response = await fetch(`/api/part/${part_num}/colors`);
+          const colorData = await response.json();
+          console.log("Fetched colors for new piece:", colorData);
+
+          // Update with colors without overriding other properties
+          setNewPiece((current) => ({
+            ...current,
+            availableColors: colorData,
+          }));
+
+          // If there are colors available, set the first one as default
+          if (colorData?.length > 0) {
+            setNewPiece((current) => ({
+              ...current,
+              elementColor: colorData[0].color,
+              elementColorId: colorData[0].colorId,
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching colors:", error);
+        }
+      };
+
+      fetchColors();
     }
   }, [searchNewPieceResult]);
-
-  // ---------------------------
-  // Set state when search result arrives
-  // ---------------------------
 
   useEffect(() => {
-    if (searchNewPieceResult) {
-      const { part_num, name, part_img_url } = searchNewPieceResult;
-      const elementColorId = colors.find(
-        (c) => c.colorName === newPiece.elementColor
-      )?.colorId;
-      setNewPiece({
-        ...newPiece,
-        uuid: uuidv4(),
-        elementColorId,
-        elementImage: part_img_url,
-        elementId: part_num,
-        elementName: name,
-        countComplete: false,
-      });
-    }
-  }, [searchNewPieceResult]);
+    if (newPiece.elementColorId && newPiece.elementId) {
+      const fetchImage = async () => {
+        try {
+          const response = await fetch(
+            `/api/image/${newPiece.elementId}/${newPiece.elementColorId}`
+          );
+          const data = await response.json();
 
-  // ---------------------------
+          console.log("Fetched image for new piece:", data);
+          if (data.part_img_url) {
+            setNewPiece((prev) => ({
+              ...prev,
+              elementImage: data.part_img_url,
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching image:", error);
+        }
+      };
+      fetchImage();
+    }
+  }, [newPiece.elementColorId, newPiece.elementId]);
+
+  // --------------------------
   // Handle add piece
   // ---------------------------
   const handleAddPiece = async () => {
@@ -98,6 +125,7 @@ export default function AddNewPieceForm() {
     const elementColorId = colors.find(
       (c) => c.colorName === newPiece.elementColor
     )?.colorId;
+
     const updatedNewPiece = {
       ...newPiece,
       uuid: uuidv4(),
@@ -130,6 +158,8 @@ export default function AddNewPieceForm() {
       elementId: "",
       elementColor: "",
       elementColorId: "",
+      availableColors: [],
+      elementImage: "",
       elementQuantityOnHand: 0,
       elementQuantityRequired: 0,
       countComplete: false,
@@ -138,10 +168,20 @@ export default function AddNewPieceForm() {
 
   return (
     <>
-      <SearchNewPiece
-        searchNewPieceResult={searchNewPieceResult}
-        setSearchNewPieceResult={setSearchNewPieceResult}
-      />
+      <div className="flex items-center ">
+        {!newPiece.elementImage ? null : (
+          <img
+            src={newPiece.elementImage || ""}
+            alt={newPiece.elementName}
+            className="w-14 h-14 rounded mb-2 mr-3"
+          />
+        )}
+
+        <SearchNewPiece
+          searchNewPieceResult={searchNewPieceResult}
+          setSearchNewPieceResult={setSearchNewPieceResult}
+        />
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Piece fields */}
         <div>
@@ -184,14 +224,21 @@ export default function AddNewPieceForm() {
           </label>
           <div className="relative">
             <CustomColorDropdown
-              colors={colors}
-              value={newPiece.elementColor}
-              onChange={(colorName) =>
-                setNewPiece({
-                  ...newPiece,
+              piece={newPiece}
+              availablePieceColors={newPiece.availableColors || []}
+              colorName={newPiece.elementColor}
+              onChange={(colorName) => {
+                // Get the color ID directly when changing the color
+                const colorId =
+                  colors.find((c) => c.colorName === colorName)?.colorId || 0;
+
+                // Update both values in a single state update
+                setNewPiece((prev) => ({
+                  ...prev,
                   elementColor: colorName,
-                })
-              }
+                  elementColorId: colorId,
+                }));
+              }}
               className="w-full"
             />
           </div>

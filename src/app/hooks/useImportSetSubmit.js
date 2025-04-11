@@ -5,6 +5,7 @@ import { useLego } from "@/Context/LegoContext";
 import { addTable } from "@/lib/Table/TableManager";
 import colors from "@/colors/colors.js";
 import { v4 as uuidv4 } from "uuid";
+import { use } from "react";
 
 export function useImportSetSubmit() {
   const {
@@ -16,7 +17,7 @@ export function useImportSetSubmit() {
 
   const handleImportSetSubmit = async (details) => {
     try {
-      const res = await fetch(`/api/sets/parts/${details.set_num}`, {
+      const res = await fetch(`/api/set/${details.set_num}/parts`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -84,6 +85,23 @@ export function useImportSetSubmit() {
         ...prev,
         [newTable.id]: importedPieces,
       }));
+
+      const pieceIds = importedPieces.map((p) => p.elementId);
+      const brickUuids = importedPieces.map((p) => p.uuid);
+
+      // Send a separate request to update colors in the background
+      fetch("/api/set/background/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pieceIds,
+          userId: "default",
+          tableId: newTable.id,
+          brickUuids,
+        }),
+      });
     } catch (err) {
       console.error("Error during set import:", err);
       alert("Something went wrong while importing the set.");

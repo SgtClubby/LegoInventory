@@ -1,7 +1,9 @@
+// src/app/api/part/[pieceId]/details/route.js
+
 export async function GET(req, { params }) {
-  const { searchTerm } = await params;
+  const { pieceId } = await params;
   const res = await fetch(
-    `https://rebrickable.com/api/v3/lego/sets/?search=${searchTerm}`,
+    `https://rebrickable.com/api/v3/lego/parts/${pieceId}`,
     {
       headers: {
         Authorization: `key ${process.env.REBRICKABLE_APIKEY}`,
@@ -15,5 +17,11 @@ export async function GET(req, { params }) {
   }
 
   const data = await res.json();
-  return Response.json(data);
+
+  return Response.json({
+    partNum: data.part_num,
+    name: data.name,
+    partUrl: data.part_url,
+    partImgUrl: data.part_img_url,
+  });
 }

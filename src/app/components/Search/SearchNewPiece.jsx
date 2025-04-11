@@ -37,9 +37,12 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
 
     const debounceFetch = setTimeout(() => {
       const fetchData = async () => {
+        // Store the current search term to compare later
+        const currentSearchTerm = searchNewPieceTerm;
+
         try {
           const response = await fetch(
-            `/api/search/part/${searchNewPieceTerm}`,
+            `/api/search/part/${currentSearchTerm}`,
             {
               method: "GET",
               headers: {
@@ -50,17 +53,21 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
           );
           const data = await response.json();
 
-          setResults(data.results || []);
+          // Only update if the search term hasn't changed since request was made
+          if (currentSearchTerm === searchNewPieceTerm) {
+            setResults(data.results || []);
 
-          // 🔥 Show dropdown only if results exist
-          if (data.results && data.results.length > 0) {
-            setIsDropdownOpen(true);
-          } else {
-            setIsDropdownOpen(false);
+            if (data.results && data.results.length > 0) {
+              setIsDropdownOpen(true);
+            } else {
+              setIsDropdownOpen(false);
+            }
           }
         } catch (error) {
           console.error("Error fetching data:", error);
-          setIsDropdownOpen(false); // Hide dropdown on failure
+          if (currentSearchTerm === searchNewPieceTerm) {
+            setIsDropdownOpen(false);
+          }
         }
       };
       fetchData();
@@ -70,7 +77,7 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
   }, [searchNewPieceTerm]);
 
   return (
-    <>
+    <div className="flex flex-col">
       <label className="block text-sm font-medium mb-1 text-gray-100">
         Search for a piece
       </label>
@@ -125,6 +132,6 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
           </ul>
         )}
       </div>
-    </>
+    </div>
   );
 }

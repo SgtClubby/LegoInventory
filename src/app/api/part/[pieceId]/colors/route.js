@@ -1,4 +1,4 @@
-// src/app/api/part/colors/[pieceId]/route.js
+// src/app/api/part/[pieceId]/colors/route.js
 
 // {
 //   "count": 6,
@@ -35,7 +35,6 @@ export async function GET(req, { params }) {
   }
 
   const data = await res.json();
-
   data.results = data.results.map((item) => {
     return {
       colorId: item.color_id,
@@ -43,5 +42,5 @@ export async function GET(req, { params }) {
     };
   });
 
-  return Response.json(data);
+  return Response.json(data.results);
 }

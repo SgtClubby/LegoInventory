@@ -31,7 +31,7 @@ export default function VirtualTable({
   const rowOptions = {
     height: 100,
   };
-  console.log(pieces.length);
+
   // Update container height on mount and resize
   useEffect(() => {
     const updateContainerHeight = () => {

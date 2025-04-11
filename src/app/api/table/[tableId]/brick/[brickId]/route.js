@@ -23,7 +23,6 @@ export async function PATCH(req, { params }) {
   const userId = req.headers.get("userId") || "default";
   const { brickId: uuid, tableId } = await params;
   const body = await req.json();
-  console.log(body);
 
   if (!tableId) {
     return Response.json({ error: "Missing table ID" }, { status: 400 });

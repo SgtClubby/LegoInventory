@@ -1,4 +1,4 @@
-// src/app/api/sets/details/[setId]/route.js
+// src/app/api/set/[setId]/details/route.js
 
 export async function GET(req, { params }) {
   const { setId } = await params;

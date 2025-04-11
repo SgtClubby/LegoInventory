@@ -7,7 +7,6 @@ const LegoContext = createContext();
 
 export function LegoProvider({ children }) {
   const [piecesByTable, setPiecesByTable] = useState({});
-  const [pieceImages, setPieceImages] = useState({});
   const [availableTables, setAvailableTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
 
@@ -16,8 +15,6 @@ export function LegoProvider({ children }) {
       value={{
         piecesByTable,
         setPiecesByTable,
-        pieceImages,
-        setPieceImages,
         availableTables,
         setAvailableTables,
         selectedTable,

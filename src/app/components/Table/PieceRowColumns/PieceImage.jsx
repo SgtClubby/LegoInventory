@@ -42,9 +42,9 @@ export default function PieceImage({ piece, colBase, columnWidths }) {
           onError={() => setLoaded(true)} // Don't keep showing loading state if image fails
           decoding="async"
           fetchPriority="low"
-          // className={`opacity-50 w-12 h-12 object-cover rounded transition-opacity duration-200 ${
-          //   loaded ? "opacity-100" : "opacity-0"
-          // }`}
+          className={`opacity-50 w-12 h-12 object-cover rounded transition-opacity duration-200 ${
+            loaded ? "opacity-100" : "opacity-0"
+          }`}
           // className="{`"opacity-50 w-12 h-12 object-cover rounded transition-opacity duration-200"
         />
       ) : (
