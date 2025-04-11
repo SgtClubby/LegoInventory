@@ -17,7 +17,7 @@ export default function PieceColor({
         availablePieceColors={piece.availableColors || []}
         colorName={piece.elementColor}
         onChange={(colorName) => {
-          onChange("elementColor", originalId, colorName);
+          onChange(originalId, "elementColor", colorName);
         }}
         className="w-full"
       />

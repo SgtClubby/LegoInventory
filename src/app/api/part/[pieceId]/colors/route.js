@@ -35,7 +35,8 @@ export async function GET(req, { params }) {
     {
       headers: {
         Authorization: `key ${process.env.REBRICKABLE_APIKEY}`,
-        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
+        "User-Agent":
+          "LegoInventoryBot/1.0 (+https://github.com/SgtClubby/LegoInventory)",
       },
     }
   );

@@ -54,6 +54,8 @@ export default function PieceTable() {
   // 1. Function to update a piece in the database (debounced)
   const updatePieceInDb = useCallback(
     debounce(async (uuid, tableId, updates) => {
+      console.log("Updating DB piece:", uuid);
+      console.log("Updates:", updates);
       try {
         const response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
           method: "PATCH",
@@ -89,6 +91,9 @@ export default function PieceTable() {
 
   const updateLocalPiece = useCallback(
     (uuid, tableId, updates) => {
+      console.log("Updating local piece:", uuid);
+      console.log("Updates:", updates);
+
       setPiecesByTable((prev) => {
         // If the table doesn't exist in state yet, return unchanged
         if (!prev[tableId]) return prev;
@@ -225,6 +230,7 @@ export default function PieceTable() {
           if (Object.keys(additionalUpdates).length > 0) {
             // Cancel any pending updates
             if (updatePieceInDb.cancel) {
+              console.log("Canceling pending update for elementId change");
               updatePieceInDb.cancel();
             }
 
