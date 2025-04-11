@@ -1,77 +1,41 @@
 // src/app/api/image/[pieceId]/[colorId]/route.js
 
-import dbConnect from "@/lib/Mongo/Mongo";
-import { ColorCache } from "@/lib/Mongo/Schema";
-
-export async function GET(req, { params }) {
-  await dbConnect();
-  const { pieceId } = await params;
-
-  if (!pieceId) {
-    return Response.json({ error: "Missing piece ID" }, { status: 400 });
+export async function GET(_req, { params }) {
+  const { pieceId, colorId } = await params;
+  const result = await fetchImageFromRebrickable(pieceId, colorId);
+  if (result.status === 404 || !result?.part_img_url) {
+    console.log(
+      `Image not found for pieceId ${pieceId} and colorId ${colorId}`
+    );
+    return Response.json({ part_img_url: null }, { status: 404 });
   }
 
+  return Response.json({ part_img_url: result?.part_img_url }, { status: 200 });
+}
+
+export async function fetchImageFromRebrickable(pieceId, colorId) {
+  const url = `https://rebrickable.com/api/v3/lego/parts/${pieceId}/colors/${colorId}/`;
+
   try {
-    // Try to get from cache first
-    const cache = await ColorCache.findOne(
-      { elementId: pieceId },
-      { _id: 0, __v: 0, createdAt: 0 }
-    ).lean();
-
-    // Check if cache is valid (has proper structure)
-    if (
-      cache &&
-      cache.availableColors &&
-      cache.availableColors.length > 0 &&
-      cache.availableColors.every((color) => color.colorId && color.color)
-    ) {
-      console.log("CACHE HIT: Using cached colors for pieceId:", pieceId);
-      return Response.json(cache.availableColors);
-    }
-
-    // If no valid cache, fetch from API
-    console.log("CACHE MISS: Fetching colors from API for pieceId:", pieceId);
-    const res = await fetch(
-      `https://rebrickable.com/api/v3/lego/parts/${pieceId}/colors/`,
-      {
-        headers: {
-          Authorization: `key ${process.env.REBRICKABLE_APIKEY}`,
-          "User-Agent":
-            "LegoInventoryBot/1.0 (+https://github.com/SgtClubby/LegoInventory)",
-        },
-      }
-    );
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `key ${process.env.REBRICKABLE_APIKEY}`,
+        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
+      },
+    });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch colors from API: ${res.statusText}`);
+      return { status: res.status, part_img_url: null };
     }
 
     const data = await res.json();
-
-    // Transform API response to our expected format
-    const colorResults = data.results.map((item) => ({
-      colorId: item.color_id,
-      color: item.color_name,
-    }));
-
-    // Save to cache for future requests
-    await ColorCache.updateOne(
-      { elementId: pieceId },
-      {
-        $set: {
-          elementId: pieceId,
-          availableColors: colorResults,
-        },
-      },
-      { upsert: true }
+    console.log("Fetched image data:", data);
+    return { part_img_url: data?.part_img_url || null, status: res.status };
+  } catch (err) {
+    console.error(
+      `Error fetching image for pieceId ${pieceId} and colorId ${colorId}:`,
+      err
     );
-
-    return Response.json(colorResults);
-  } catch (error) {
-    console.error(`Error processing colors for pieceId ${pieceId}:`, error);
-    return Response.json(
-      { error: error.message || "Failed to fetch colors" },
-      { status: 500 }
-    );
+    return { status: 500, part_img_url: null };
   }
 }

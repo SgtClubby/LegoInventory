@@ -116,12 +116,26 @@ export default function PieceTable() {
   // ---------------------------
   // Handle piece update (debounced)
   // ---------------------------
+  // The fixed handleUpdatePiece function for PieceTable.jsx
+
+  /**
+   * Handles updating a piece's properties with proper race condition prevention
+   *
+   * @param {string} uuid - The unique identifier of the piece
+   * @param {string} field - The field name to update
+   * @param {any} value - The new value for the field
+   */
   const handleUpdatePiece = useCallback(
     async (uuid, field, value) => {
       const tableId = selectedTable.id;
       const currentPiece = pieces.find((p) => p.uuid === uuid);
 
-      if (!currentPiece) return;
+      if (!currentPiece) {
+        console.error("Piece not found:", uuid);
+        return;
+      }
+
+      console.log(`Updating piece ${uuid}, field: ${field}, value:`, value);
 
       // Mark piece as updating
       setUpdatingPieces((prev) => {
@@ -130,23 +144,137 @@ export default function PieceTable() {
         return newSet;
       });
 
+      // Generate a unique key for this update
+      const updateKey = `${tableId}-${uuid}`;
+
       // Create update payload
       const updates = { [field]: value };
 
       // Special field handling
       if (field === "elementColor") {
+        console.log("COLOR CHANGE DETECTED");
         // When color changes, we need to update both the color name and ID
         const colorObj = colors.find((c) => c.colorName === value);
         if (colorObj) {
           updates.elementColorId = colorObj.colorId;
           updates.elementColor = colorObj.colorName;
+          console.log("Found color object:", colorObj);
+        } else {
+          console.warn("Color not found:", value);
         }
-      }
 
-      if (
+        // Cancel any pending updates to prevent race conditions
+        if (updatePieceInDb.cancel) {
+          console.log("Canceling pending debounced updates");
+          updatePieceInDb.cancel();
+        }
+
+        // Update local state immediately for responsive UI
+        console.log("Updating local state with color:", updates);
+        updateLocalPiece(uuid, tableId, updates);
+
+        try {
+          // For color changes, fetch the new image *before* any API calls
+          const colorId = updates.elementColorId;
+          const elementId = currentPiece.elementId;
+
+          console.log("Fetching image with IDs:", { elementId, colorId });
+
+          if (!elementId || colorId === undefined || colorId === null) {
+            console.warn("Missing IDs for image fetch:", {
+              elementId,
+              colorId,
+            });
+          }
+
+          // Only proceed with the image fetch if we have both IDs
+          if (
+            (colorId === 0 || colorId) && // This checks for colorId: 0 or any truthy colorId
+            elementId
+          ) {
+            // This is a crucial step - we await the image fetch
+            const img_part_url = await fetchImageForPiece(elementId, colorId);
+            console.log("Fetched image URL:", img_part_url);
+
+            // Create a separate imageUpdate object to track changes
+            let completeUpdates = { ...updates };
+
+            if (img_part_url) {
+              // Add image to the updates
+              completeUpdates.elementImage = img_part_url;
+
+              // Also update local state with image immediately
+              console.log("Updating local state with image:", img_part_url);
+              updateLocalPiece(uuid, tableId, { elementImage: img_part_url });
+            } else {
+              console.warn("No image URL returned from fetch");
+            }
+
+            // Store the complete updates in the ref
+            console.log("Complete updates to save:", completeUpdates);
+            pendingUpdatesRef.current.set(updateKey, completeUpdates);
+
+            // Make a DIRECT API call with the complete updates
+            console.log(
+              "Sending color+image update to API:",
+              JSON.stringify(completeUpdates)
+            );
+            const response = await fetch(
+              `/api/table/${tableId}/brick/${uuid}`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(completeUpdates),
+              }
+            );
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("API update failed:", response.status, errorText);
+              throw new Error(`Failed to update piece: ${response.statusText}`);
+            }
+
+            console.log("API update successful");
+            pendingUpdatesRef.current.delete(updateKey);
+          } else {
+            console.warn("Skipping image fetch due to missing IDs");
+
+            // If we can't fetch an image, still update the color
+            console.log("Sending color-only update");
+            const response = await fetch(
+              `/api/table/${tableId}/brick/${uuid}`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(updates),
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error(`Failed to update piece: ${response.statusText}`);
+            }
+
+            pendingUpdatesRef.current.delete(updateKey);
+          }
+        } catch (error) {
+          console.error("Error in color change flow:", error);
+        } finally {
+          // Always remove from updating state
+          setUpdatingPieces((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(uuid);
+            return newSet;
+          });
+        }
+      } else if (
         field === "elementQuantityOnHand" ||
         field === "elementQuantityRequired"
       ) {
+        // Handle quantity updates (mostly unchanged)
         const onHand =
           field === "elementQuantityOnHand"
             ? value
@@ -158,31 +286,27 @@ export default function PieceTable() {
             : currentPiece.elementQuantityRequired;
 
         updates.countComplete = required === 0 ? null : onHand >= required;
-      }
 
-      // Generate a unique key for this update
-      const updateKey = `${tableId}-${uuid}`;
+        // Cancel any pending updates for this piece
+        if (updatePieceInDb.cancel) {
+          updatePieceInDb.cancel();
+        }
 
-      // Cancel any pending updates for this piece
-      if (updatePieceInDb.cancel) {
-        updatePieceInDb.cancel();
-      }
+        // Store the full intended state in the pending updates map
+        const previousUpdates = pendingUpdatesRef.current.get(updateKey) || {};
+        const mergedUpdates = { ...previousUpdates, ...updates };
+        pendingUpdatesRef.current.set(updateKey, mergedUpdates);
 
-      // Store the full intended state in the pending updates map
-      // This ensures we know the complete desired state for this piece
-      const previousUpdates = pendingUpdatesRef.current.get(updateKey) || {};
-      const mergedUpdates = { ...previousUpdates, ...updates };
-      pendingUpdatesRef.current.set(updateKey, mergedUpdates);
+        // Update local state immediately for responsive UI
+        updateLocalPiece(uuid, tableId, updates);
 
-      // Update local state immediately for responsive UI
-      updateLocalPiece(uuid, tableId, updates);
-
-      // Schedule database update for the combined state
-      updatePieceInDb(uuid, tableId, mergedUpdates);
-
-      // Handle special cases that need additional API calls
-      if (field === "elementId") {
+        // Schedule database update for the combined state
+        updatePieceInDb(uuid, tableId, mergedUpdates);
+      } else if (field === "elementId") {
         try {
+          // Create the initial update with the ID change
+          const initialUpdates = { [field]: value };
+
           // Fetch part details in parallel
           const partDetailsPromise = fetchPartDetails(value);
           const availableColorsPromise = fetchPartColors(value);
@@ -192,7 +316,8 @@ export default function PieceTable() {
             availableColorsPromise,
           ]);
 
-          const additionalUpdates = {};
+          // Start with the ID change, then add additional properties
+          const additionalUpdates = { ...initialUpdates };
 
           // Update name if available
           if (partDetails?.name) {
@@ -226,11 +351,10 @@ export default function PieceTable() {
             additionalUpdates.elementImage = img_part_url;
           }
 
-          // If we have additional updates, apply them
+          // If we have updates to apply
           if (Object.keys(additionalUpdates).length > 0) {
             // Cancel any pending updates
             if (updatePieceInDb.cancel) {
-              console.log("Canceling pending update for elementId change");
               updatePieceInDb.cancel();
             }
 
@@ -244,6 +368,7 @@ export default function PieceTable() {
             updateLocalPiece(uuid, tableId, additionalUpdates);
 
             // Send immediate update to database (not debounced)
+            console.log("Sending elementId update with changes:", finalUpdates);
             await fetch(`/api/table/${tableId}/brick/${uuid}`, {
               method: "PATCH",
               headers: {
@@ -265,32 +390,23 @@ export default function PieceTable() {
             return newSet;
           });
         }
-      } else if (field === "elementColor") {
-        // If color changed, fetch new image
-        try {
-          const colorId = updates.elementColorId;
-          const elementId = currentPiece.elementId;
-
-          const img_part_url = await fetchImageForPiece(elementId, colorId);
-
-          if (img_part_url) {
-            const imageUpdate = { elementImage: img_part_url };
-
-            // Update pending updates
-            const currentUpdates =
-              pendingUpdatesRef.current.get(updateKey) || {};
-            const finalUpdates = { ...currentUpdates, ...imageUpdate };
-            pendingUpdatesRef.current.set(updateKey, finalUpdates);
-
-            // Update local state
-            updateLocalPiece(uuid, tableId, imageUpdate);
-
-            // Update database with the full intended state
-            updatePieceInDb(uuid, tableId, finalUpdates);
-          }
-        } catch (error) {
-          console.error("Error updating image for color change:", error);
+      } else {
+        // For other field types, use the standard flow
+        // Cancel any pending updates for this piece
+        if (updatePieceInDb.cancel) {
+          updatePieceInDb.cancel();
         }
+
+        // Store the full intended state in the pending updates map
+        const previousUpdates = pendingUpdatesRef.current.get(updateKey) || {};
+        const mergedUpdates = { ...previousUpdates, ...updates };
+        pendingUpdatesRef.current.set(updateKey, mergedUpdates);
+
+        // Update local state immediately for responsive UI
+        updateLocalPiece(uuid, tableId, updates);
+
+        // Schedule database update for the combined state
+        updatePieceInDb(uuid, tableId, mergedUpdates);
       }
     },
     [
