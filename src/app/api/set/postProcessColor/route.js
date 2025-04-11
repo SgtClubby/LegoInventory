@@ -49,7 +49,7 @@ export async function POST(req) {
  */
 async function processPiecesInBatches(pieceIds, tableId, ownerId) {
   const BATCH_SIZE = 5;
-  const STANDARD_DELAY = 2000; // 2 seconds between normal batches
+  const STANDARD_DELAY = 6000; // 5 seconds between normal batches
   const RATE_LIMIT_DELAY = 120000; // 2 minutes when rate limited
 
   let batchDelay = STANDARD_DELAY;

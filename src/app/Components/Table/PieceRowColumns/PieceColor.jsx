@@ -16,6 +16,7 @@ export default function PieceColor({
         piece={piece}
         availablePieceColors={piece.availableColors || []}
         colorName={piece.elementColor}
+        isNew={false}
         onChange={(colorName) => {
           onChange(originalId, "elementColor", colorName);
         }}

@@ -1,8 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Lego Inventory Piece Manager
+
+A modern web application for tracking your LEGO® piece inventory and needs. Built with Next.js and MongoDB.
+
+![LegoInventory](https://img.shields.io/badge/LegoInventory-1.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+## Features
+
+- **Inventory Management**: Keep track of your LEGO pieces, including quantities on hand and required
+- **Set Import**: Import sets directly from the Rebrickable API
+- **Color Support**: View and filter pieces by their colors
+- **Multi-Table Organization**: Organize pieces into different tables (collections)
+- **Search Functionality**: Find pieces by name, ID, or color
+- **Import/Export**: Save and load your inventory data
+- **Responsive Design**: Works on desktop and mobile devices
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TailwindCSS 4
+- **UI Components**: Material UI (MUI) 7
+- **Database**: MongoDB with Mongoose
+- **Virtualization**: TanStack Virtual for efficient rendering of large lists
+- **External API**: Integration with Rebrickable API for piece and set data
+
+## Screenshots
+
+_[Screenshots will be added here]_
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js (v18+)
+- MongoDB connection string
+- Rebrickable API key
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/SgtClubby/legoinventory.git
+cd legoinventory
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+# or
+bun install
+```
+
+3. Create a `.env` file in the root directory with the following variables:
+
+```
+REBRICKABLE_APIKEY=<your_rebrickable_api_key>
+MONGODB_URI=<your_mongodb_connection_string>
+MONGODB_DB=<your_database_name>
+
+MONGODB_PARAMS=<your_optional_mongodb_params>
+```
+
+4. Run the development server:
 
 ```bash
 npm run dev
@@ -14,23 +78,47 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Adding Pieces
 
-## Learn More
+1. Use the "Add New Piece" form at the top of the page
+2. Search for pieces using the search field
+3. Fill in the required fields (name, ID, color)
+4. Set quantities on hand and required
+5. Click "Add Piece"
 
-To learn more about Next.js, take a look at the following resources:
+### Importing Sets
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Use the "Import set?" search field
+2. Select a set from the search results
+3. Confirm the import in the modal
+4. Wait for the import to complete (all pieces will be added to a new table)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Managing Tables
 
-## Deploy on Vercel
+1. Use the "Select Table" dropdown to switch between tables
+2. Click "Add" to create a new table
+3. Click "Remove" to delete the current table (Main table cannot be deleted)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Searching and Filtering
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Use the search field to filter pieces by name, ID, or color
+- Click column headers to sort by that column
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgements
+
+- [Rebrickable API](https://rebrickable.com/api/) for providing LEGO set and piece data
+- [Next.js](https://nextjs.org/) for the React framework
+- [TailwindCSS](https://tailwindcss.com/) for styling
+- [MongoDB](https://www.mongodb.com/) for database storage
+
+## Disclaimer
+
+LEGO® is a trademark of the LEGO Group, which does not sponsor, authorize or endorse this application.

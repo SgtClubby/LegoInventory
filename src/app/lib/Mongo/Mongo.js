@@ -2,8 +2,10 @@
 
 import mongoose from "mongoose";
 
-if (!process.env.MONGODB_URI) {
-  throw new Error("Missing MongoDB connection string in env");
+if (!process.env.MONGODB_URI || !process.env.MONGODB_DB) {
+  throw new Error(
+    "Correctly define the MONGODB_URI and DB environment variable inside .env"
+  );
 }
 
 let cached = global.mongoose;

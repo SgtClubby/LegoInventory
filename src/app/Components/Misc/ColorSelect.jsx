@@ -9,6 +9,7 @@ export default function ColorSelect({
   piece,
   colorName,
   onChange,
+  isNew = true,
   availablePieceColors = [],
   className = "",
 }) {
@@ -192,7 +193,7 @@ export default function ColorSelect({
                 </div>
               ))}
             </div>
-          ) : needToFetchColors ? (
+          ) : needToFetchColors && !isNew ? (
             <div className="px-4 py-4 text-sm text-center text-gray-400">
               <button
                 onClick={fetchAvailableColors}
@@ -202,8 +203,8 @@ export default function ColorSelect({
               </button>
             </div>
           ) : (
-            <div className="px-4 py-4 text-sm text-center text-gray-400">
-              <span>No colors available for this piece</span>
+            <div className="px-4 py-2 text-sm text-center text-gray-400">
+              <span>No colors available</span>
             </div>
           )}
         </div>
