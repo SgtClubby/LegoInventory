@@ -10,8 +10,6 @@ export default function PieceColor({
   onChange,
   originalId,
 }) {
-  const { elementColor } = piece;
-  const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
 
@@ -40,7 +38,7 @@ export default function PieceColor({
         availablePieceColors={piece.availableColors || []}
         colorName={piece.elementColor}
         onChange={(colorName) => {
-          onChange("elementColor", originalId, colorName);
+          onChange(originalId, "elementColor", colorName);
         }}
         className="w-full"
       />

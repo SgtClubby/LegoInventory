@@ -6,11 +6,11 @@ import { Brick } from "@/lib/Mongo/Schema";
 export async function DELETE(req, { params }) {
   await dbConnect();
 
-  const userId = req.headers.get("userId") || "default";
+  const ownerId = req.headers.get("ownerId") || "default";
   const { tableId, brickId: uuid } = await params;
 
   try {
-    await Brick.deleteOne({ uuid, tableId, ownerId: userId });
+    await Brick.deleteOne({ uuid, tableId, ownerId });
     return Response.json({ success: true });
   } catch (e) {
     return Response.json({ error: "Failed to delete bricks" }, { status: 500 });
@@ -20,7 +20,7 @@ export async function DELETE(req, { params }) {
 export async function PATCH(req, { params }) {
   await dbConnect();
 
-  const userId = req.headers.get("userId") || "default";
+  const ownerId = req.headers.get("ownerId") || "default";
   const { brickId: uuid, tableId } = await params;
   const body = await req.json();
 
@@ -37,7 +37,7 @@ export async function PATCH(req, { params }) {
   }
 
   try {
-    await Brick.updateOne({ uuid, tableId, ownerId: userId }, { $set: body });
+    await Brick.updateOne({ uuid, tableId, ownerId }, { $set: body });
     return Response.json({ success: true });
   } catch (e) {
     return Response.json({ error: "Failed to update bricks" }, { status: 500 });

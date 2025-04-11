@@ -221,9 +221,10 @@ export default function AddNewPieceForm() {
         <div className="">
           <label className="block text-sm font-medium mb-1 text-gray-100">
             Color <span className="text-red-400 transform ">*</span>
-          </label> 
+          </label>
           <div className="relative">
             <ColorSelect
+              key={newPiece.elementColorId}
               piece={newPiece}
               availablePieceColors={newPiece.availableColors || []}
               colorName={newPiece.elementColor}

@@ -4,6 +4,9 @@ export async function GET(_req, { params }) {
   const { pieceId, colorId } = await params;
   const result = await fetchImageFromRebrickable(pieceId, colorId);
   if (result.status === 404 || !result?.part_img_url) {
+    console.error(
+      `Image not found for pieceId ${pieceId} and colorId ${colorId}`
+    );
     return Response.json({ part_img_url: null }, { status: 500 });
   }
 
@@ -26,8 +29,13 @@ export async function fetchImageFromRebrickable(pieceId, colorId) {
     }
 
     const data = await res.json();
+    console.log("Fetched image data:", data);
     return { part_img_url: data?.part_img_url || null, status: res.status };
   } catch (err) {
+    console.error(
+      `Error fetching image for pieceId ${pieceId} and colorId ${colorId}:`,
+      err
+    );
     return { status: 500, part_img_url: null };
   }
 }

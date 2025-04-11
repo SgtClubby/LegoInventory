@@ -1,4 +1,4 @@
-// src/app/components/Table/PieceRowColumns/PieceInventory.jsx
+// src/app/Components/Table/PieceRowColumns/PieceInventory.jsx
 
 export default function PieceInventory({
   piece,
@@ -30,7 +30,7 @@ export default function PieceInventory({
               elementQuantityRequired !== 0 &&
               newValue >= elementQuantityRequired;
             if (willBeComplete) e.target.blur();
-            onChange("elementQuantityOnHand", originalId, newValue);
+            onChange(originalId, "elementQuantityOnHand", newValue);
           }}
           className="w-16 bg-transparent border-0 focus:border-blue-500 focus:ring-0 text-gray-200"
         />
@@ -46,7 +46,7 @@ export default function PieceInventory({
             const willBeComplete =
               elementQuantityOnHand !== 0 && newValue <= elementQuantityOnHand;
             if (willBeComplete) e.target.blur();
-            onChange("elementQuantityRequired", originalId, newValue);
+            onChange(originalId, "elementQuantityRequired", newValue);
           }}
           className="w-16 bg-transparent border-0 focus:border-blue-500 focus:ring-0 text-gray-200"
         />

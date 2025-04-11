@@ -1,4 +1,4 @@
-// src/app/components/Table/VirtualTable.jsx
+// src/app/Components/Table/VirtualTable.jsx
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import VirtualTableHeader from "./VirtualTableHeader";
@@ -10,6 +10,7 @@ export default function VirtualTable({
   onDelete,
   sort,
   sortConfig,
+  isUpdating = () => false, // Optional function to check if piece is updating
 }) {
   // Table refs
   const tableContainerRef = useRef(null);
@@ -50,16 +51,59 @@ export default function VirtualTable({
     };
   }, []);
 
-  // Set up virtualizer with fixed row height for performance
+  // Set up virtualizer with dynamic row height and overscan
   const rowVirtualizer = useVirtualizer({
     count: pieces.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => rowOptions.height,
-    overscan: 10, // Render more rows above and below the visible area
+    overscan: 5, // More efficient overscan
+    getItemKey: (index) => pieces[index]?.uuid || index, // Use UUID for stable keys
   });
 
   // Get virtualized rows
   const virtualRows = rowVirtualizer.getVirtualItems();
+
+  // Memoize renderers for better performance
+  const renderedRows = useMemo(() => {
+    return virtualRows.map((virtualRow) => {
+      const piece = pieces[virtualRow.index];
+      // Skip rendering if we don't have a piece (shouldn't happen but safeguard)
+      if (!piece) return null;
+
+      return (
+        <div
+          key={piece.uuid}
+          data-index={virtualRow.index}
+          className="absolute w-full"
+          style={{
+            transform: `translateY(${virtualRow.start}px)`,
+            height: `${virtualRow.size}px`,
+            zIndex: -virtualRow.index + pieces.length, // Ensure correct stacking order
+          }}
+        >
+          <PieceRow
+            piece={piece}
+            originalId={piece.uuid}
+            onChange={onChange}
+            onDelete={onDelete}
+            columnWidths={columnWidths}
+            virtualizer={rowVirtualizer}
+            rowOptions={rowOptions}
+            index={virtualRow.index}
+            isUpdating={isUpdating(piece.uuid)}
+          />
+        </div>
+      );
+    });
+  }, [virtualRows, pieces, onChange, onDelete, isUpdating]);
+
+  // Empty state
+  const emptyState =
+    pieces.length === 0 ? (
+      <div className="flex items-center justify-center h-48 text-gray-400">
+        No pieces found. Add a piece or import a set to get started.
+      </div>
+    ) : null;
 
   return (
     <div className="w-full bg-slate-900 overflow-hidden">
@@ -74,6 +118,7 @@ export default function VirtualTable({
         className="w-full overflow-auto mt-0"
         style={{ height: `${containerHeight}px` }}
       >
+        {emptyState}
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
@@ -81,33 +126,7 @@ export default function VirtualTable({
             position: "relative",
           }}
         >
-          {virtualRows.map((virtualRow) => {
-            const piece = pieces[virtualRow.index];
-
-            return (
-              <div
-                key={piece.uuid}
-                data-index={virtualRow.index}
-                className="absolute w-full"
-                style={{
-                  transform: `translateY(${virtualRow.start}px)`,
-                  height: `${virtualRow.size}px`,
-                  zIndex: -virtualRow.index + pieces.length,
-                }}
-              >
-                <PieceRow
-                  piece={piece}
-                  originalId={piece.uuid}
-                  onChange={onChange}
-                  onDelete={onDelete}
-                  columnWidths={columnWidths}
-                  virtualizer={rowVirtualizer}
-                  rowOptions={rowOptions}
-                  index={virtualRow.index}
-                />
-              </div>
-            );
-          })}
+          {renderedRows}
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
-// src/app/components/Table/PieceRow.jsx
+// src/app/Components/Table/PieceRow.jsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 
 // Functions
 import colors from "@/Colors/colors.js";
@@ -27,6 +27,7 @@ const PieceRow = ({
   virtualizer,
   rowOptions,
   index,
+  isUpdating = false,
 }) => {
   const {
     elementId,
@@ -54,7 +55,12 @@ const PieceRow = ({
 
   const colBase = `h-16 border-b border-gray-700 py-3 px-4 text-sm md:text-md text-gray-200 flex items-center justify-center flex-shrink-0 relative`;
 
-  // Mobile view with dropdown
+  // Add a subtle loading indicator when the row is being updated
+  const loadingOverlay = isUpdating ? (
+    <div className="absolute inset-0 bg-blue-500/10 pointer-events-none z-10 flex items-center justify-end pr-4">
+      <div className="h-4 w-4 rounded-full border-2 border-blue-400 border-t-transparent animate-spin"></div>
+    </div>
+  ) : null;
 
   // Desktop view with inline editing
   const desktopView = (
@@ -65,8 +71,9 @@ const PieceRow = ({
           : highlighted
           ? "bg-pink-900 hover:bg-pink-800"
           : "bg-slate-900 hover:bg-slate-800"
-      } transition duration-200`}
+      } transition duration-200 relative`}
     >
+      {loadingOverlay}
       <PieceImage
         piece={piece}
         colBase={colBase}
@@ -129,9 +136,10 @@ const PieceRow = ({
             : highlighted
             ? "bg-pink-900"
             : "bg-slate-900"
-        } hover:bg-slate-800 transition duration-200 cursor-pointer`}
+        } hover:bg-slate-800 transition duration-200 cursor-pointer relative`}
         onClick={toggleExpand}
       >
+        {loadingOverlay}
         <div className="flex items-center">
           <PieceImage
             piece={piece}
@@ -222,10 +230,6 @@ const PieceRow = ({
                 value={elementQuantityOnHand}
                 onChange={(e) => {
                   const newValue = parseInt(e.target.value) || 0;
-                  const willBeComplete =
-                    elementQuantityRequired !== 0 &&
-                    newValue >= elementQuantityRequired;
-                  if (willBeComplete) e.target.blur();
                   onChange("elementQuantityOnHand", originalId, newValue);
                 }}
                 className="w-20 bg-slate-700 border border-gray-700 rounded px-2 py-1 focus:border-blue-500 focus:ring-0 text-gray-200"
@@ -241,10 +245,6 @@ const PieceRow = ({
                 value={elementQuantityRequired}
                 onChange={(e) => {
                   const newValue = parseInt(e.target.value) || 0;
-                  const willBeComplete =
-                    elementQuantityOnHand !== 0 &&
-                    newValue <= elementQuantityOnHand;
-                  if (willBeComplete) e.target.blur();
                   onChange("elementQuantityRequired", originalId, newValue);
                 }}
                 className="w-20 bg-slate-700 border border-gray-700 rounded px-2 py-1 focus:border-blue-500 focus:ring-0 text-gray-200"
@@ -279,7 +279,10 @@ const PieceRow = ({
                 <label className="text-gray-200">Highlight</label>
               </div>
               <button
-                onClick={() => onDelete(originalId)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(originalId);
+                }}
                 className="text-red-500 hover:text-red-700 px-3 py-1 rounded bg-red-900/30 hover:bg-red-900/50 transition duration-200"
               >
                 Delete
@@ -299,13 +302,33 @@ const PieceRow = ({
   );
 };
 
-// Preserve memoization with proper comparison
+// Improved equality check for better memoization
 function areEqual(prevProps, nextProps) {
+  // First check if any props have changed
+  const basicPropsEqual =
+    prevProps.originalId === nextProps.originalId &&
+    prevProps.isUpdating === nextProps.isUpdating;
+
+  if (!basicPropsEqual) return false;
+
+  // Then do a shallow comparison of the piece object
+  const prevPiece = prevProps.piece;
+  const nextPiece = nextProps.piece;
+
+  // If references are the same, they're equal
+  if (prevPiece === nextPiece) return true;
+
+  // Check each important property
   return (
-    prevProps.piece === nextProps.piece &&
-    prevProps.base64image === nextProps.base64image &&
-    prevProps.isExpanded === nextProps.isExpanded
+    prevPiece.elementId === nextPiece.elementId &&
+    prevPiece.elementName === nextPiece.elementName &&
+    prevPiece.elementColor === nextPiece.elementColor &&
+    prevPiece.elementColorId === nextPiece.elementColorId &&
+    prevPiece.elementImage === nextPiece.elementImage &&
+    prevPiece.elementQuantityOnHand === nextPiece.elementQuantityOnHand &&
+    prevPiece.elementQuantityRequired === nextPiece.elementQuantityRequired &&
+    prevPiece.countComplete === nextPiece.countComplete
   );
 }
 
-export default React.memo(PieceRow, areEqual);
+export default memo(PieceRow, areEqual);

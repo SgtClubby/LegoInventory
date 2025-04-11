@@ -30,14 +30,16 @@ const tableSchema = new Schema({
 });
 
 const colorCacheSchema = new Schema({
+  elementId: String,
   availableColors: [
     {
       colorId: String,
       color: String,
-      elementId: String,
-    }
+    },
   ],
+  createdAt: { type: Date, default: Date.now },
 });
+colorCacheSchema.index({ elementId: 1 });
 
 // Only compile once (important for dev/hot-reload)
 export const Brick =

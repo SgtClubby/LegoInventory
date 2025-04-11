@@ -6,16 +6,16 @@ import { Brick, Table } from "@/lib/Mongo/Schema";
 export async function GET(req) {
   await dbConnect();
 
-  const userId = req.headers.get("userId") || "default";
+  const ownerId = req.headers.get("ownerId") || "default";
 
   try {
-    const Tables = await Table.find({ ownerId: userId });
+    const Tables = await Table.find({ ownerId });
 
     if (Tables.length === 0) {
       Table.create({
         id: "1",
         name: "Main",
-        ownerId: userId,
+        ownerId,
       });
       return Response.json([{ id: "1", name: "Main" }]);
     }
@@ -34,7 +34,7 @@ export async function GET(req) {
 export async function POST(req) {
   await dbConnect();
 
-  const userId = req.headers.get("userId") || "default";
+  const ownerId = req.headers.get("ownerId") || "default";
 
   const { name } = await req.json();
 
@@ -44,13 +44,15 @@ export async function POST(req) {
 
   // make new table based on name, increment id, and set ownerId, only ids are unique, the can have the same name
   try {
-    const lastTable = await Table.findOne({ ownerId: userId }).sort({ id: -1 });
+    const lastTable = await Table.findOne({ ownerId }).sort({
+      id: -1,
+    });
     const newId = lastTable ? parseInt(lastTable.id) + 1 : 1;
 
     const newTable = new Table({
       id: newId.toString(),
       name,
-      ownerId: userId,
+      ownerId,
     });
 
     await newTable.save();
@@ -64,7 +66,7 @@ export async function POST(req) {
 export async function DELETE(req) {
   await dbConnect();
 
-  const userId = req.headers.get("userId") || "default";
+  const ownerId = req.headers.get("ownerId") || "default";
 
   const { id } = await req.json();
 
@@ -73,9 +75,9 @@ export async function DELETE(req) {
   }
 
   try {
-    await Table.deleteOne({ id, ownerId: userId });
+    await Table.deleteOne({ id, ownerId });
     // Delete all bricks associated with this table
-    await Brick.deleteMany({ tableId: id, ownerId: userId });
+    await Brick.deleteMany({ tableId: id, ownerId });
 
     return Response.json({ success: true });
   } catch (e) {

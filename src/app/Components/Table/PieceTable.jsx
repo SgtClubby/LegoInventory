@@ -1,5 +1,6 @@
-// src/app/components/Table/PieceTable.jsx
-import { useState, useMemo, useCallback } from "react";
+// src/app/Components/Table/PieceTable.jsx
+import { useState, useMemo, useCallback, useRef } from "react";
+import { debounce } from "lodash";
 
 // Icons
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
@@ -11,8 +12,7 @@ import { addTable, deleteTable } from "@/lib/Table/TableManager";
 import TableAddModal from "../Modals/TableAddModal";
 import TableDeleteModal from "../Modals/TableDeleteModal";
 import { useLego } from "@/Context/LegoContext";
-import { debounce } from "lodash";
-import { fetchPartDetails } from "@/lib/Pieces/PiecesManager";
+import { fetchPartDetails, fetchPartColors } from "@/lib/Pieces/PiecesManager";
 import VirtualTable from "./VirtualTable";
 
 import colors from "@/Colors/colors";
@@ -28,139 +28,319 @@ export default function PieceTable() {
     setPiecesByTable,
   } = useLego();
 
+  // Keep track of pending updates to avoid UI flicker
+  const pendingUpdatesRef = useRef(new Map());
+
+  // Track which pieces are currently loading/updating
+  const [updatingPieces, setUpdatingPieces] = useState(new Set());
+
+  // ---------------------------
+  // Memoized current pieces for selected table
+  // ---------------------------
+
   const [showAddModal, setAddShowModal] = useState(false);
   const [showDeleteModal, setDeleteShowModal] = useState(false);
   const [newTableName, setNewTableName] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
+  const pieces = useMemo(() => {
+    return piecesByTable[selectedTable?.id] || [];
+  }, [piecesByTable, selectedTable?.id]);
+
   // ---------------------------
   // Helper functions for debounced patch of piece data
   // ---------------------------
-  const debouncedPatch = useCallback(
-    debounce(async (uuid, tableId, patchPayload) => {
-      await fetch(`/api/table/${tableId}/brick/${uuid}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-        },
-        body: JSON.stringify(patchPayload),
-      });
+
+  // 1. Function to update a piece in the database (debounced)
+  const updatePieceInDb = useCallback(
+    debounce(async (uuid, tableId, updates) => {
+      try {
+        const response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updates),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to update piece: ${response.statusText}`);
+        }
+
+        // Remove from pending updates after successful save
+        const updateKey = `${tableId}-${uuid}`;
+        pendingUpdatesRef.current.delete(updateKey);
+
+        // Remove from updating state
+        setUpdatingPieces((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(uuid);
+          return newSet;
+        });
+
+        return true;
+      } catch (error) {
+        console.error("Error updating piece:", error);
+        return false;
+      }
     }, 750),
     []
   );
 
-  // Helper: Update a piece in state
-  const updatePieceField = (tableId, uuid, updates) => {
-    setPiecesByTable((prev) => {
-      const updatedPieces =
-        prev[tableId]?.map((p) =>
-          p.uuid === uuid ? { ...p, ...updates } : p
-        ) || [];
-      return { ...prev, [tableId]: updatedPieces };
-    });
-  };
+  const updateLocalPiece = useCallback(
+    (uuid, tableId, updates) => {
+      setPiecesByTable((prev) => {
+        // If the table doesn't exist in state yet, return unchanged
+        if (!prev[tableId]) return prev;
 
-  async function quickPatch(uuid, tableId, payload) {
-    updatePieceField(tableId, uuid, payload);
-    await fetch(`/api/table/${tableId}/brick/${uuid}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-  }
+        // Create a new array for the table's pieces, with the updated piece
+        const updatedPieces = prev[tableId].map((piece) =>
+          piece.uuid === uuid ? { ...piece, ...updates } : piece
+        );
+
+        // Return new state object with updated table pieces
+        return {
+          ...prev,
+          [tableId]: updatedPieces,
+        };
+      });
+    },
+    [setPiecesByTable]
+  );
 
   // ---------------------------
   // Handle piece update (debounced)
   // ---------------------------
-  const handleUpdatePiece = async (uuid, field, value) => {
-    const tableId = selectedTable.id;
-    const currentPiece = piecesByTable[tableId]?.find((p) => p.uuid === uuid);
-    if (!currentPiece) return;
+  const handleUpdatePiece = useCallback(
+    async (uuid, field, value) => {
+      const tableId = selectedTable.id;
+      const currentPiece = pieces.find((p) => p.uuid === uuid);
 
-    // Create a new updated piece object
-    const updatedPiece = { ...currentPiece, [field]: value };
+      if (!currentPiece) return;
 
-    if (field === "elementColor") {
-      const colorId = colors.find((c) => c.colorName === value)?.colorId;
-      updatedPiece.elementColorId = colorId;
-    }
-
-    if (
-      field === "elementQuantityOnHand" ||
-      field === "elementQuantityRequired"
-    ) {
-      updatedPiece.countComplete =
-        updatedPiece.elementQuantityRequired === 0
-          ? null
-          : updatedPiece.elementQuantityOnHand >=
-            updatedPiece.elementQuantityRequired;
-    }
-
-    // Build the patch payload
-    const patchPayload = {
-      [field]: updatedPiece[field],
-    };
-
-    if (field === "elementColor") {
-      patchPayload.elementColorId = updatedPiece.elementColorId;
-    }
-
-    if (
-      field === "elementQuantityOnHand" ||
-      field === "elementQuantityRequired"
-    ) {
-      patchPayload.countComplete = updatedPiece.countComplete;
-    }
-
-    debouncedPatch(uuid, tableId, patchPayload);
-    updatePieceField(tableId, uuid, updatedPiece);
-
-    // If elementId changed, update elementName via fetched part details (without recursion)
-    if (field === "elementId") {
-      const partDetails = await fetchPartDetails(value);
-      if (partDetails?.name) {
-        await quickPatch(uuid, tableId, {
-          elementName: partDetails.name,
-        });
-      }
-    }
-
-    if (field === "elementId" || field === "elementColor") {
-      const elementId = field === "elementId" ? value : currentPiece.elementId;
-      const colorId =
-        field === "elementColor"
-          ? colors.find((c) => c.colorName === value)?.colorId
-          : currentPiece.elementColorId;
-
-      const img_part_url = await fetchImageForPiece(elementId, colorId);
-      await quickPatch(uuid, tableId, {
-        elementImage: img_part_url,
+      // Mark piece as updating
+      setUpdatingPieces((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(uuid);
+        return newSet;
       });
-    }
-  };
+
+      // Create update payload
+      const updates = { [field]: value };
+
+      // Special field handling
+      if (field === "elementColor") {
+        // When color changes, we need to update both the color name and ID
+        const colorObj = colors.find((c) => c.colorName === value);
+        if (colorObj) {
+          updates.elementColorId = colorObj.colorId;
+          updates.elementColor = colorObj.colorName;
+        }
+      }
+
+      if (
+        field === "elementQuantityOnHand" ||
+        field === "elementQuantityRequired"
+      ) {
+        const onHand =
+          field === "elementQuantityOnHand"
+            ? value
+            : currentPiece.elementQuantityOnHand;
+
+        const required =
+          field === "elementQuantityRequired"
+            ? value
+            : currentPiece.elementQuantityRequired;
+
+        updates.countComplete = required === 0 ? null : onHand >= required;
+      }
+
+      // Generate a unique key for this update
+      const updateKey = `${tableId}-${uuid}`;
+
+      // Cancel any pending updates for this piece
+      if (updatePieceInDb.cancel) {
+        updatePieceInDb.cancel();
+      }
+
+      // Store the full intended state in the pending updates map
+      // This ensures we know the complete desired state for this piece
+      const previousUpdates = pendingUpdatesRef.current.get(updateKey) || {};
+      const mergedUpdates = { ...previousUpdates, ...updates };
+      pendingUpdatesRef.current.set(updateKey, mergedUpdates);
+
+      // Update local state immediately for responsive UI
+      updateLocalPiece(uuid, tableId, updates);
+
+      // Schedule database update for the combined state
+      updatePieceInDb(uuid, tableId, mergedUpdates);
+
+      // Handle special cases that need additional API calls
+      if (field === "elementId") {
+        try {
+          // Fetch part details in parallel
+          const partDetailsPromise = fetchPartDetails(value);
+          const availableColorsPromise = fetchPartColors(value);
+
+          const [partDetails, availableColors] = await Promise.all([
+            partDetailsPromise,
+            availableColorsPromise,
+          ]);
+
+          const additionalUpdates = {};
+
+          // Update name if available
+          if (partDetails?.name) {
+            additionalUpdates.elementName = partDetails.name;
+          }
+
+          // Update available colors if found
+          if (availableColors?.length > 0 && availableColors[0].colorId) {
+            additionalUpdates.availableColors = availableColors;
+
+            // Check if current color exists in available colors
+            const currentColorExists = availableColors.some(
+              (c) =>
+                String(c.colorId) === String(currentPiece.elementColorId) ||
+                c.color === currentPiece.elementColor
+            );
+
+            // If current color isn't available, select the first one
+            if (!currentColorExists && availableColors.length > 0) {
+              additionalUpdates.elementColor = availableColors[0].color;
+              additionalUpdates.elementColorId = availableColors[0].colorId;
+            }
+          }
+
+          // Fetch image for the piece with new color if needed
+          const imageColorId =
+            additionalUpdates.elementColorId || currentPiece.elementColorId;
+          const img_part_url = await fetchImageForPiece(value, imageColorId);
+
+          if (img_part_url) {
+            additionalUpdates.elementImage = img_part_url;
+          }
+
+          // If we have additional updates, apply them
+          if (Object.keys(additionalUpdates).length > 0) {
+            // Cancel any pending updates
+            if (updatePieceInDb.cancel) {
+              updatePieceInDb.cancel();
+            }
+
+            // Update pending updates map
+            const currentUpdates =
+              pendingUpdatesRef.current.get(updateKey) || {};
+            const finalUpdates = { ...currentUpdates, ...additionalUpdates };
+            pendingUpdatesRef.current.set(updateKey, finalUpdates);
+
+            // Update local state
+            updateLocalPiece(uuid, tableId, additionalUpdates);
+
+            // Send immediate update to database (not debounced)
+            await fetch(`/api/table/${tableId}/brick/${uuid}`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(finalUpdates),
+            });
+
+            // Clear from pending updates
+            pendingUpdatesRef.current.delete(updateKey);
+          }
+        } catch (error) {
+          console.error("Error handling elementId update:", error);
+        } finally {
+          // Always make sure to remove from updating state
+          setUpdatingPieces((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(uuid);
+            return newSet;
+          });
+        }
+      } else if (field === "elementColor") {
+        // If color changed, fetch new image
+        try {
+          const colorId = updates.elementColorId;
+          const elementId = currentPiece.elementId;
+
+          const img_part_url = await fetchImageForPiece(elementId, colorId);
+
+          if (img_part_url) {
+            const imageUpdate = { elementImage: img_part_url };
+
+            // Update pending updates
+            const currentUpdates =
+              pendingUpdatesRef.current.get(updateKey) || {};
+            const finalUpdates = { ...currentUpdates, ...imageUpdate };
+            pendingUpdatesRef.current.set(updateKey, finalUpdates);
+
+            // Update local state
+            updateLocalPiece(uuid, tableId, imageUpdate);
+
+            // Update database with the full intended state
+            updatePieceInDb(uuid, tableId, finalUpdates);
+          }
+        } catch (error) {
+          console.error("Error updating image for color change:", error);
+        }
+      }
+    },
+    [
+      pieces,
+      selectedTable,
+      updateLocalPiece,
+      updatePieceInDb,
+      pendingUpdatesRef,
+    ]
+  );
 
   // ---------------------------
-  // Handle delete piece
+  // Delete handler with optimistic UI updates
   // ---------------------------
-  const handleDeletePiece = async (uuid) => {
-    if (!confirm("Are you sure you want to delete this piece?")) return;
-    const tableId = selectedTable.id;
-    await fetch(`/api/table/${tableId}/brick/${uuid}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-      },
-    });
-    updatePieceField(tableId, uuid, null); // We'll filter it out below
-    setPiecesByTable((prev) => {
-      const updated = prev[tableId]?.filter((p) => p.uuid !== uuid) || [];
-      return { ...prev, [tableId]: updated };
-    });
-  };
+  const handleDeletePiece = useCallback(
+    async (uuid) => {
+      if (!confirm("Are you sure you want to delete this piece?")) return;
+
+      const tableId = selectedTable.id;
+
+      // Optimistically remove from UI first
+      setPiecesByTable((prev) => {
+        const updatedPieces =
+          prev[tableId]?.filter((p) => p.uuid !== uuid) || [];
+        return { ...prev, [tableId]: updatedPieces };
+      });
+
+      try {
+        // Then delete from database
+        const response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete piece: ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error("Error deleting piece:", error);
+
+        // If deletion fails, restore the piece in UI
+        setPiecesByTable((prev) => {
+          const restoredPiece = pieces.find((p) => p.uuid === uuid);
+          if (!restoredPiece) return prev;
+
+          const updatedPieces = [...(prev[tableId] || []), restoredPiece];
+          return { ...prev, [tableId]: updatedPieces };
+        });
+
+        alert("Failed to delete piece. Please try again.");
+      }
+    },
+    [pieces, selectedTable, setPiecesByTable]
+  );
 
   // Handle table selection using id for consistency
   const handleTableSelect = (event) => {
@@ -223,13 +403,6 @@ export default function PieceTable() {
     }
     setSortConfig({ key, direction });
   };
-
-  // ---------------------------
-  // Memoized current pieces for selected table
-  // ---------------------------
-  const pieces = useMemo(() => {
-    return piecesByTable[selectedTable?.id] || [];
-  }, [piecesByTable, selectedTable?.id]);
 
   const filteredPieces = useMemo(() => {
     if (!debouncedSearchTerm) return pieces;
@@ -336,8 +509,9 @@ export default function PieceTable() {
 
         <VirtualTable
           pieces={sortedPieces}
-          onChange={(field, id, value) => handleUpdatePiece(id, field, value)}
-          onDelete={(id) => handleDeletePiece(id)}
+          onChange={handleUpdatePiece}
+          onDelete={handleDeletePiece}
+          isUpdating={(uuid) => updatingPieces.has(uuid)}
           sort={sort}
           sortConfig={sortConfig}
         />

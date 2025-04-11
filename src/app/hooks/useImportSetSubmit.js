@@ -125,7 +125,7 @@ export function useImportSetSubmit() {
           },
           body: JSON.stringify({
             pieceIds,
-            userId: "default",
+            ownerId: "default",
             tableId: newTable.id,
             brickUuids,
           }),

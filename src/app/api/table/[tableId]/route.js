@@ -6,7 +6,7 @@ import { Brick } from "@/lib/Mongo/Schema";
 export async function GET(req, { params }) {
   await dbConnect();
 
-  const userId = req.headers.get("userId") || "default";
+  const ownerId = req.headers.get("ownerId") || "default";
   const { tableId } = await params;
 
   if (!tableId) {
@@ -14,7 +14,14 @@ export async function GET(req, { params }) {
   }
 
   try {
-    const bricks = await Brick.find({ tableId, ownerId: userId });
+    const bricks = await Brick.find(
+      { tableId, ownerId },
+      {
+        __v: 0,
+        _id: 0,
+        updatedAt: 0,
+      }
+    );
     return Response.json(bricks);
   } catch (e) {
     return Response.json({ error: "Failed to fetch bricks" }, { status: 500 });
@@ -24,7 +31,7 @@ export async function GET(req, { params }) {
 export async function POST(req, { params }) {
   await dbConnect();
 
-  const userId = req.headers.get("userId") || "default";
+  const ownerId = req.headers.get("ownerId") || "default";
   const { tableId } = await params;
   const body = await req.json();
 
@@ -39,7 +46,7 @@ export async function POST(req, { params }) {
     const docs = bricks.map((b) => ({
       ...b,
       tableId,
-      ownerId: userId,
+      ownerId,
     }));
 
     await Brick.insertMany(docs);
