@@ -1,9 +1,7 @@
 // src/app/components/Table/PieceRowColumns/PieceColor.jsx
 
 import { useState, useRef, useEffect } from "react";
-import getColorStyle from "@/lib/Misc/getColorStyle";
-import colors from "@/colors/colors";
-import CustomColorDropdown from "@/components/Misc/CustomColorDropdown";
+import ColorSelect from "@/Components/Misc/ColorSelect";
 
 export default function PieceColor({
   piece,
@@ -13,6 +11,7 @@ export default function PieceColor({
   originalId,
 }) {
   const { elementColor } = piece;
+  const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
 
@@ -36,12 +35,12 @@ export default function PieceColor({
 
   return (
     <div className={`${colBase} ${columnWidths.color} flex-1 relative`}>
-      <CustomColorDropdown
+      <ColorSelect
         piece={piece}
         availablePieceColors={piece.availableColors || []}
-        colorName={elementColor}
-        onChange={(color) => {
-          onChange("elementColor", originalId, color);
+        colorName={piece.elementColor}
+        onChange={(colorName) => {
+          onChange("elementColor", originalId, colorName);
         }}
         className="w-full"
       />

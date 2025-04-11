@@ -15,7 +15,7 @@ import { debounce } from "lodash";
 import { fetchPartDetails } from "@/lib/Pieces/PiecesManager";
 import VirtualTable from "./VirtualTable";
 
-import colors from "@/colors/colors";
+import colors from "@/Colors/colors";
 import { fetchImageForPiece } from "@/lib/Pieces/Images/fetchImages";
 
 export default function PieceTable() {

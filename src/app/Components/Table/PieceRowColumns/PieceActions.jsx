@@ -1,7 +1,7 @@
 // src/app/components/Table/PieceRowColumns/PieceActions.jsx
 
 import getColorStyle from "@/lib/Misc/getColorStyle";
-import colors from "@/colors/colors";
+import colors from "@/Colors/colors";
 
 export default function PieceActions({
   colBase,

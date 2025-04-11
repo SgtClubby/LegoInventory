@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 
 // Functions
-import colors from "@/colors/colors.js";
+import colors from "@/Colors/colors.js";
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import useBreakpoint from "@/hooks/useBreakpoint";
 
@@ -32,7 +32,6 @@ const PieceRow = ({
     elementId,
     elementName,
     elementColor,
-    elementImage,
     elementQuantityOnHand,
     elementQuantityRequired,
     countComplete,
@@ -53,7 +52,7 @@ const PieceRow = ({
     setIsExpanded(!isExpanded);
   };
 
-  const colBase = `h-18 border-b border-gray-700 py-3 px-4 text-sm md:text-md text-gray-200 flex items-center justify-center flex-shrink-0 relative`;
+  const colBase = `h-16 border-b border-gray-700 py-3 px-4 text-sm md:text-md text-gray-200 flex items-center justify-center flex-shrink-0 relative`;
 
   // Mobile view with dropdown
 

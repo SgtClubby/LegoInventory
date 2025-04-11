@@ -4,15 +4,15 @@
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 
 // Components
-import SearchNewPiece from "@/components/Search/SearchNewPiece";
+import SearchNewPiece from "@/Components/Search/SearchNewPiece";
 
 // Functions and Helpers
-import colors from "@/colors/colors.js";
+import colors from "@/Colors/colors.js";
 import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import CustomColorDropdown from "../Misc/CustomColorDropdown";
+import ColorSelect from "../Misc/ColorSelect";
 
 export default function AddNewPieceForm() {
   // ---------------------------
@@ -221,18 +221,16 @@ export default function AddNewPieceForm() {
         <div className="">
           <label className="block text-sm font-medium mb-1 text-gray-100">
             Color <span className="text-red-400 transform ">*</span>
-          </label>
+          </label> 
           <div className="relative">
-            <CustomColorDropdown
+            <ColorSelect
               piece={newPiece}
               availablePieceColors={newPiece.availableColors || []}
               colorName={newPiece.elementColor}
               onChange={(colorName) => {
-                // Get the color ID directly when changing the color
                 const colorId =
                   colors.find((c) => c.colorName === colorName)?.colorId || 0;
 
-                // Update both values in a single state update
                 setNewPiece((prev) => ({
                   ...prev,
                   elementColor: colorName,

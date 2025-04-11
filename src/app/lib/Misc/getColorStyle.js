@@ -1,6 +1,6 @@
 // src/app/lib/Misc/getColorStyle.js
 
-import colors from "@/colors/colors.js";
+import colors from "@/Colors/colors.js";
 
 // Function to get color style
 export default function getColorStyle(colorName) {

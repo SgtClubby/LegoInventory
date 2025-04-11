@@ -26,8 +26,8 @@ export default function TableAddModal({
   };
 
   return (
-    <div className="z-20 fixed inset-0 flex items-center justify-center">
-      <div className="absolute z-20 bg-slate-800 p-6 rounded shadow-lg w-80">
+    <div className="z-[10000] fixed inset-0 flex items-center justify-center">
+      <div className="absolute z-[10000] bg-slate-800 p-6 rounded shadow-lg w-80">
         <h2 className="biiig font-semibold mb-4 text-gray-100">
           Add New Table
         </h2>

@@ -44,8 +44,8 @@ export default function ImportModal({ toggleModal, searchResult }) {
   };
 
   return (
-    <div className="z-20 fixed inset-0 flex items-center justify-center">
-      <div className="absolute z-20 bg-slate-800 p-6 rounded shadow-lg w-fit">
+    <div className="z-[10000] fixed inset-0 flex items-center justify-center">
+      <div className="absolute z-[10000] bg-slate-800 p-6 rounded shadow-lg w-fit">
         <h2 className="text-xl font-semibold mb-4 text-gray-100">
           Import set?
         </h2>

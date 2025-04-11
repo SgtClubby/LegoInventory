@@ -47,3 +47,4 @@ next-env.d.ts
 /Archive
 cache.json
 real_fake_data.json
+package-lock.json
