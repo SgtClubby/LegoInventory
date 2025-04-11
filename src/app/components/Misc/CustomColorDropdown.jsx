@@ -1,101 +1,130 @@
 // src/app/components/Misc/CustomColorDropdown.jsx
 
-import { useState, useRef, useEffect } from "react";
-import getColorStyle from "@/lib/Misc/getColorStyle";
-import colors from "@/colors/colors";
+import React, { useState, useRef, useEffect } from "react";
+import colors from "@/colors/colors.js";
 
-export default function CustomColorDropdown({
+const CustomColorDropdown = ({
+  piece,
+  availablePieceColors = [], // Add default value
   colorName,
   onChange,
-  availablePieceColors = [],
-  className = "",
-}) {
+  className,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [availableColors, setAvailableColors] = useState(availablePieceColors);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedColors, setHasLoadedColors] = useState(false); // Track if we've loaded colors
   const dropdownRef = useRef(null);
-  const buttonRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  // Update local state when prop changes
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target) &&
-        !buttonRef.current.contains(event.target)
-      ) {
+    if (availablePieceColors?.length > 0) {
+      setAvailableColors(availablePieceColors);
+      setHasLoadedColors(true);
+    }
+  }, [availablePieceColors]);
+
+  // Only fetch if not already loaded and dropdown is opened
+  useEffect(() => {
+    if (
+      isOpen &&
+      !hasLoadedColors &&
+      availableColors.length === 0 &&
+      piece?.elementId &&
+      !isLoading
+    ) {
+      setIsLoading(true);
+      console.log(`Fetching colors for ${piece.elementId}`);
+
+      fetch(`/api/part/${piece.elementId}/colors`)
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Fetched colors:", data);
+          setAvailableColors(data);
+          setHasLoadedColors(true);
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.error("Error fetching colors:", err);
+          setIsLoading(false);
+        });
+    }
+  }, [isOpen, piece?.elementId, hasLoadedColors, availableColors.length]);
+
+  const currentHex = colors.find((c) => c.colorName === colorName)?.hex;
+  const currentColor = colors.find((c) => c.colorName === colorName)?.colorName;
+
+  // Transform the API available colors to the format expected by CustomColorDropdown
+  const formattedAvailableColors = availableColors?.map((color) => {
+    const fullColorInfo = colors.find((c) => c.colorName === color.color) || {};
+    return {
+      colorId: color.colorId,
+      colorName: color.color, // Use the 'color' property from API as 'colorName'
+      hex: fullColorInfo.hex || "#CCCCCC", // Default color if not found
+    };
+  });
+
+  // Close dropdown if clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }
-    }
+    };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filter colors if availablePieceColors is provided
-  const colorOptions =
-    availablePieceColors.length > 0
-      ? colors.filter((c) =>
-          availablePieceColors.some(
-            (apc) => apc.colorId.toString() === c.colorId.toString()
-          )
-        )
-      : colors;
+  const handleSelect = (chosenColor) => {
+    onChange(chosenColor);
+    setIsOpen(false);
+  };
 
   return (
-    <div className={`relative ${className}`}>
+    <div
+      className={`relative w-full ${
+        isOpen ?? "z-[99999]"
+      } min-w-48 ${className}`}
+      ref={dropdownRef}
+    >
       <button
-        ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center w-full p-2 border border-gray-300 rounded text-gray-100 bg-slate-800 justify-between"
         type="button"
+        className="w-full text-gray-200 pl-3 py-2 pr-4 border border-gray-300 rounded text-left flex items-center"
+        onClick={() => setIsOpen(!isOpen)}
       >
-        <div className="flex items-center">
-          <div
-            style={getColorStyle(colorName)}
-            className="mr-2 w-6 h-6 rounded-full flex-shrink-0"
-          ></div>
-          <span>{colorName || "Select color"}</span>
-        </div>
-        <svg
-          className="h-5 w-5 text-gray-400"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            fillRule="evenodd"
-            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-            clipRule="evenodd"
-          />
-        </svg>
+        <div
+          className="w-6 h-6 min-w-6 aspect-square mr-2 rounded-sm"
+          style={{
+            backgroundColor: currentHex,
+            border: "1px solid #ccc",
+          }}
+        />
+        {currentColor}
       </button>
 
       {isOpen && (
-        <div
-          ref={dropdownRef}
-          className="absolute left-0 z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-slate-800 border border-gray-700 shadow-lg"
-          style={{
-            maxHeight: "300px",
-            overflowY: "auto",
-            zIndex: 9999,
-          }}
-        >
-          <div className="py-1">
-            {colorOptions.map((color) => (
+        <div className="transition-all z-20 absolute w-full mt-1 bg-slate-800 border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+          <div className="p-1">
+            {formattedAvailableColors?.length === 0 && (
+              <div className="text-gray-400 text-sm text-center">
+                No available colors
+              </div>
+            )}
+            {formattedAvailableColors?.map((color) => (
               <div
-                key={color.colorName}
-                className="flex items-center px-4 py-2 text-gray-200 hover:bg-slate-700 cursor-pointer"
-                onClick={() => {
-                  onChange(color.colorName);
-                  setIsOpen(false);
-                }}
+                key={color.colorId}
+                className="cursor-pointer text-gray-200 rounded-sm px-2 py-1 flex items-center hover:opacity-90"
+                onClick={() => handleSelect(color.colorName)}
               >
                 <div
-                  style={getColorStyle(color.colorName)}
-                  className="mr-2 w-6 h-6 rounded-full flex-shrink-0"
-                ></div>
-                <span>{color.colorName}</span>
+                  className="w-6 h-6 min-w-6 aspect-square mr-2 rounded-sm"
+                  style={{
+                    backgroundColor: color.hex,
+                    border: "1px solid #ccc",
+                  }}
+                />
+                {color.colorName}
               </div>
             ))}
           </div>
@@ -103,4 +132,6 @@ export default function CustomColorDropdown({
       )}
     </div>
   );
-}
+};
+
+export default CustomColorDropdown;
