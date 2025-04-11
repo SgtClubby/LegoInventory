@@ -29,8 +29,20 @@ const tableSchema = new Schema({
   ownerId: { type: String, default: "default" },
 });
 
+const colorCacheSchema = new Schema({
+  availableColors: [
+    {
+      colorId: String,
+      color: String,
+      elementId: String,
+    }
+  ],
+});
+
 // Only compile once (important for dev/hot-reload)
 export const Brick =
   mongoose.models.Brick || mongoose.model("Brick", brickSchema);
 export const Table =
   mongoose.models.Table || mongoose.model("Table", tableSchema);
+export const ColorCache =
+  mongoose.models.ColorCache || mongoose.model("ColorCache", colorCacheSchema);

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import colors from "@/Colors/colors";
 
-export default function CustomColorDropdown({
+export default function ColorSelect({
   colorName,
   onChange,
   availablePieceColors = [],

@@ -1,18 +1,31 @@
 // src/app/api/set/background/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
-import { Brick } from "@/lib/Mongo/Schema";
+import { Brick, ColorCache } from "@/lib/Mongo/Schema";
 
 export async function POST(req) {
   await dbConnect();
 
   const { pieceIds, tableId, brickUuids, userId } = await req.json();
 
+  console.log("Starting post-processing...");
+
+  // check if the cache has the availableColors already
+  // const cache = await ColorCache.findOne({
+  //   "availableColors.elementId": { $in: pieceIds },
+  // });
+
+  // console.log("Cache:", cache);
+
   // Process in batches
-  const batchSize = 5;
+  const batchSize = 10;
   for (let i = 0; i < pieceIds.length; i += batchSize) {
     const batch = pieceIds.slice(i, i + batchSize);
-    const batchUuids = brickUuids.slice(i, i + batchSize);
+
+    console.log(`Processing
+    batch ${i / batchSize + 1} of ${Math.ceil(
+      pieceIds.length / batchSize
+    )}...`);
 
     const promises = batch.map(async (pieceId, index) => {
       try {
@@ -29,9 +42,25 @@ export async function POST(req) {
 
         // Update the piece in the database
         await Brick.updateOne(
-          { uuid: batchUuids[index], tableId, userId },
-          { $set: { availableColors: data.results } }
+          { elementId: pieceId, tableId, ownerId: userId },
+          {
+            $set: {
+              availableColors: data.results.map((result) => ({
+                colorId: result.color_id,
+                color: result.color_name,
+              })),
+            },
+          }
         );
+
+        // save for future fetches
+        await ColorCache.create({
+          availableColors: data.results.map((result) => ({
+            colorId: result.color_id,
+            color: result.color_name,
+            elementId: pieceId,
+          })),
+        });
       } catch (error) {
         console.error(`Error fetching colors for piece ${pieceId}:`, error);
       }
@@ -41,9 +70,10 @@ export async function POST(req) {
 
     // Add delay between batches
     if (i + batchSize < pieceIds.length) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     }
   }
 
+  console.log("Post-processing complete.");
   return Response.json({ success: true });
 }

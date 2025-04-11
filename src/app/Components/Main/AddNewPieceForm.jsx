@@ -12,7 +12,7 @@ import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import CustomColorDropdown from "../Misc/CustomColorDropdown";
+import ColorSelect from "../Misc/ColorSelect";
 
 export default function AddNewPieceForm() {
   // ---------------------------
@@ -221,9 +221,9 @@ export default function AddNewPieceForm() {
         <div className="">
           <label className="block text-sm font-medium mb-1 text-gray-100">
             Color <span className="text-red-400 transform ">*</span>
-          </label>
+          </label> 
           <div className="relative">
-            <CustomColorDropdown
+            <ColorSelect
               piece={newPiece}
               availablePieceColors={newPiece.availableColors || []}
               colorName={newPiece.elementColor}

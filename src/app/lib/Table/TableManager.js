@@ -30,13 +30,15 @@ export async function addTable(name) {
       body: JSON.stringify({ name }),
     });
     const data = await res.json();
-    if (data && data.length > 0) {
-      return data;
+    console.log(data);
+    if (data.id) return data;
+    if (data.error) {
+      console.error(`Error adding table:`, data.error);
+      return null;
     }
   } catch (err) {
     console.error(`Error adding table:`, err);
   }
-  return null;
 }
 
 export async function deleteTable(id) {

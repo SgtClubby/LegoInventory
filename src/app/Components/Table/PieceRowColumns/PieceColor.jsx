@@ -1,7 +1,7 @@
 // src/app/components/Table/PieceRowColumns/PieceColor.jsx
 
 import { useState, useRef, useEffect } from "react";
-import CustomColorDropdown from "@/Components/Misc/CustomColorDropdown";
+import ColorSelect from "@/Components/Misc/ColorSelect";
 
 export default function PieceColor({
   piece,
@@ -35,7 +35,7 @@ export default function PieceColor({
 
   return (
     <div className={`${colBase} ${columnWidths.color} flex-1 relative`}>
-      <CustomColorDropdown
+      <ColorSelect
         piece={piece}
         availablePieceColors={piece.availableColors || []}
         colorName={piece.elementColor}

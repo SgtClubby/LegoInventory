@@ -5,11 +5,11 @@ import { useLego } from "@/Context/LegoContext";
 import { addTable } from "@/lib/Table/TableManager";
 import colors from "@/Colors/colors.js";
 import { v4 as uuidv4 } from "uuid";
-import { use } from "react";
 
 export function useImportSetSubmit() {
   const {
     availableTables,
+    selectedTable,
     setAvailableTables,
     setSelectedTable,
     setPiecesByTable,
@@ -28,6 +28,12 @@ export function useImportSetSubmit() {
       if (data.error) {
         alert("Failed to fetch set data!");
         return;
+      }
+
+      const originalTable = selectedTable;
+
+      function resetTableState() {
+        setSelectedTable(originalTable);
       }
 
       const { results } = data;
@@ -49,10 +55,6 @@ export function useImportSetSubmit() {
         id: newTableId.toString(),
       };
 
-      await addTable(tableName);
-      setAvailableTables([...availableTables, newTable]);
-      setSelectedTable(newTable);
-
       const importedPieces = results.map((piece) => {
         const colorId = colors.find(
           (c) => c.colorName === piece.color.name
@@ -64,6 +66,7 @@ export function useImportSetSubmit() {
           elementImage: piece.part.part_img_url,
           elementColor: piece.color.name || "Black",
           elementColorId: colorId || 0,
+          availableColors: [],
           elementQuantityOnHand: 0,
           elementQuantityRequired: piece.quantity,
           countComplete: false,
@@ -72,7 +75,18 @@ export function useImportSetSubmit() {
         };
       });
 
-      await fetch(`/api/table/${newTable.id}`, {
+      // We init all the data then do the checks
+      const tableReady = await addTable(tableName);
+      console.log(tableReady);
+      if (!tableReady) {
+        alert("Failed to fetch set! Failed to create table!");
+        return;
+      }
+
+      setAvailableTables([...availableTables, newTable]);
+      setSelectedTable(newTable);
+
+      const ready = await fetch(`/api/table/${newTable.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -80,6 +94,20 @@ export function useImportSetSubmit() {
         },
         body: JSON.stringify(importedPieces),
       });
+
+      if (!ready.ok) {
+        resetTableState();
+        alert("Failed to fetch set! Failed to during import!");
+        return;
+      }
+
+      const readyData = await ready.json();
+
+      if (!readyData.success) {
+        resetTableState();
+        alert("Failed to fetch set! Failed to during import!");
+        return;
+      }
 
       setPiecesByTable((prev) => ({
         ...prev,
@@ -89,19 +117,23 @@ export function useImportSetSubmit() {
       const pieceIds = importedPieces.map((p) => p.elementId);
       const brickUuids = importedPieces.map((p) => p.uuid);
 
-      // Send a separate request to update colors in the background
-      fetch("/api/set/background/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          pieceIds,
-          userId: "default",
-          tableId: newTable.id,
-          brickUuids,
-        }),
-      });
+      if (readyData.success) {
+        fetch("/api/set/postProcessColor/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            pieceIds,
+            userId: "default",
+            tableId: newTable.id,
+            brickUuids,
+          }),
+        }).catch((error) => {
+          console.error("Error processing colors:", error);
+          // Optionally show a non-blocking notification to user
+        });
+      }
     } catch (err) {
       console.error("Error during set import:", err);
       alert("Something went wrong while importing the set.");
