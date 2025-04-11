@@ -2,7 +2,7 @@
 
 //Components
 
-import LEGOMain from "@/components/Main/MainApp";
+import LEGOMain from "@/Components/Main/MainApp";
 
 const App = () => {
   return (
