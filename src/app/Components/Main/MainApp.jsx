@@ -4,12 +4,12 @@
 import React, { useState, useEffect } from "react";
 
 // Components
-import Header from "@/components/Misc/Header";
-import PieceTable from "@/components/Table/PieceTable";
-import Statistics from "@/components/Misc/Statistics";
-import SearchSet from "@/components/Search/SearchSet";
-import ImportModal from "@/components/Modals/ImportModal";
-import ImportExport from "@/components/Misc/ImportExport";
+import Header from "@/Components/Misc/Header";
+import PieceTable from "@/Components/Table/PieceTable";
+import Statistics from "@/Components/Misc/Statistics";
+import SearchSet from "@/Components/Search/SearchSet";
+import ImportModal from "@/Components/Modals/ImportModal";
+import ImportExport from "@/Components/Misc/ImportExport";
 
 // Functions & Helpers
 import { fetchPiecesFromTable } from "@/lib/Pieces/PiecesManager";

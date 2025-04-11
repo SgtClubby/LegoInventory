@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import getColorStyle from "@/lib/Misc/getColorStyle";
-import colors from "@/colors/colors";
+import colors from "@/Colors/colors";
 
 export default function CustomColorDropdown({
   colorName,
@@ -74,12 +74,7 @@ export default function CustomColorDropdown({
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-slate-800 border border-gray-700 shadow-lg"
-          style={{
-            maxHeight: "300px",
-            overflowY: "auto",
-            zIndex: 9999,
-          }}
+          className="absolute left-0 mt-1 max-h-60 w-full overflow-auto rounded-md bg-slate-800 border border-gray-700 shadow-lg"
         >
           <div className="py-1">
             {colorOptions.map((color) => (

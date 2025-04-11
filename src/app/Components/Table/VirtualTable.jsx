@@ -29,7 +29,7 @@ export default function VirtualTable({
 
   // Row options
   const rowOptions = {
-    height: 100,
+    height: 64,
   };
 
   // Update container height on mount and resize
@@ -92,6 +92,7 @@ export default function VirtualTable({
                 style={{
                   transform: `translateY(${virtualRow.start}px)`,
                   height: `${virtualRow.size}px`,
+                  zIndex: -virtualRow.index + pieces.length,
                 }}
               >
                 <PieceRow
@@ -100,6 +101,7 @@ export default function VirtualTable({
                   onChange={onChange}
                   onDelete={onDelete}
                   columnWidths={columnWidths}
+                  virtualizer={rowVirtualizer}
                   rowOptions={rowOptions}
                   index={virtualRow.index}
                 />

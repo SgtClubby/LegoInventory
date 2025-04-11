@@ -3,7 +3,7 @@
 "use client";
 import { useLego } from "@/Context/LegoContext";
 import { addTable } from "@/lib/Table/TableManager";
-import colors from "@/colors/colors.js";
+import colors from "@/Colors/colors.js";
 import { v4 as uuidv4 } from "uuid";
 import { use } from "react";
 
