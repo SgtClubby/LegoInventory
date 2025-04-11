@@ -1,6 +1,7 @@
 # Lego Inventory Piece Manager
 
-A modern web application for tracking your LEGO® piece inventory and needs. Built with Next.js and MongoDB.
+A web application for tracking your LEGO® piece inventory and needs. Built with Next.js and MongoDB.
+A side-project that started with simple roots, that have since just grown and grown, figured i had to put this out here!
 
 ![LegoInventory](https://img.shields.io/badge/LegoInventory-1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
