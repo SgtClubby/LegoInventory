@@ -31,13 +31,13 @@ export default function AddNewPieceForm() {
     elementColor: "",
     elementColorId: "",
     availableColors: [],
-    elementImage: "",
     elementQuantityOnHand: 0,
     elementQuantityRequired: 0,
     countComplete: false,
   });
 
   const [image, setImage] = useState(null);
+  const [imageLoading, setImageLoading] = useState(null);
 
   // ---------------------------
   // Update newPiece when search result arrives
@@ -55,14 +55,13 @@ export default function AddNewPieceForm() {
         countComplete: false,
       }));
 
-      setImage(part_img_url);
+      setImageLoading(true);
 
       // Then fetch colors separately
       const fetchColors = async () => {
         try {
           const response = await fetch(`/api/part/${part_num}/colors`);
           const colorData = await response.json();
-          console.log("Fetched colors for new piece:", colorData);
 
           // Update with colors without overriding other properties
           setNewPiece((current) => ({
@@ -83,7 +82,9 @@ export default function AddNewPieceForm() {
         }
       };
 
-      fetchColors();
+      fetchColors().finally(() => {
+        setImageLoading(false);
+      });
     }
   }, [searchNewPieceResult]);
 
@@ -103,7 +104,7 @@ export default function AddNewPieceForm() {
           );
           const data = await response.json();
 
-          console.log("Fetched image for new piece:", data);
+          console.log("Fetched image for new piece:", data.part_img_url);
           if (data.part_img_url) {
             setImage(data.part_img_url);
           }
@@ -167,6 +168,11 @@ export default function AddNewPieceForm() {
       return;
     }
 
+    // Reset search result
+    setSearchNewPieceResult(null);
+    setImage(null);
+    setImageLoading(null);
+
     // Reset form state
     setNewPiece({
       uuid: uuidv4(),
@@ -184,7 +190,9 @@ export default function AddNewPieceForm() {
   return (
     <>
       <div className="flex items-center ">
-        {!image ? null : (
+        {imageLoading ? (
+          <div className="w-14 h-14 rounded mb-2 mr-3 animate-pulse bg-gray-500" />
+        ) : !image ? null : (
           <img
             src={image || ""}
             alt={newPiece.elementName}

@@ -18,7 +18,10 @@ export async function GET(req, { params }) {
     await dbConnect();
     const existingMetadata = await BrickMetadata.findOne(
       { elementId: pieceId },
-      { _id: 0, elementId: 1, elementName: 1, availableColors: 1 }
+      {
+        _id: 0,
+        "availableColors._id": 0,
+      }
     ).lean();
 
     // If we have complete metadata with at least one color that has an image
@@ -53,15 +56,11 @@ export async function GET(req, { params }) {
     );
 
     if (!res.ok) {
-      return Response.json(
-        { error: "Failed to fetch!" },
-        { status: res.status }
-      );
+      return Response.json({ error: "No part found" }, { status: 404 });
     }
 
     const data = await res.json();
 
-    // Save this data to metadata for future use (don't await to keep response fast)
     updateBrickMetadata(pieceId, data);
 
     return Response.json({

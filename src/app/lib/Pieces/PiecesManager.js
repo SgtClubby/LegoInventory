@@ -70,7 +70,16 @@ export async function fetchPartDetails(partId) {
       },
     });
 
+    if (res.status === 404) {
+      console.warn(`Part "${partId}" not found.`);
+      return null;
+    }
+
     if (!res.ok) {
+      console.log(
+        `Failed to fetch part details for "${partId}":`,
+        res.statusText
+      );
       throw new Error(`Failed to fetch part details: ${res.statusText}`);
     }
 
@@ -91,9 +100,19 @@ export async function fetchPartColors(partId) {
       },
     });
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch part colors: ${res.statusText}`);
+    if (res.status === 404) {
+      console.warn(`Part "${partId}" not found.`);
+      return null;
     }
+
+    if (!res.ok) {
+      console.log(
+        `Failed to fetch part details for "${partId}":`,
+        res.statusText
+      );
+      throw new Error(`Failed to fetch part details: ${res.statusText}`);
+    }
+
     const data = await res.json();
     if (data && data.length > 0) {
       return data;

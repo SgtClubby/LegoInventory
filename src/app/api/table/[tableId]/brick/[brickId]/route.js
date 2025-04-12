@@ -40,7 +40,15 @@ export async function PATCH(req, { params }) {
   const { brickId: uuid, tableId } = await params;
   const body = await req.json();
 
-  console.log("PATCH:", body);
+  console.log(`[PATCH] Received update for brick ${uuid} in table ${tableId}`);
+  // the body might have a long availableColors array, so i want to just snip it to max of 2 elemets in the available colors array
+  // and then stringify it to make it easier to read in the logs
+  const bodyCopy = { ...body };
+  if (bodyCopy.availableColors) {
+    bodyCopy.availableColors = bodyCopy.availableColors.slice(0, 2);
+    bodyCopy.availableColors.push("...");
+  }
+  console.log("[PATCH] Payload:", bodyCopy);
 
   if (!tableId) {
     return Response.json({ error: "Missing table ID" }, { status: 400 });
@@ -68,6 +76,13 @@ export async function PATCH(req, { params }) {
       } else {
         userUpdates[key] = value;
       }
+
+      // Handle special case for invalid flag
+      if (key["invalid"] === true) {
+        console.log("Invalid flag set to true, updating metadata");
+        userUpdates.invalid = value;
+        metadataUpdates.invalid = value;
+      }
     }
 
     // First, get the brick to update metadata if needed
@@ -77,7 +92,8 @@ export async function PATCH(req, { params }) {
         { elementId: 1 }
       );
 
-      if (brick) {
+      if (brick && !metadataUpdates.invalid) {
+        // Update metadata if the brick is valid
         operations.push(
           BrickMetadata.updateOne(
             { elementId: brick.elementId },
@@ -85,6 +101,9 @@ export async function PATCH(req, { params }) {
             { upsert: true }
           )
         );
+      } else {
+        // If the brick is invalid, we don't update metadata
+        console.log("Brick is invalid, skipping metadata update");
       }
     }
 

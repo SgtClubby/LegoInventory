@@ -33,6 +33,7 @@ export default function useInit() {
           console.log(`Fetching pieces for table ${firstTable.id}...`);
           const savedData = await fetchPiecesFromTable(firstTable.id);
           if (savedData) {
+            console.log(savedData);
             setPiecesByTable((prev) => ({
               ...prev,
               [firstTable.id]: savedData,

@@ -38,12 +38,19 @@ export default function ColorSelect({
     };
   }, []);
 
-  // When availablePieceColors changes from props, update local state
+  // When availablePieceColors changes from props, and check whenever the dropdown is opened
   useEffect(() => {
+    console.log("[ColorSelect] availablePieceColors:", availablePieceColors);
     if (availablePieceColors && availablePieceColors.length > 0) {
+      // If availablePieceColors is not empty, set it to localColors
+      console.log(
+        "[ColorSelect] availablePieceColors is not empty, setting localColors"
+      );
       setLocalColors(availablePieceColors);
+    } else {
+      setLocalColors([{ empty: true }]);
     }
-  }, [availablePieceColors]);
+  }, [availablePieceColors, isOpen]);
 
   // Check if colors need to be fetched
   const needToFetchColors =
@@ -70,7 +77,6 @@ export default function ColorSelect({
       }
 
       const data = await res.json();
-      console.log("Fetched colors:", data);
 
       // Update local state first for immediate UI update
       setLocalColors(data);
@@ -112,11 +118,16 @@ export default function ColorSelect({
 
   // Handle toggle dropdown
   const handleToggleDropdown = async () => {
-    const newIsOpen = !isOpen;
-    setIsOpen(newIsOpen);
+    setIsOpen(!isOpen);
 
     // Only fetch if we're opening the dropdown and don't have valid colors
-    if (newIsOpen && needToFetchColors) {
+    if (
+      isOpen &&
+      needToFetchColors &&
+      !isNew &&
+      piece.elementId &&
+      !availablePieceColors[0]?.empty
+    ) {
       await fetchAvailableColors();
     }
   };
@@ -193,15 +204,19 @@ export default function ColorSelect({
                 </div>
               ))}
             </div>
-          ) : needToFetchColors && !isNew ? (
-            <div className="px-4 py-4 text-sm text-center text-gray-400">
-              <button
-                onClick={fetchAvailableColors}
-                className="text-blue-400 hover:text-blue-300 underline"
-              >
-                Click to fetch available colors
-              </button>
-            </div>
+          ) : !needToFetchColors ? (
+            availablePieceColors[0]?.empty &&
+            !isNew &&
+            piece.elementId && (
+              <div className="px-4 py-4 text-sm text-center text-gray-400">
+                <button
+                  onClick={fetchAvailableColors}
+                  className="text-blue-400 hover:text-blue-300 underline"
+                >
+                  Click to fetch available colors
+                </button>
+              </div>
+            )
           ) : (
             <div className="px-4 py-2 text-sm text-center text-gray-400">
               <span>No colors available</span>

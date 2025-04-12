@@ -24,26 +24,14 @@ export async function GET(req, { params }) {
       {
         _id: 0,
         __v: 0,
+        "availableColors._id": 0,
       }
     );
 
     // Validate cache data
     if (ColorCache) {
-      const isAvailableColorMalformed = ColorCache.availableColors.some(
-        (color) =>
-          !color?.colorId ||
-          !color?.color ||
-          (color?.colorId === undefined && color?.color === undefined)
-      );
-
-      if (!isAvailableColorMalformed) {
-        console.log("HIT! Cache found for pieceId:", pieceId);
-
-        // Also update brick metadata with these colors if needed
-        updateBrickMetadataColors(pieceId, ColorCache.availableColors);
-
-        return Response.json(ColorCache.availableColors);
-      }
+      console.log("HIT! Cache found for pieceId:", pieceId);
+      return Response.json(ColorCache.availableColors);
     }
 
     // If not in cache or invalid, fetch from Rebrickable API
@@ -67,6 +55,10 @@ export async function GET(req, { params }) {
 
     const data = await res.json();
 
+    if (!data.results.length > 0) {
+      return Response.json({ error: "No colors found" }, { status: 404 });
+    }
+
     // Format the results consistently
     const formattedResults = data.results.map((item) => ({
       colorId: item.color_id,
@@ -74,24 +66,20 @@ export async function GET(req, { params }) {
       elementImage: item.part_img_url,
     }));
 
-    console.log("Data fetched from Rebrickable:", formattedResults);
-
     // Short delay to avoid race conditions
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Update both cache and metadata
-    await Promise.all([
-      BrickMetadata.updateOne(
-        { elementId: pieceId },
-        {
-          elementId: pieceId,
-          availableColors: formattedResults,
-        },
-        { upsert: true }
-      ),
-      updateBrickMetadataColors(pieceId, formattedResults),
-    ]);
+    // Update the cache with the new data
+    // Check if formattedResults is empty or null
+    // If it is, set the cache to null
+    // This is to avoid storing all the key-value pairs in the database for pices that dont exist
+    if (!formattedResults || formattedResults.length === 0) {
+      await updateBrickMetadata(null, formattedResults);
+    } else {
+      await updateBrickMetadata(pieceId, formattedResults);
+    }
 
+    // Update both cache and metadata
     console.log("MISS! Cache created for pieceId:", pieceId);
 
     return Response.json(formattedResults);
@@ -100,7 +88,6 @@ export async function GET(req, { params }) {
     return Response.json({ error: "Failed to fetch colors" }, { status: 500 });
   }
 }
-
 /**
  * Update brick metadata with color information
  *
@@ -108,7 +95,7 @@ export async function GET(req, { params }) {
  * @param {Array} colors - Array of color objects
  * @returns {Promise} Promise resolving to the database operation result
  */
-function updateBrickMetadataColors(pieceId, colors) {
+function updateBrickMetadata(pieceId, colors) {
   return BrickMetadata.updateOne(
     { elementId: pieceId },
     {

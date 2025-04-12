@@ -30,7 +30,7 @@ export async function addTable(name) {
       body: JSON.stringify({ name }),
     });
     const data = await res.json();
-    console.log(data);
+
     if (data.id) return data;
     if (data.error) {
       console.error(`Error adding table:`, data.error);

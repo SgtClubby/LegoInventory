@@ -7,7 +7,7 @@ export default function PieceImage({ piece, colBase, columnWidths }) {
   const { availableColors, elementName } = piece;
 
   const elementImage =
-    availableColors.find((color) => color.colorId == piece.elementColorId)
+    availableColors?.find((color) => color.colorId == piece.elementColorId)
       ?.elementImage || null;
   // Create image URL, with fallback handling
   const resizedImage = elementImage

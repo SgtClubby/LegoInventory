@@ -142,7 +142,7 @@ export async function fetchImageFromRebrickable(pieceId, colorId) {
     }
 
     const data = await res.json();
-    console.log("Fetched image data:", data);
+    
     return { part_img_url: data?.part_img_url || null, status: res.status };
   } catch (err) {
     console.error(

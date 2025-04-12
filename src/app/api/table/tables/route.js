@@ -31,7 +31,7 @@ export async function GET(req) {
       id: table.id,
       name: table.name,
     }));
-    console.log(data);
+    
     return Response.json(data);
   } catch (e) {
     console.error("Error fetching tables:", e);

@@ -1,7 +1,11 @@
 // src/app/api/table/[tableId]/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
-import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
+import {
+  UserBrick,
+  BrickMetadata,
+  addInvalidMetadataEntry,
+} from "@/lib/Mongo/Schema";
 
 /**
  * GET all bricks for a specific table with metadata included
@@ -12,6 +16,8 @@ import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
  */
 export async function GET(req, { params }) {
   await dbConnect();
+
+  addInvalidMetadataEntry();
 
   const ownerId = req.headers.get("ownerId") || "default";
   const { tableId } = await params;
@@ -55,21 +61,20 @@ export async function GET(req, { params }) {
     const completeBricks = userBricks.map((userBrick) => {
       const metadata = metadataMap[userBrick.elementId] || {};
 
-      // Find the matching color image if available
-      let brickImage = null;
-      if (metadata.availableColors && metadata.availableColors.length) {
-        const colorMatch = metadata.availableColors.find(
-          (c) => c.colorId === userBrick.elementColorId
-        );
-        if (colorMatch && colorMatch.elementImage) {
-          brickImage = colorMatch.elementImage;
-        }
+      if (userBrick.invalid) {
+        return {
+          ...userBrick,
+          elementColorId: null,
+          elementColor: null,
+          elementName: "Invalid/Missing ID",
+          availableColors: [{ empty: true }],
+        };
       }
 
       return {
         ...userBrick,
-        elementName: metadata.elementName || userBrick.elementName, // Fallback to any existing name during migration
-        availableColors: metadata.availableColors || userBrick.availableColors, // Fallback to any existing colors during migration
+        elementName: metadata.elementName,
+        availableColors: metadata.availableColors || [{ empty: true }],
       };
     });
 
