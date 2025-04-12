@@ -1,8 +1,7 @@
-// src/app/api/table/[tableId]/brick/[brickId]/route.js
+// \Users\Clomby\Projects\LegoInventory\src\app\api\table\[tableId]\brick\[brickId]\route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
 import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
-
 /**
  * DELETE a specific brick from a user's table
  *
@@ -62,6 +61,11 @@ export async function PATCH(req, { params }) {
     return Response.json({ error: "Missing body" }, { status: 400 });
   }
 
+  const pieceId = await UserBrick.findOne(
+    { uuid, tableId, ownerId },
+    { elementId: 1 }
+  ).then((result) => result.elementId);
+
   try {
     const operations = [];
 
@@ -78,10 +82,19 @@ export async function PATCH(req, { params }) {
       }
 
       // Handle special case for invalid flag
-      if (key["invalid"] === true) {
+      if (key === "invalid" && value === true) {
         console.log("Invalid flag set to true, updating metadata");
         userUpdates.invalid = value;
-        metadataUpdates.invalid = value;
+
+        // Only update metadata to invalid state if the element actually is invalid
+        // This prevents valid metadata from being marked invalid
+        const isActuallyInvalid = await _fetchPartDetails(pieceId)
+          .then((result) => !result || !result.name)
+          .catch(() => true);
+
+        if (isActuallyInvalid) {
+          metadataUpdates.invalid = value;
+        }
       }
     }
 
@@ -124,5 +137,38 @@ export async function PATCH(req, { params }) {
       { error: "Failed to update brick: " + e.message },
       { status: 500 }
     );
+  }
+}
+
+export async function _fetchPartDetails(pieceId) {
+  try {
+    const res = await fetch(
+      `https://rebrickable.com/api/v3/lego/parts/${pieceId}`,
+      {
+        headers: {
+          Authorization: `key ${process.env.REBRICKABLE_APIKEY}`,
+          "User-Agent":
+            "LegoInventoryBot/1.0 (+https://github.com/SgtClubby/LegoInventory)",
+        },
+      }
+    );
+
+    if (res.status === 404) {
+      console.warn(`Part "${pieceId}" not found.`);
+      return null;
+    }
+
+    if (!res.ok) {
+      console.log(
+        `Failed to fetch part details for "${pieceId}":`,
+        res.statusText
+      );
+      throw new Error(`Failed to fetch part details: ${res.statusText}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error(`Error fetching part details for "${pieceId}":`, err);
+    return null;
   }
 }

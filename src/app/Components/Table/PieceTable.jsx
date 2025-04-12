@@ -14,7 +14,6 @@ import TableDeleteModal from "../Modals/TableDeleteModal";
 import { useLego } from "@/Context/LegoContext";
 import { fetchPartDetails, fetchPartColors } from "@/lib/Pieces/PiecesManager";
 import VirtualTable from "./VirtualTable";
-import { fetchImageForPiece } from "@/lib/Pieces/Images/fetchImages";
 import colors from "@/Colors/colors.js";
 
 export default function PieceTable() {
@@ -120,8 +119,8 @@ export default function PieceTable() {
         clearUpdatingState(uuid);
         return false;
       }
-    }, 750),
-    [clearUpdatingState] // FIX: Add dependency
+    }, 450),
+    [clearUpdatingState]
   );
 
   /**
@@ -152,6 +151,8 @@ export default function PieceTable() {
     [setPiecesByTable]
   );
 
+  const requestIdentifier = useRef(0);
+
   /**
    * Handles updating a piece's properties with debouncing and special field handling
    *
@@ -162,6 +163,7 @@ export default function PieceTable() {
   const handleUpdatePiece = useCallback(
     async (uuid, field, value) => {
       // Check if we have a valid piece before proceeding
+      const currentRequestId = ++requestIdentifier.current;
       const tableId = selectedTable.id;
       const currentPiece = pieces.find((p) => p.uuid === uuid);
 
@@ -320,6 +322,13 @@ export default function PieceTable() {
           console.log(
             `[handleUpdatePiece] Fetching part details and colors for elementId: ${value}`
           );
+          if (currentRequestId !== requestIdentifier.current) {
+            console.log(
+              `[handleUpdatePiece] Aborting stale request ${currentRequestId}`
+            );
+            clearUpdatingState(uuid);
+            return;
+          }
           const partDetailsPromise = fetchPartDetails(value);
           const availableColorsPromise = fetchPartColors(value);
 
@@ -331,6 +340,14 @@ export default function PieceTable() {
             availableColorsPromise,
           ]);
 
+          // After receiving API responses, check again if this is still the latest request
+          if (currentRequestId !== requestIdentifier.current) {
+            console.log(
+              `[handleUpdatePiece] Ignoring stale response for request ${currentRequestId}`
+            );
+            clearUpdatingState(uuid);
+            return;
+          }
           console.log(
             `[handleUpdatePiece] Received part details:`,
             partDetails

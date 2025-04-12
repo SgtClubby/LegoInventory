@@ -59,6 +59,10 @@ export async function GET(req, { params }) {
       return Response.json({ error: "No part found" }, { status: 404 });
     }
 
+    if (res.status == 404) {
+      return Response.json({ error: "No part found" }, { status: 404 });
+    }
+
     const data = await res.json();
 
     updateBrickMetadata(pieceId, data);
@@ -85,12 +89,15 @@ export async function GET(req, { params }) {
  * @param {Object} data - Brick data from Rebrickable API
  */
 function updateBrickMetadata(partId, data) {
-  // We only update the name here, as the image URLs will be added when fetching colors
+  // Check if this is a valid part before updating
+  const isValid = data && data.name;
+
   BrickMetadata.updateOne(
     { elementId: partId },
     {
       $set: {
-        elementName: data.name,
+        elementName: isValid ? data.name : "Invalid/Missing ID",
+        invalid: !isValid, // Very important - set invalid flag correctly!
       },
       $setOnInsert: { elementId: partId },
     },
