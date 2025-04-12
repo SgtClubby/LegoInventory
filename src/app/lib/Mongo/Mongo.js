@@ -8,6 +8,9 @@ if (!process.env.MONGODB_URI || !process.env.MONGODB_DB) {
   );
 }
 
+const MONGODB_CONNECTION_STRING =
+  process.env.MONGODB_URI + process.env.MONGODB_DB + process.env.MONGODB_PARAMS;
+
 let cached = global.mongoose;
 
 if (!cached) {
@@ -18,11 +21,16 @@ async function dbConnect() {
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
+    console.log("Connecting to MongoDB...");
     cached.promise = mongoose
-      .connect(process.env.MONGODB_URI, {
+      .connect(MONGODB_CONNECTION_STRING, {
         bufferCommands: false,
       })
       .then((mongoose) => {
+        console.log("MongoDB connected");
+        mongoose.connection.on("error", (err) => {
+          console.error("MongoDB connection error:", err);
+        });
         return mongoose;
       });
   }

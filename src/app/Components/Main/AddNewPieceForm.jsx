@@ -1,4 +1,4 @@
-// src/app/components/Main/AddNewPieceForm.jsx
+// src/app/Components/Main/AddNewPieceForm.jsx
 
 // Icons
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
@@ -20,7 +20,6 @@ export default function AddNewPieceForm() {
   // ---------------------------
 
   const { setPiecesByTable, selectedTable } = useLego();
-
   // ---------------------------
   // Component state
   // ---------------------------
@@ -38,6 +37,8 @@ export default function AddNewPieceForm() {
     countComplete: false,
   });
 
+  const [image, setImage] = useState(null);
+
   // ---------------------------
   // Update newPiece when search result arrives
   // ---------------------------
@@ -49,11 +50,12 @@ export default function AddNewPieceForm() {
       setNewPiece((prev) => ({
         ...prev,
         uuid: uuidv4(),
-        elementImage: part_img_url,
         elementId: part_num,
         elementName: name,
         countComplete: false,
       }));
+
+      setImage(part_img_url);
 
       // Then fetch colors separately
       const fetchColors = async () => {
@@ -86,7 +88,14 @@ export default function AddNewPieceForm() {
   }, [searchNewPieceResult]);
 
   useEffect(() => {
-    if (newPiece.elementColorId && newPiece.elementId) {
+    if (
+      newPiece.elementColorId &&
+      newPiece.elementId &&
+      !newPiece.availableColors
+    ) {
+      console.log(
+        "No piece color metadata loaded... Fetching single image for elementId and elementColorId"
+      );
       const fetchImage = async () => {
         try {
           const response = await fetch(
@@ -96,16 +105,23 @@ export default function AddNewPieceForm() {
 
           console.log("Fetched image for new piece:", data);
           if (data.part_img_url) {
-            setNewPiece((prev) => ({
-              ...prev,
-              elementImage: data.part_img_url,
-            }));
+            setImage(data.part_img_url);
           }
         } catch (error) {
           console.error("Error fetching image:", error);
         }
       };
       fetchImage();
+    } else {
+      console.log(
+        "Fetching image fom availableColors for new piece with elementId and elementColorId"
+      );
+      const colorData = newPiece.availableColors.find(
+        (color) => color.colorId == newPiece.elementColorId
+      );
+      if (colorData) {
+        setImage(colorData.elementImage);
+      }
     }
   }, [newPiece.elementColorId, newPiece.elementId]);
 
@@ -159,7 +175,6 @@ export default function AddNewPieceForm() {
       elementColor: "",
       elementColorId: "",
       availableColors: [],
-      elementImage: "",
       elementQuantityOnHand: 0,
       elementQuantityRequired: 0,
       countComplete: false,
@@ -169,9 +184,9 @@ export default function AddNewPieceForm() {
   return (
     <>
       <div className="flex items-center ">
-        {!newPiece.elementImage ? null : (
+        {!image ? null : (
           <img
-            src={newPiece.elementImage || ""}
+            src={image || ""}
             alt={newPiece.elementName}
             className="w-14 h-14 rounded mb-2 mr-3"
           />
@@ -231,6 +246,9 @@ export default function AddNewPieceForm() {
               onChange={(colorName) => {
                 const colorId =
                   colors.find((c) => c.colorName === colorName)?.colorId || 0;
+                const colorImage = newPiece.availableColors.find(
+                  (c) => c.colorId === colorId
+                )?.part_img_url;
 
                 setNewPiece((prev) => ({
                   ...prev,

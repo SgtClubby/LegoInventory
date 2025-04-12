@@ -1,7 +1,7 @@
 // src/app/api/set/postProcessColor/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
-import { Brick, ColorCache } from "@/lib/Mongo/Schema";
+import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
 
 /**
  * Processes LEGO piece IDs to fetch and store their available colors
@@ -49,7 +49,7 @@ export async function POST(req) {
  */
 async function processPiecesInBatches(pieceIds, tableId, ownerId) {
   const BATCH_SIZE = 5;
-  const STANDARD_DELAY = 6000; // 5 seconds between normal batches
+  const STANDARD_DELAY = 6000; // 6 seconds between normal batches
   const RATE_LIMIT_DELAY = 120000; // 2 minutes when rate limited
 
   let batchDelay = STANDARD_DELAY;
@@ -86,9 +86,9 @@ async function processPiecesInBatches(pieceIds, tableId, ownerId) {
         (id) => !cachedPieceIds.includes(id)
       );
 
-      // Update database with cached results
+      // Update user bricks with cached results
       if (cachedResults.length > 0) {
-        await updateBricksWithCachedColors(cachedResults, tableId, ownerId);
+        await updateUserBricksWithCachedColors(cachedResults, tableId, ownerId);
         console.log(
           `Found ${cachedResults.length} pieces in cache of ${unprocessedBatch.length} in batch`
         );
@@ -141,7 +141,7 @@ async function processPiecesInBatches(pieceIds, tableId, ownerId) {
  */
 async function getColorCache(pieceIds) {
   try {
-    const cacheEntries = await ColorCache.find(
+    const cacheEntries = await BrickMetadata.find(
       { elementId: { $in: pieceIds } },
       { elementId: 1, availableColors: 1, _id: 0 }
     );
@@ -160,14 +160,19 @@ async function getColorCache(pieceIds) {
 }
 
 /**
- * Update bricks in database with cached color information
+ * Update user bricks in database with cached color information
  *
  * @param {Array} cachedResults - Array of cached color entries
  * @param {string} tableId - Table ID for the database query
  * @param {string} ownerId - Owner ID for the database query
  */
-async function updateBricksWithCachedColors(cachedResults, tableId, ownerId) {
+async function updateUserBricksWithCachedColors(
+  cachedResults,
+  tableId,
+  ownerId
+) {
   try {
+    // Also update the brick metadata for these pieces
     const updateOperations = cachedResults.map((cache) => ({
       updateOne: {
         filter: { elementId: cache.elementId, tableId, ownerId },
@@ -175,10 +180,25 @@ async function updateBricksWithCachedColors(cachedResults, tableId, ownerId) {
       },
     }));
 
+    const metadataOperations = cachedResults.map((cache) => ({
+      updateOne: {
+        filter: { elementId: cache.elementId },
+        update: {
+          $set: { availableColors: cache.availableColors },
+          $setOnInsert: { elementId: cache.elementId },
+        },
+        upsert: true,
+      },
+    }));
+
     if (updateOperations.length > 0) {
-      await Brick.bulkWrite(updateOperations);
+      await Promise.all([
+        UserBrick.bulkWrite(updateOperations),
+        BrickMetadata.bulkWrite(metadataOperations),
+      ]);
+
       console.log(
-        `Updated ${updateOperations.length} bricks with cached colors`
+        `Updated ${updateOperations.length} user bricks and metadata with cached colors`
       );
     }
   } catch (error) {
@@ -235,21 +255,19 @@ async function fetchColorsForPieces(pieceIds, tableId, ownerId) {
         availableColors: data.results.map((result) => ({
           colorId: result.color_id,
           color: result.color_name,
+          elementImage: result.part_img_url,
         })),
       };
 
-      // Save to cache and update brick
+      // Save to cache, update user brick, and update metadata
       await Promise.all([
-        // Update the brick document
-        Brick.updateOne(
-          { elementId: pieceId, tableId, ownerId },
-          { $set: { availableColors: colorData.availableColors } }
-        ),
-
-        // Save to cache (upsert to handle existing entries)
-        ColorCache.updateOne(
+        // Update brick metadata
+        BrickMetadata.updateOne(
           { elementId: pieceId },
-          { $set: colorData },
+          {
+            $set: { availableColors: colorData.availableColors },
+            $setOnInsert: { elementId: pieceId },
+          },
           { upsert: true }
         ),
       ]);

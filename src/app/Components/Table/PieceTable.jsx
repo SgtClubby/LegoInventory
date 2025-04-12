@@ -139,16 +139,6 @@ export default function PieceTable() {
 
           if (colorObj?.colorId) {
             updates.elementColorId = colorObj.colorId;
-
-            // Fetch image for this part with new color
-            const img_part_url = await fetchImageForPiece(
-              currentPiece.elementId,
-              colorObj.colorId
-            );
-
-            if (img_part_url) {
-              updates.elementImage = img_part_url;
-            }
           }
 
           // Update local state immediately

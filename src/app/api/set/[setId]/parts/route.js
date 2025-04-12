@@ -1,7 +1,7 @@
 // src/app/api/set/[setId]/parts/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
-import { ColorCache } from "@/lib/Mongo/Schema";
+import { BrickMetadata } from "@/lib/Mongo/Schema";
 
 /**
  * Fetch parts for a LEGO set, including cached color data if available
@@ -40,25 +40,41 @@ export async function GET(req, { params }) {
     ];
     console.log(`Set contains ${uniquePartIds.length} unique parts`);
 
-    // Step 3: Connect to database and look up color data from cache
+    // Step 3: Connect to database
     await dbConnect();
-    const colorData = await fetchCachedColorData(uniquePartIds);
+
+    // Step 4: Look up metadata and color data for all parts
+    const [colorData, metadataEntries] = await Promise.all([
+      fetchCachedColorData(uniquePartIds),
+      fetchExistingMetadata(uniquePartIds),
+    ]);
+
     console.log(
-      `Found color data for ${Object.keys(colorData).length} parts in cache`
+      `Found color data for ${
+        Object.keys(colorData).length
+      } parts in cache and metadata for ${metadataEntries.length} parts`
     );
 
-    // Step 4: Enhance results with color data
+    // Create a metadata lookup map
+    const metadataMap = {};
+    metadataEntries.forEach((entry) => {
+      metadataMap[entry.elementId] = entry;
+    });
+
+    // Step 5: Enhance results with color data and update metadata if needed
     const enhancedResults = results.map((item) => {
       const partId = item.part.part_num;
+      const result = { ...item };
+
       // Add availableColors from cache if we have it
       if (colorData[partId]) {
-        return {
-          ...item,
-          availableColors: colorData[partId],
-        };
+        result.availableColors = colorData[partId];
       }
-      // Otherwise return the original item
-      return item;
+
+      // Store/update metadata in the background (don't await to keep response fast)
+      updateBrickMetadata(partId, item.part.name, item.part.part_img_url);
+
+      return result;
     });
 
     // Calculate how many parts we found colors for
@@ -89,6 +105,46 @@ export async function GET(req, { params }) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Fetch existing metadata for bricks
+ *
+ * @param {string[]} partIds - Array of part IDs to look up
+ * @returns {Array} Array of metadata objects
+ */
+async function fetchExistingMetadata(partIds) {
+  try {
+    return await BrickMetadata.find(
+      { elementId: { $in: partIds } },
+      { _id: 0, elementId: 1, elementName: 1, elementImage: 1 }
+    ).lean();
+  } catch (error) {
+    console.error("Error fetching brick metadata:", error);
+    return [];
+  }
+}
+
+/**
+ * Update brick metadata in the background
+ *
+ * @param {string} partId - Brick element ID
+ * @param {string} name - Brick name
+ */
+function updateBrickMetadata(partId, name) {
+  // Don't await this to keep the response fast - run in background
+  BrickMetadata.updateOne(
+    { elementId: partId },
+    {
+      $set: {
+        elementName: name,
+      },
+      $setOnInsert: { elementId: partId },
+    },
+    { upsert: true }
+  ).catch((err) => {
+    console.error(`Error updating metadata for part ${partId}:`, err);
+  });
 }
 
 /**
@@ -158,7 +214,7 @@ async function fetchCachedColorData(partIds) {
 
   try {
     // Query the cache for all parts at once
-    const cacheEntries = await ColorCache.find(
+    const cacheEntries = await BrickMetadata.find(
       { elementId: { $in: partIds } },
       { _id: 0, elementId: 1, availableColors: 1 }
     ).lean();

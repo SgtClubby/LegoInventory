@@ -1,18 +1,25 @@
 // src/app/api/table/tables/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
-import { Brick, Table } from "@/lib/Mongo/Schema";
+import { UserBrick, Table } from "@/lib/Mongo/Schema";
 
+/**
+ * GET all tables for a user
+ *
+ * @param {Request} req - The request object
+ * @returns {Response} JSON response with tables data
+ */
 export async function GET(req) {
   await dbConnect();
 
   const ownerId = req.headers.get("ownerId") || "default";
 
   try {
-    const Tables = await Table.find({ ownerId });
+    const tables = await Table.find({ ownerId });
 
-    if (Tables.length === 0) {
-      Table.create({
+    // Create a default table if none exist
+    if (tables.length === 0) {
+      await Table.create({
         id: "1",
         name: "Main",
         ownerId,
@@ -20,35 +27,40 @@ export async function GET(req) {
       return Response.json([{ id: "1", name: "Main" }]);
     }
 
-    const data = Tables.map((table) => ({
+    const data = tables.map((table) => ({
       id: table.id,
       name: table.name,
     }));
-
+    console.log(data);
     return Response.json(data);
   } catch (e) {
-    return Response.json({ error: "Failed to fetch!" }, { status: 500 });
+    console.error("Error fetching tables:", e);
+    return Response.json({ error: "Failed to fetch tables" }, { status: 500 });
   }
 }
 
+/**
+ * POST a new table for a user
+ *
+ * @param {Request} req - The request object
+ * @returns {Response} JSON response with new table data
+ */
 export async function POST(req) {
   await dbConnect();
 
   const ownerId = req.headers.get("ownerId") || "default";
-
   const { name } = await req.json();
 
   if (!name) {
-    return Response.json({ error: "Missing table name!" }, { status: 400 });
+    return Response.json({ error: "Missing table name" }, { status: 400 });
   }
 
-  // make new table based on name, increment id, and set ownerId, only ids are unique, the can have the same name
   try {
-    const lastTable = await Table.findOne({ ownerId }).sort({
-      id: -1,
-    });
+    // Find the table with the highest ID for this user
+    const lastTable = await Table.findOne({ ownerId }).sort({ id: -1 });
     const newId = lastTable ? parseInt(lastTable.id) + 1 : 1;
 
+    // Create new table
     const newTable = new Table({
       id: newId.toString(),
       name,
@@ -56,31 +68,39 @@ export async function POST(req) {
     });
 
     await newTable.save();
-
     return Response.json({ id: newId.toString(), name });
   } catch (e) {
-    return Response.json({ error: "Failed to create table!" }, { status: 500 });
+    console.error("Error creating table:", e);
+    return Response.json({ error: "Failed to create table" }, { status: 500 });
   }
 }
 
+/**
+ * DELETE a table and all associated user bricks
+ *
+ * @param {Request} req - The request object
+ * @returns {Response} JSON response indicating success or failure
+ */
 export async function DELETE(req) {
   await dbConnect();
 
   const ownerId = req.headers.get("ownerId") || "default";
-
   const { id } = await req.json();
 
   if (!id) {
-    return Response.json({ error: "Missing table id!" }, { status: 400 });
+    return Response.json({ error: "Missing table ID" }, { status: 400 });
   }
 
   try {
-    await Table.deleteOne({ id, ownerId });
-    // Delete all bricks associated with this table
-    await Brick.deleteMany({ tableId: id, ownerId });
+    // Delete the table and all user bricks associated with it
+    await Promise.all([
+      Table.deleteOne({ id, ownerId }),
+      UserBrick.deleteMany({ tableId: id, ownerId }),
+    ]);
 
     return Response.json({ success: true });
   } catch (e) {
-    return Response.json({ error: "Failed to delete table!" }, { status: 500 });
+    console.error("Error deleting table:", e);
+    return Response.json({ error: "Failed to delete table" }, { status: 500 });
   }
 }

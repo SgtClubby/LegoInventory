@@ -1,11 +1,14 @@
-// src/app/components/Table/PieceRowColumns/PieceImage.jsx
+// src/app/Components/Table/PieceRowColumns/PieceImage.jsx
 import { useState, useEffect, useRef } from "react";
 
 export default function PieceImage({ piece, colBase, columnWidths }) {
   const [loaded, setLoaded] = useState(false);
   const imgRef = useRef(null);
-  const { elementImage, elementName } = piece;
+  const { availableColors, elementName } = piece;
 
+  const elementImage =
+    availableColors.find((color) => color.colorId == piece.elementColorId)
+      ?.elementImage || null;
   // Create image URL, with fallback handling
   const resizedImage = elementImage
     ? (elementImage + "/48x48p.jpg").replace("parts", "thumbs/parts")

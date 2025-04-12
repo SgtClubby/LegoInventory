@@ -1,8 +1,15 @@
 // src/app/api/table/[tableId]/brick/[brickId]/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
-import { Brick } from "@/lib/Mongo/Schema";
+import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
 
+/**
+ * DELETE a specific brick from a user's table
+ *
+ * @param {Request} req - The request object
+ * @param {Object} params - The route parameters containing tableId and brickId
+ * @returns {Response} JSON response indicating success or failure
+ */
 export async function DELETE(req, { params }) {
   await dbConnect();
 
@@ -10,13 +17,22 @@ export async function DELETE(req, { params }) {
   const { tableId, brickId: uuid } = await params;
 
   try {
-    await Brick.deleteOne({ uuid, tableId, ownerId });
+    // We only delete the user's brick instance, never the metadata
+    await UserBrick.deleteOne({ uuid, tableId, ownerId });
     return Response.json({ success: true });
   } catch (e) {
-    return Response.json({ error: "Failed to delete bricks" }, { status: 500 });
+    console.error("Error deleting brick:", e);
+    return Response.json({ error: "Failed to delete brick" }, { status: 500 });
   }
 }
 
+/**
+ * PATCH/update a specific brick in a user's table
+ *
+ * @param {Request} req - The request object
+ * @param {Object} params - The route parameters containing tableId and brickId
+ * @returns {Response} JSON response indicating success or failure
+ */
 export async function PATCH(req, { params }) {
   await dbConnect();
 
@@ -39,9 +55,55 @@ export async function PATCH(req, { params }) {
   }
 
   try {
-    await Brick.updateOne({ uuid, tableId, ownerId }, { $set: body });
+    const operations = [];
+
+    // Separate user-specific updates and metadata updates
+    const userUpdates = {};
+    const metadataUpdates = {};
+
+    // Determine which fields belong to which schema
+    for (const [key, value] of Object.entries(body)) {
+      if (["elementName", "availableColors"].includes(key)) {
+        metadataUpdates[key] = value;
+      } else {
+        userUpdates[key] = value;
+      }
+    }
+
+    // First, get the brick to update metadata if needed
+    if (Object.keys(metadataUpdates).length > 0) {
+      const brick = await UserBrick.findOne(
+        { uuid, tableId, ownerId },
+        { elementId: 1 }
+      );
+
+      if (brick) {
+        operations.push(
+          BrickMetadata.updateOne(
+            { elementId: brick.elementId },
+            { $set: metadataUpdates },
+            { upsert: true }
+          )
+        );
+      }
+    }
+
+    // Update user-specific data if needed
+    if (Object.keys(userUpdates).length > 0) {
+      operations.push(
+        UserBrick.updateOne({ uuid, tableId, ownerId }, { $set: userUpdates })
+      );
+    }
+
+    // Execute all operations in parallel
+    await Promise.all(operations);
+
     return Response.json({ success: true });
   } catch (e) {
-    return Response.json({ error: "Failed to update bricks" }, { status: 500 });
+    console.error("Error updating brick:", e);
+    return Response.json(
+      { error: "Failed to update brick: " + e.message },
+      { status: 500 }
+    );
   }
 }

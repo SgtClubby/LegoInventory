@@ -1,8 +1,15 @@
 // src/app/api/table/[tableId]/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
-import { Brick } from "@/lib/Mongo/Schema";
+import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
 
+/**
+ * GET all bricks for a specific table with metadata included
+ *
+ * @param {Request} req - The request object
+ * @param {Object} params - The route parameters containing tableId
+ * @returns {Response} JSON response with bricks data
+ */
 export async function GET(req, { params }) {
   await dbConnect();
 
@@ -14,20 +21,72 @@ export async function GET(req, { params }) {
   }
 
   try {
-    const bricks = await Brick.find(
+    // Get user-specific brick data
+    const userBricks = await UserBrick.find(
       { tableId, ownerId },
       {
         __v: 0,
         _id: 0,
         updatedAt: 0,
       }
-    );
-    return Response.json(bricks);
+    ).lean();
+
+    // Extract unique element IDs to fetch metadata efficiently
+    const elementIds = [...new Set(userBricks.map((brick) => brick.elementId))];
+
+    // Fetch metadata for all needed bricks in a single query
+    const brickMetadataList = await BrickMetadata.find(
+      { elementId: { $in: elementIds } },
+      {
+        _id: 0,
+        __v: 0,
+        createdAt: 0,
+        updatedAt: 0,
+      }
+    ).lean();
+
+    // Create a lookup map for faster access
+    const metadataMap = {};
+    brickMetadataList.forEach((meta) => {
+      metadataMap[meta.elementId] = meta;
+    });
+
+    // Combine user data with metadata
+    const completeBricks = userBricks.map((userBrick) => {
+      const metadata = metadataMap[userBrick.elementId] || {};
+
+      // Find the matching color image if available
+      let brickImage = null;
+      if (metadata.availableColors && metadata.availableColors.length) {
+        const colorMatch = metadata.availableColors.find(
+          (c) => c.colorId === userBrick.elementColorId
+        );
+        if (colorMatch && colorMatch.elementImage) {
+          brickImage = colorMatch.elementImage;
+        }
+      }
+
+      return {
+        ...userBrick,
+        elementName: metadata.elementName || userBrick.elementName, // Fallback to any existing name during migration
+        availableColors: metadata.availableColors || userBrick.availableColors, // Fallback to any existing colors during migration
+      };
+    });
+
+    return Response.json(completeBricks);
   } catch (e) {
+    console.error("Error fetching bricks:", e);
     return Response.json({ error: "Failed to fetch bricks" }, { status: 500 });
   }
 }
 
+/**
+ * POST new bricks to a table
+ *
+ * @param {Request} req - The request object
+ * @param {Object} params - The route parameters containing tableId
+ * @returns {Response} JSON response indicating success or failure
+ */
 export async function POST(req, { params }) {
   await dbConnect();
 
@@ -43,15 +102,59 @@ export async function POST(req, { params }) {
   const bricks = Array.isArray(body) ? body : [body];
 
   try {
-    const docs = bricks.map((b) => ({
-      ...b,
-      tableId,
-      ownerId,
-    }));
+    const bricksToInsert = [];
+    const metadataToUpsert = [];
 
-    await Brick.insertMany(docs);
+    // Process each brick to separate user data from metadata
+    for (const brick of bricks) {
+      // Prepare user-specific brick data
+      bricksToInsert.push({
+        uuid: brick.uuid,
+        elementId: brick.elementId,
+        elementColorId: brick.elementColorId,
+        elementColor: brick.elementColor,
+        elementQuantityOnHand: brick.elementQuantityOnHand || 0,
+        elementQuantityRequired: brick.elementQuantityRequired || 0,
+        countComplete: brick.countComplete || false,
+        tableId,
+        ownerId,
+      });
+
+      // Prepare brick metadata for upsert
+      metadataToUpsert.push({
+        updateOne: {
+          filter: { elementId: brick.elementId },
+          update: {
+            $set: {
+              elementName: brick.elementName,
+            },
+            // Only update availableColors if provided and not empty
+            ...(brick.availableColors && brick.availableColors.length > 0
+              ? {
+                  $setOnInsert: { availableColors: brick.availableColors },
+                }
+              : {}),
+          },
+          upsert: true,
+        },
+      });
+    }
+
+    // Perform operations in parallel for efficiency
+    await Promise.all([
+      UserBrick.insertMany(bricksToInsert),
+      // Only do the metadata bulkWrite if we have operations
+      metadataToUpsert.length > 0
+        ? BrickMetadata.bulkWrite(metadataToUpsert)
+        : Promise.resolve(),
+    ]);
+
     return Response.json({ success: true });
   } catch (e) {
-    return Response.json({ error: "Failed to save bricks" }, { status: 500 });
+    console.error("Error saving bricks:", e);
+    return Response.json(
+      { error: "Failed to save bricks: " + e.message },
+      { status: 500 }
+    );
   }
 }
