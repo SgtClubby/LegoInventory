@@ -20,21 +20,7 @@ export default function PieceID({
   // Handle local changes without immediately updating parent
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
-  };
-
-  // Only update parent component when editing is complete
-  const handleBlur = () => {
-    // Only trigger update if value actually changed
-    if (inputValue !== piece.elementId) {
-      onChange(originalId, "elementId", inputValue);
-    }
-  };
-
-  // Also update on Enter key
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.target.blur(); // Will trigger onBlur
-    }
+    onChange(originalId, "elementId", e.target.value);
   };
 
   return (
@@ -43,8 +29,6 @@ export default function PieceID({
         type="text"
         value={inputValue}
         onChange={handleInputChange}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
         className="w-full bg-transparent border-0 focus:border-blue-500 focus:ring-0 text-gray-200"
       />
     </div>
