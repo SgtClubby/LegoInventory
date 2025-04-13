@@ -284,6 +284,34 @@ export default function VirtualTable({
     });
   }, [virtualRows, pieces, onChange, handleDeleteInitiate, isUpdating]);
 
+  // Mobile card view for small screens
+  const MobileCardView = () => (
+    <div className="switch:hidden space-y-3 p-2">
+      {pieces.length > 0 ? (
+        pieces.map((piece) => (
+          <PieceRow
+            key={piece.uuid}
+            piece={piece}
+            originalId={piece.uuid}
+            onChange={onChange}
+            columns={columns}
+            onDelete={handleDeleteInitiate}
+            isUpdating={isUpdating(piece.uuid)}
+          />
+        ))
+      ) : (
+        <EmptyState />
+      )}
+
+      {pieces.length > 50 && (
+        <div className="text-center p-3 text-slate-400">
+          Showing 50 of {pieces.length} pieces. Use filters to narrow down
+          results.
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <div className="bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-slate-700 w-full h-full">
@@ -312,25 +340,7 @@ export default function VirtualTable({
         </div>
 
         {/* Mobile Card View */}
-        <div className="switch:hidden space-y-3 p-2">
-          <div
-            ref={tableContainerRef}
-            style={{ height: `${containerHeight}px` }}
-          >
-            {pieces.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <div
-                className="relative w-full"
-                style={{
-                  height: `${rowVirtualizer.getTotalSize()}px`,
-                }}
-              >
-                {renderedRows}
-              </div>
-            )}
-          </div>
-        </div>
+        <MobileCardView />
       </div>
 
       {/* Delete Confirmation Modal */}
