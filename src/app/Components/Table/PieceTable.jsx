@@ -1,20 +1,23 @@
 // src/app/Components/Table/PieceTable.jsx
 import { useState, useMemo, useCallback, useRef } from "react";
-import { add, debounce, set } from "lodash";
-
-// Icons
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { debounce } from "lodash";
 
 // Components
-import SearchPiece from "@/Components/Search/SearchPiece";
 import { addTable, deleteTable } from "@/lib/Table/TableManager";
-import TableAddModal from "../Modals/TableAddModal";
-import TableDeleteModal from "../Modals/TableDeleteModal";
 import { useLego } from "@/Context/LegoContext";
 import { fetchPartDetails, fetchPartColors } from "@/lib/Pieces/PiecesManager";
-import VirtualTable from "./VirtualTable";
 import colors from "@/Colors/colors.js";
+import TableAddModal from "@/Components/Modals/TableAddModal";
+import TableDeleteModal from "@/Components/Modals/TableDeleteModal";
+import VirtualTable from "@/Components/Table/VirtualTable";
+import SearchPiece from "../Search/SearchPiece";
+import {
+  Add,
+  AddRounded,
+  DeleteForever,
+  ExpandMoreRounded,
+} from "@mui/icons-material";
+import FilterTabs from "../Misc/FilterTabs";
 
 export default function PieceTable() {
   const {
@@ -26,28 +29,29 @@ export default function PieceTable() {
     setPiecesByTable,
   } = useLego();
 
+  // State management
   const [showAddModal, setAddShowModal] = useState(false);
   const [showDeleteModal, setDeleteShowModal] = useState(false);
   const [newTableName, setNewTableName] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
-    key: null,
+    key: "elementName",
     direction: "ascending",
   });
+  const pendingUpdatesRef = useRef(new Map());
+  const [updatingPieces, setUpdatingPieces] = useState(new Set());
+  const requestIdentifier = useRef(0);
+
+  // Active view state
+  const [activeView, setActiveView] = useState("all"); // "all", "incomplete", "complete"
 
   // Memoized current pieces for selected table
   const pieces = useMemo(() => {
     return piecesByTable[selectedTable?.id] || [];
   }, [piecesByTable, selectedTable?.id]);
 
-  // Update state management
-  const pendingUpdatesRef = useRef(new Map());
-  const [updatingPieces, setUpdatingPieces] = useState(new Set());
-
   /**
    * Helper function to clear updating state for a piece
-   *
-   * @param {string} uuid - The UUID of the piece to remove from updating state
    */
   const clearUpdatingState = useCallback((uuid) => {
     setUpdatingPieces((prev) => {
@@ -59,24 +63,17 @@ export default function PieceTable() {
 
   /**
    * Helper function to mark a piece as updating
-   *
-   * @param {string} uuid - The UUID of the piece to add to updating state
    */
   const setUpdatingState = useCallback((uuid) => {
     setUpdatingPieces((prev) => {
       const newSet = new Set(prev);
-      newSet.add(uuid); // FIX: This should ADD the UUID, not delete it
+      newSet.add(uuid);
       return newSet;
     });
   }, []);
 
   /**
    * Updates a piece in the database with debouncing
-   *
-   * @param {string} uuid - The UUID of the piece to update
-   * @param {string} tableId - The ID of the table containing the piece
-   * @param {Object} updates - The properties to update
-   * @returns {Promise<boolean>} True if update was successful
    */
   const updatePieceInDb = useCallback(
     debounce(async (uuid, tableId, updates) => {
@@ -89,22 +86,11 @@ export default function PieceTable() {
           body: JSON.stringify(updates),
         });
 
-        console.warn(
-          "[updatePieceInDb] Response status: Updated piece: ",
-          uuid
-        );
-
         if (!response.ok) {
           throw new Error(
             `Failed to update piece: ${response.status} ${response.statusText}`
           );
         }
-
-        // Update local state with the new piece data
-        console.warn(
-          "[updatePieceInDb] Successfully updated piece in local state: ",
-          uuid
-        );
 
         // Remove from pending updates after successful save
         const updateKey = `${tableId}-${uuid}`;
@@ -125,10 +111,6 @@ export default function PieceTable() {
 
   /**
    * Updates piece in local state immediately for responsive UI
-   *
-   * @param {string} uuid - The UUID of the piece to update
-   * @param {string} tableId - The ID of the table containing the piece
-   * @param {Object} updates - The properties to update
    */
   const updateLocalPiece = useCallback(
     (uuid, tableId, updates) => {
@@ -151,93 +133,50 @@ export default function PieceTable() {
     [setPiecesByTable]
   );
 
-  const requestIdentifier = useRef(0);
-
   /**
    * Handles updating a piece's properties with debouncing and special field handling
-   *
-   * @param {string} uuid - The UUID of the piece to update
-   * @param {string} field - The field to update
-   * @param {any} value - The new value for the field
    */
   const handleUpdatePiece = useCallback(
     async (uuid, field, value) => {
-      // Check if we have a valid piece before proceeding
       const currentRequestId = ++requestIdentifier.current;
       const tableId = selectedTable.id;
       const currentPiece = pieces.find((p) => p.uuid === uuid);
 
-      console.log(
-        `[handleUpdatePiece] Starting update for piece ${uuid}, field: ${field}, value:`,
-        value
-      );
-      console.log(`[handleUpdatePiece] Table ID: ${tableId}`);
-      console.log("[handleUpdatePiece] Current piece:", currentPiece);
-
-      if (!currentPiece) {
-        console.log(
-          `[handleUpdatePiece] Piece ${uuid} not found in current pieces, aborting update`
-        );
-        return;
-      }
+      if (!currentPiece) return;
 
       // Mark piece as updating
-      console.log(`[handleUpdatePiece] Marking piece ${uuid} as updating`);
       setUpdatingState(uuid);
 
       // Cancel any pending updates for this piece
       if (updatePieceInDb.cancel) {
-        console.warn(
-          `[handleUpdatePiece] Cancelling any pending debounced updates`
-        );
         updatePieceInDb.cancel();
       }
 
       // Special case for elementId, set to "0" if empty
       if (field === "elementId" && (!value || value.length === 0)) {
-        // FIX: Correct equality check
-        console.log(
-          `[handleUpdatePiece] Empty elementId value, setting to "0"`
-        );
         value = "0";
       }
 
       // Create update payload
       const updates = { [field]: value };
-      console.log(`[handleUpdatePiece] Initial update payload:`, updates);
 
       // Preserve invalid state if present
       if (currentPiece.invalid === true) {
-        // FIX: Correct equality check
         updates.invalid = true;
       }
 
       // Special field handling
       if (field === "elementColor") {
-        console.warn(
-          `[handleUpdatePiece] Special handling for elementColor field`
-        );
         // When color changes, we need to update both the color name and ID
         const colorObj = colors.find((c) => c.colorName === value);
-        console.log(`[handleUpdatePiece] Found color object:`, colorObj);
         if (colorObj) {
           updates.elementColorId = colorObj.colorId;
-          console.log(
-            `[handleUpdatePiece] Adding elementColorId: ${colorObj.colorId} to updates`
-          );
         }
       } else if (field === "elementColorId") {
-        console.warn(
-          `[handleUpdatePiece] Special handling for elementColorId field`
-        );
         // Similarly, when ID changes, update the color name too
         const colorObj = colors.find((c) => c.colorId === value);
-        console.log(`[handleUpdatePiece] Found color object:`, colorObj);
         if (colorObj) {
           updates.elementColor = colorObj.colorName;
-          console.log(
-            `[handleUpdatePiece] Adding elementColor: ${colorObj.colorName} to updates`
-          );
         }
       }
 
@@ -245,10 +184,6 @@ export default function PieceTable() {
         field === "elementQuantityOnHand" ||
         field === "elementQuantityRequired"
       ) {
-        console.warn(
-          `[handleUpdatePiece] Special handling for quantity fields`
-        );
-
         const onHand =
           field === "elementQuantityOnHand"
             ? value
@@ -259,82 +194,39 @@ export default function PieceTable() {
             ? value
             : currentPiece.elementQuantityRequired;
 
-        console.log(
-          `[handleUpdatePiece] Quantity calculation - onHand: ${onHand}, required: ${required}`
-        );
-
         updates.countComplete = required === 0 ? null : onHand >= required;
-        console.log(
-          `[handleUpdatePiece] Setting countComplete to: ${updates.countComplete}`
-        );
       }
 
       // Generate a unique key for this update
       const updateKey = `${tableId}-${uuid}`;
-      console.log(`[handleUpdatePiece] Generated update key: ${updateKey}`);
 
       // Store the full intended state in the pending updates map
-      // This ensures we know the complete desired state for this piece
       const previousUpdates = pendingUpdatesRef.current.get(updateKey) || {};
-      console.log(
-        `[handleUpdatePiece] Previous pending updates:`,
-        previousUpdates
-      );
-
       const mergedUpdates = { ...previousUpdates, ...updates };
-      console.log(
-        `[handleUpdatePiece] Merged updates (previous + current):`,
-        mergedUpdates
-      );
-
       pendingUpdatesRef.current.set(updateKey, mergedUpdates);
-      console.log(
-        `[handleUpdatePiece] Stored merged updates in pendingUpdatesRef`
-      );
 
       // Update local state immediately for responsive UI
-      console.log(
-        `[handleUpdatePiece] Updating local state for immediate UI response`
-      );
       updateLocalPiece(uuid, tableId, updates);
 
       // Schedule database update for the combined state
-      console.log(`[handleUpdatePiece] Scheduling debounced database update`);
       updatePieceInDb(uuid, tableId, mergedUpdates);
 
       // Handle special cases that need additional API calls
       if (field === "elementId") {
-        console.warn(
-          `[handleUpdatePiece] Special handling for elementId field`
-        );
-
         try {
           // Fetch part details in parallel
           if (!value || value.length === 0) {
-            // FIX: Correct equality check
-            // Set to ID 0 if empty, to avoid API errors
-            console.log(
-              `[handleUpdatePiece] Empty elementId value, setting to "0"`
-            );
             value = "0";
           }
 
-          console.log(
-            `[handleUpdatePiece] Fetching part details and colors for elementId: ${value}`
-          );
           if (currentRequestId !== requestIdentifier.current) {
-            console.log(
-              `[handleUpdatePiece] Aborting stale request ${currentRequestId}`
-            );
             clearUpdatingState(uuid);
             return;
           }
+
           const partDetailsPromise = fetchPartDetails(value);
           const availableColorsPromise = fetchPartColors(value);
 
-          console.log(
-            `[handleUpdatePiece] Waiting for part details and colors API responses`
-          );
           const [partDetails, availableColors] = await Promise.all([
             partDetailsPromise,
             availableColorsPromise,
@@ -342,44 +234,20 @@ export default function PieceTable() {
 
           // After receiving API responses, check again if this is still the latest request
           if (currentRequestId !== requestIdentifier.current) {
-            console.log(
-              `[handleUpdatePiece] Ignoring stale response for request ${currentRequestId}`
-            );
             clearUpdatingState(uuid);
             return;
           }
-          console.log(
-            `[handleUpdatePiece] Received part details:`,
-            partDetails
-          );
-          console.log(
-            `[handleUpdatePiece] Received available colors:`,
-            availableColors
-          );
 
           const additionalUpdates = {};
-          console.log(
-            `[handleUpdatePiece] Preparing additional updates based on API responses`
-          );
-
-          console.log("[handleUpdatePiece] current update", updates);
 
           // Update name if available
           if (partDetails?.name) {
             additionalUpdates.elementName = partDetails.name;
             if (updates.invalid) additionalUpdates.invalid = false;
-
-            console.log(
-              `[handleUpdatePiece] Setting elementName to: ${partDetails.name}`
-            );
           } else {
             // Only update to "Invalid/Missing ID" if it's not already that value
             if (currentPiece.elementName !== "Invalid/Missing ID") {
-              // FIX: Correct condition
               additionalUpdates.elementName = "Invalid/Missing ID";
-              console.log(
-                `[handleUpdatePiece] Setting elementName to: "Invalid/Missing ID"`
-              );
             }
             if (!updates.invalid) additionalUpdates.invalid = true;
           }
@@ -387,9 +255,6 @@ export default function PieceTable() {
           // Update available colors if found
           if (availableColors?.length > 0) {
             additionalUpdates.availableColors = availableColors;
-            console.log(
-              `[handleUpdatePiece] Setting availableColors with ${availableColors.length} colors`
-            );
 
             // Check if current color exists in available colors
             const currentColorExists = availableColors.some(
@@ -398,27 +263,14 @@ export default function PieceTable() {
                 c.color === currentPiece.elementColor
             );
 
-            console.log(
-              `[handleUpdatePiece] Current color exists in available colors: ${currentColorExists}`
-            );
-
             // If current color isn't available, select the first one
             if (!currentColorExists && availableColors.length > 0) {
               additionalUpdates.elementColor = availableColors[0].color;
               additionalUpdates.elementColorId = availableColors[0].colorId;
-              console.log(
-                `[handleUpdatePiece] Current color not available, selecting first available color: ${availableColors[0].color} (ID: ${availableColors[0].colorId})`
-              );
             }
           } else {
             // We have fetched an invalid ID, so set colors to reflect this
-            console.log(
-              `[handleUpdatePiece] No available colors found for elementId: ${value}`
-            );
-
-            // Only update if current available colors don't have an empty property
             if (!currentPiece.availableColors?.[0]?.empty) {
-              // FIX: Add optional chaining
               additionalUpdates.availableColors = [{ empty: true }];
             }
 
@@ -430,86 +282,48 @@ export default function PieceTable() {
               additionalUpdates.elementColorId = null;
               additionalUpdates.elementColor = null;
             }
-
-            console.log(
-              `[handleUpdatePiece] No available colors found, setting empty color values`
-            );
           }
 
           // If we have additional updates, apply them
           if (Object.keys(additionalUpdates).length > 0) {
-            console.log(
-              `[handleUpdatePiece] Have ${
-                Object.keys(additionalUpdates).length
-              } additional updates to apply`
-            );
-
             // Get the latest pending updates for this piece
             const currentUpdates =
               pendingUpdatesRef.current.get(updateKey) || {};
-            console.log(
-              `[handleUpdatePiece] Current pending updates:`,
-              currentUpdates
-            );
-
             const finalUpdates = { ...currentUpdates, ...additionalUpdates };
-            console.log(
-              `[handleUpdatePiece] Final updates (current + additional):`,
-              finalUpdates
-            );
-
             pendingUpdatesRef.current.set(updateKey, finalUpdates);
-            console.log(
-              `[handleUpdatePiece] Stored final updates in pendingUpdatesRef`
-            );
 
             // Update local state first
-            console.log(
-              `[handleUpdatePiece] Updating local state with additional updates`
-            );
             updateLocalPiece(uuid, tableId, additionalUpdates);
 
             // Send update to database with all accumulated changes
-            console.log(
-              `[handleUpdatePiece] Sending update to database with all changes`
-            );
             updatePieceInDb(uuid, tableId, finalUpdates);
           } else {
-            console.log(`[handleUpdatePiece] No additional updates needed`);
             // Make sure we clear the updating state since we're done
             clearUpdatingState(uuid);
           }
         } catch (error) {
-          console.error(
-            `[handleUpdatePiece] Error handling elementId update:`,
-            error
-          );
+          console.error("Error handling elementId update:", error);
           // Ensure we clear the updating state on error
           clearUpdatingState(uuid);
         }
-      } else {
-        // For non-elementId updates, we need to make sure updating state is cleared eventually
-        // The debounced updatePieceInDb will handle this when it completes
       }
-
-      console.log(
-        `[handleUpdatePiece] Completed update process for piece ${uuid}, field: ${field}`
-      );
     },
     [
       pieces,
       selectedTable,
-      colors, // FIX: Add missing dependency
+      colors,
       updateLocalPiece,
       updatePieceInDb,
-      setUpdatingState, // FIX: Add missing dependency
-      clearUpdatingState, // FIX: Add missing dependency
-      fetchPartDetails, // FIX: Add missing dependency
-      fetchPartColors, // FIX: Add missing dependency
+      setUpdatingState,
+      clearUpdatingState,
+      fetchPartDetails,
+      fetchPartColors,
     ]
   );
 
-  // Handle deleting a piece
+  /**
+   * Handles deleting a piece
+   */
   const handleDeletePiece = useCallback(
     async (uuid) => {
       if (!confirm("Are you sure you want to delete this piece?")) return;
@@ -564,7 +378,8 @@ export default function PieceTable() {
   const handleDeleteTable = () => setDeleteShowModal(true);
 
   const handleAddModalSubmit = async () => {
-    const newId = Math.max(...availableTables.map((t) => t.id)) + 1;
+    const newId =
+      Math.max(...availableTables.map((t) => Number(t.id) || 0)) + 1;
     const newTable = {
       id: newId.toString(),
       name: newTableName || `Table ${newId}`,
@@ -584,7 +399,9 @@ export default function PieceTable() {
     setAvailableTables(updatedTables);
     deleteTable(selectedTable.id);
     setDeleteShowModal(false);
-    setSelectedTable(updatedTables.find((t) => t.id === "1") || null);
+    setSelectedTable(
+      updatedTables.find((t) => t.id === "1") || updatedTables[0] || null
+    );
     setPiecesByTable((prev) => {
       const { [selectedTable.id]: _, ...rest } = prev;
       return rest;
@@ -592,7 +409,7 @@ export default function PieceTable() {
   };
 
   // Sorting function
-  const sort = (key) => {
+  const handleSort = (key) => {
     let direction = "ascending";
     if (sortConfig.key === key && sortConfig.direction === "ascending") {
       direction = "descending";
@@ -600,117 +417,195 @@ export default function PieceTable() {
     setSortConfig({ key, direction });
   };
 
-  // Filter pieces based on search term
+  // Filter pieces based on search term and active view
   const filteredPieces = useMemo(() => {
-    if (!debouncedSearchTerm) return pieces;
+    let filteredByStatus = pieces;
 
-    const lower = debouncedSearchTerm.toLowerCase();
-    const regex = new RegExp(
-      lower
-        .split(" ")
-        .map((word) => `(?=.*${word})`)
-        .join(""),
-      "i"
-    );
+    // First filter by status
+    if (activeView === "complete") {
+      filteredByStatus = pieces.filter((piece) => piece.countComplete === true);
+    } else if (activeView === "incomplete") {
+      filteredByStatus = pieces.filter(
+        (piece) => piece.countComplete === false
+      );
+    }
 
-    return pieces.filter(
+    // Then filter by search term
+    if (!searchTerm) return filteredByStatus;
+
+    const lower = searchTerm.toLowerCase();
+
+    return filteredByStatus.filter(
       (piece) =>
-        regex.test(piece.elementName) ||
-        regex.test(piece.elementId.toString()) ||
-        regex.test(piece.elementColor)
+        piece.elementName?.toLowerCase().includes(lower) ||
+        piece.elementId?.toString().includes(lower) ||
+        piece.elementColor?.toLowerCase().includes(lower)
     );
-  }, [pieces, debouncedSearchTerm]);
+  }, [pieces, searchTerm, activeView]);
 
   // Apply sorting to filtered pieces
   const sortedPieces = useMemo(() => {
     if (!sortConfig.key) return filteredPieces;
 
     return [...filteredPieces].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      // Handle null values
+      if (aValue === null && bValue === null) return 0;
+      if (aValue === null) return 1;
+      if (bValue === null) return -1;
+
+      // Compare values
+      if (aValue < bValue) {
         return sortConfig.direction === "ascending" ? -1 : 1;
       }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
+      if (aValue > bValue) {
         return sortConfig.direction === "ascending" ? 1 : -1;
       }
       return 0;
     });
   }, [filteredPieces, sortConfig]);
 
-  return (
-    <div>
-      <div className="bg-slate-700 rounded-lg shadow overflow-hidden">
-        <div className="flex items-center justify-between p-4 bg-slate-800 border-b">
-          {/* Table control header (Table select / Piece search) */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
-            {/* Search input - full width on mobile, fits in row on md+ */}
-            <div className="flex-1 w-full md:max-w-[320px]">
-              <SearchPiece
-                setSearchTerm={setDebouncedSearchTerm}
-                searchTerm={debouncedSearchTerm}
-              />
-            </div>
+  // Stats
+  const stats = useMemo(() => {
+    const total = pieces.length;
+    const complete = pieces.filter((p) => p.countComplete === true).length;
+    const incomplete = pieces.filter((p) => p.countComplete === false).length;
+    const general = total - complete - incomplete;
 
-            {/* Grouped table controls */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap">
-              {/* Label + Select Table */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <label
-                  htmlFor="tableSelect"
-                  className="text-gray-100 whitespace-nowrap"
-                >
-                  Select Table:
-                </label>
+    return { total, complete, incomplete, general };
+  }, [pieces]);
+
+  return (
+    <div className="space-y-6">
+      {/* Control Panel */}
+      <div className="bg-slate-800 rounded-xl shadow-lg  border border-slate-700">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-end gap-6">
+            {/* Table Selection */}
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-white">
+                  {selectedTable ? selectedTable.name : "Select a Table"}
+                </h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAddTable}
+                    className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                    title="Add Table"
+                  >
+                    <AddRounded className="" fontSize="medium" />
+                  </button>
+
+                  {selectedTable?.id > 1 && (
+                    <button
+                      onClick={handleDeleteTable}
+                      className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md transition-all"
+                      title="Delete Table"
+                    >
+                      <DeleteForever className="" fontSize="medium" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="relative">
                 <select
-                  id="tableSelect"
-                  value={selectedTable ? selectedTable.id : 1}
+                  value={selectedTable ? selectedTable.id : "1"}
                   onChange={handleTableSelect}
-                  className="border border-gray-300 rounded-lg p-2 text-gray-100 bg-slate-800"
+                  className="w-full h-12 pl-4 pr-10 text-base text-white bg-slate-700 border border-slate-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {availableTables.map((table) => (
-                    <option
-                      className="text-gray-100 bg-slate-800"
-                      key={table.id}
-                      value={table.id}
-                    >
+                    <option key={table.id} value={table.id}>
                       {table.name}
                     </option>
                   ))}
                 </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                  <ExpandMoreRounded fontSize="small" />
+                </div>
+              </div>
+            </div>
+
+            {/* Search & Filters */}
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-white">
+                  Search & Filter
+                </h3>
+
+                <div className="text-sm font-medium text-slate-300">
+                  {filteredPieces.length}
+                  <span className="text-slate-400"> of </span>
+                  {pieces.length} pieces
+                </div>
               </div>
 
-              {/* Add / Remove buttons */}
-              <div className="flex gap-3 sm:ml-4 flex-wrap">
-                <button
-                  onClick={handleAddTable}
-                  className="flex items-center text-gray-100 hover:text-gray-400"
-                >
-                  <AddCircleOutlineIcon className="mr-1" />
-                  Add
-                </button>
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <div className="flex-1 md:w-[50%]">
+                  {/* Search Input */}
+                  <SearchPiece
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                  />
+                </div>
 
-                {selectedTable?.id > 1 && (
-                  <button
-                    onClick={handleDeleteTable}
-                    className="flex items-center text-gray-100 hover:text-gray-400"
-                  >
-                    <DeleteOutlineIcon className="mr-1 text-red-500" />
-                    Remove
-                  </button>
-                )}
+                {/* View Tabs */}
+                <div className="h-12 md:w-[50%] rounded-lg overflow-hidden">
+                  <FilterTabs
+                    setActiveView={setActiveView}
+                    activeView={activeView}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <VirtualTable
-          pieces={sortedPieces}
-          onChange={handleUpdatePiece}
-          onDelete={handleDeletePiece}
-          isUpdating={(uuid) => updatingPieces.has(uuid)}
-          sort={sort}
-          sortConfig={sortConfig}
-        />
+          {/* Stats Bar */}
+          <div className="flex flex-wrap gap-4 mt-6 pt-5 border-t border-slate-700">
+            <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+              <div className="h-3 w-3 rounded-full bg-slate-400 mr-2"></div>
+              <span className="text-slate-300 mr-2">Total:</span>
+              <span className="text-white font-semibold">{stats.total}</span>
+            </div>
+
+            <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+              <div className="h-3 w-3 rounded-full bg-emerald-500 mr-2"></div>
+              <span className="text-slate-300 mr-2">Complete:</span>
+              <span className="text-white font-semibold">{stats.complete}</span>
+            </div>
+
+            <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+              <div className="h-3 w-3 rounded-full bg-rose-500 mr-2"></div>
+              <span className="text-slate-300 mr-2">Incomplete:</span>
+              <span className="text-white font-semibold">
+                {stats.incomplete}
+              </span>
+            </div>
+
+            {stats.general > 0 && (
+              <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                <div className="h-3 w-3 rounded-full bg-slate-500 mr-2"></div>
+                <span className="text-slate-300 mr-2">General:</span>
+                <span className="text-white font-semibold">
+                  {stats.general}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Table Component */}
+      <VirtualTable
+        pieces={sortedPieces}
+        onChange={handleUpdatePiece}
+        onDelete={handleDeletePiece}
+        isUpdating={(uuid) => updatingPieces.has(uuid)}
+        sort={handleSort}
+        sortConfig={sortConfig}
+      />
 
       {/* Modal for adding a new table */}
       {showAddModal && (
@@ -721,6 +616,7 @@ export default function PieceTable() {
           handleSubmit={handleAddModalSubmit}
         />
       )}
+
       {/* Modal for deleting a table */}
       {showDeleteModal && (
         <TableDeleteModal

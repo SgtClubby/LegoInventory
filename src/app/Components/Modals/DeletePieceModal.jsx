@@ -1,13 +1,9 @@
-// src/app/Components/Modals/TableDeleteModal.jsx
+// src/app/Components/Modals/DeletePieceModal.jsx
 
 import { DeleteForeverRounded, DeleteRounded } from "@mui/icons-material";
 import { useEffect } from "react";
 
-export default function TableDeleteModal({
-  toggleModal,
-  handleSubmit,
-  tableName,
-}) {
+export default function DeletePieceModal({ toggleModal, handleDelete, piece }) {
   // Handle escape key press
   useEffect(() => {
     const handleEscapeKey = (e) => {
@@ -21,6 +17,11 @@ export default function TableDeleteModal({
   }, []);
 
   const handleClose = () => {
+    toggleModal(false);
+  };
+
+  const handleConfirmDelete = () => {
+    handleDelete();
     toggleModal(false);
   };
 
@@ -40,18 +41,39 @@ export default function TableDeleteModal({
           </div>
 
           <h2 className="text-2xl font-semibold text-white text-center mb-3">
-            Delete Table?
+            Delete LEGO Piece?
           </h2>
 
+          {piece && (
+            <div className="bg-slate-700/50 rounded-lg border border-slate-600/50 p-4 mb-5 flex items-center gap-4">
+              {piece.availableColors?.find(
+                (color) => color.colorId == piece.elementColorId
+              )?.elementImage && (
+                <img
+                  src={
+                    piece.availableColors.find(
+                      (color) => color.colorId == piece.elementColorId
+                    ).elementImage
+                  }
+                  alt={piece.elementName}
+                  className="w-12 h-12 object-cover rounded"
+                />
+              )}
+
+              <div>
+                <p className="font-semibold text-white">{piece.elementName}</p>
+                <p className="text-sm text-slate-300">
+                  <span className="text-slate-400">ID:</span> {piece.elementId}{" "}
+                  | <span className="text-slate-400">Color:</span>{" "}
+                  {piece.elementColor}
+                </p>
+              </div>
+            </div>
+          )}
+
           <p className="mb-6 text-slate-300 text-center">
-            Are you sure you want to delete{" "}
-            {tableName ? (
-              <span className="font-medium text-white">"{tableName}"</span>
-            ) : (
-              "this table"
-            )}
-            ? This action cannot be undone and all pieces in this table will be
-            permanently removed.
+            This action cannot be undone. The piece will be permanently removed
+            from your inventory.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-4">
@@ -63,14 +85,11 @@ export default function TableDeleteModal({
             </button>
 
             <button
-              onClick={handleSubmit}
+              onClick={handleConfirmDelete}
               className="inline-flex justify-center items-center px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 transition-colors duration-200"
             >
-              <DeleteForeverRounded
-                className="h-5 w-5 mr-2"
-                fontSize="medium"
-              />
-              Delete Table
+              <DeleteForeverRounded className="h-5 w-5 mr-2" />
+              Delete Piece
             </button>
           </div>
         </div>

@@ -1,137 +1,266 @@
-// src/app/components/Search/SearchNewPiece.jsx
+// src/app/Components/Search/SearchNewPiece.jsx
 
+import {
+  ArrowCircleDownRounded,
+  CancelRounded,
+  ClearRounded,
+  SearchRounded,
+} from "@mui/icons-material";
 import React, { useState, useEffect, useRef } from "react";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 
 export default function SearchNewPiece({ setSearchNewPieceResult }) {
-  const [searchNewPieceTerm, setSearchNewPieceTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+  const searchTimeout = useRef(null);
 
+  // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const clickedInput = inputRef.current?.contains(event.target);
-      const clickedDropdown = dropdownRef.current?.contains(event.target);
-
-      if (!clickedInput && !clickedDropdown) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target)
+      ) {
         setIsDropdownOpen(false);
-      } else if (clickedInput && searchNewPieceTerm.length > 2) {
-        setIsDropdownOpen(true);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [searchNewPieceTerm]);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
+  // Handle search term changes with debounce
   useEffect(() => {
-    if (searchNewPieceTerm.length < 2) {
+    if (!searchTerm || searchTerm.length < 2) {
       setResults([]);
       setIsDropdownOpen(false);
       return;
     }
 
-    const debounceFetch = setTimeout(() => {
-      const fetchData = async () => {
-        // Store the current search term to compare later
-        const currentSearchTerm = searchNewPieceTerm;
+    // Clear previous timeout
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
 
-        try {
-          const response = await fetch(
-            `/api/search/part/${currentSearchTerm}`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-              },
-            }
-          );
-          const data = await response.json();
+    setIsLoading(true);
 
-          // Only update if the search term hasn't changed since request was made
-          if (currentSearchTerm === searchNewPieceTerm) {
-            setResults(data.results || []);
+    // Set new timeout for debounced search
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/search/part/${searchTerm}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
+          },
+        });
 
-            if (data.results && data.results.length > 0) {
-              setIsDropdownOpen(true);
-            } else {
-              setIsDropdownOpen(false);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching data:", error);
-          if (currentSearchTerm === searchNewPieceTerm) {
-            setIsDropdownOpen(false);
-          }
+        const data = await response.json();
+
+        if (data.results && data.results.length > 0) {
+          setResults(data.results);
+          setIsDropdownOpen(true);
+          setSelectedIndex(-1); // Reset selected index on new results
+        } else {
+          setResults([]);
+          setIsDropdownOpen(false);
         }
-      };
-      fetchData();
+      } catch (error) {
+        console.error("Error fetching search results:", error);
+        setResults([]);
+        setIsDropdownOpen(false);
+      } finally {
+        setIsLoading(false);
+      }
     }, 300);
 
-    return () => clearTimeout(debounceFetch);
-  }, [searchNewPieceTerm]);
+    return () => {
+      if (searchTimeout.current) {
+        clearTimeout(searchTimeout.current);
+      }
+    };
+  }, [searchTerm]);
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!isDropdownOpen) return;
+
+    // Down arrow - move down the list
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < results.length - 1 ? prev + 1 : prev));
+    }
+    // Up arrow - move up the list
+    else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+    }
+    // Enter - select current item
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selectedIndex >= 0 && selectedIndex < results.length) {
+        handleSelectResult(results[selectedIndex]);
+      }
+    }
+    // Escape - close dropdown
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      setIsDropdownOpen(false);
+    }
+  };
+
+  // Handle result selection
+  const handleSelectResult = (result) => {
+    setSearchNewPieceResult(result);
+    setSearchTerm("");
+    setIsDropdownOpen(false);
+  };
 
   return (
-    <div className="flex flex-col">
-      <label className="block text-sm font-medium mb-1 text-gray-100">
+    <div className="w-full">
+      <label
+        htmlFor="search-new-piece"
+        className="block text-sm font-medium mb-1.5 text-slate-300"
+      >
         Search for a piece
       </label>
-      <div className="relative mb-1">
-        <SearchOutlinedIcon
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-100"
-          size={18}
-        />
-        <input
-          type="text"
-          ref={inputRef}
-          placeholder="Search pieces..."
-          value={searchNewPieceTerm}
-          onChange={(e) => {
-            setSearchNewPieceTerm(e.target.value);
-            setIsDropdownOpen(true);
-          }}
-          className="pl-10 w-full py-2 pr-4 border border-gray-300 text-gray-100 placeholder:text-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
 
-        {/* Dropdown List */}
-        {results.length > 0 && (
-          <ul
+      <div className="relative">
+        {/* Search input */}
+        <div className="relative">
+          <input
+            ref={inputRef}
+            id="search-new-piece"
+            type="text"
+            placeholder="Search by name or ID (e.g., 'Brick 2x4' or '3001')"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onFocus={() => searchTerm.length >= 2 && setIsDropdownOpen(true)}
+            onKeyDown={handleKeyDown}
+            className="w-full p-3 pl-10 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          />
+
+          {/* Search icon */}
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+            {isLoading ? (
+              <svg
+                className="animate-spin h-5 w-5"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            ) : (
+              <SearchRounded className="h-5 w-5" />
+            )}
+          </div>
+
+          {/* Clear button */}
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              <ClearRounded className="h-5 w-5" fontSize="medium" />
+            </button>
+          )}
+        </div>
+
+        {/* Dropdown results */}
+        {isDropdownOpen && (
+          <div
             ref={dropdownRef}
-            className={`absolute z-10 bg-slate-800 border border-gray-300 w-full mt-1 rounded-lg shadow-lg max-h-60 overflow-auto transition-all duration-200 ease-out origin-top ${
-              isDropdownOpen
-                ? "opacity-100 scale-100"
-                : "opacity-0 scale-95 pointer-events-none"
-            }`}
+            className="absolute left-0 z-50 mt-1 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-96 overflow-auto scrollbar-thin scrollbar-thumb-slate-600"
           >
-            {results.map((item) => {
-              return (
-                <li
-                  key={item.part_num + item.theme_id}
-                  className="flex flex-row gap-4 px-4 py-2 hover:bg-slate-900 cursor-pointer"
-                  onClick={() => {
-                    setSearchNewPieceTerm("");
-                    setIsDropdownOpen(false);
-                    setSearchNewPieceResult(item);
-                  }}
+            <div className="py-1 divide-y divide-slate-700">
+              {results.map((item, index) => (
+                <div
+                  key={item.part_num + "-" + index}
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer ${
+                    index === selectedIndex
+                      ? "bg-blue-600/20 hover:bg-blue-600/30"
+                      : "hover:bg-slate-700/70"
+                  }`}
+                  onClick={() => handleSelectResult(item)}
+                  onMouseEnter={() => setSelectedIndex(index)}
                 >
-                  <img src={item.part_img_url} className="w-10 h-10"></img>
-                  <div>
-                    <div className="font-semibold text-gray-100">
+                  {item.part_img_url ? (
+                    <img
+                      src={item.part_img_url}
+                      alt={item.name}
+                      className="w-12 h-12 object-cover bg-slate-700 rounded"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-slate-700 rounded flex items-center justify-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-slate-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-200 truncate">
                       {item.name}
                     </div>
-                    <div className="text-xs text-gray-300">{item.part_num}</div>
+                    <div className="text-sm text-slate-400">
+                      ID: {item.part_num}
+                    </div>
                   </div>
-                </li>
-              );
-            })}
-          </ul>
+
+                  <div className="flex-shrink-0 text-blue-400">
+                    <ArrowCircleDownRounded className="h-6 w-6" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Loader at the bottom of the list */}
+            {isLoading && (
+              <div className="px-4 py-3 text-center text-slate-400">
+                <div className="inline-block animate-spin mr-2 h-4 w-4 border-t-2 border-blue-500 rounded-full"></div>
+                Loading more results...
+              </div>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Help text */}
+      <p className="mt-2 text-xs text-slate-400">
+        Start typing to search for LEGO pieces by name or ID. Use arrow keys to
+        navigate and Enter to select.
+      </p>
     </div>
   );
 }
