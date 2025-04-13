@@ -3,6 +3,18 @@ import React, { useState, memo, useRef } from "react";
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import colors from "@/Colors/colors.js";
 
+/**
+ * Component that renders a single piece row in both mobile and desktop views
+ *
+ * @param {Object} piece - The piece data object
+ * @param {Function} onChange - Function to handle changes to piece properties
+ * @param {Function} onDelete - Function to handle piece deletion
+ * @param {string} originalId - The unique ID of the piece
+ * @param {boolean} isUpdating - Whether the piece is currently being updated
+ * @param {number} index - The index of the piece in the list
+ * @param {boolean} isLast - Whether this is the last piece in the list
+ * @returns {JSX.Element} The rendered piece row
+ */
 const PieceRow = ({
   piece,
   onChange,
@@ -10,6 +22,7 @@ const PieceRow = ({
   originalId,
   isUpdating = false,
   index,
+  columns,
   isLast = false,
 }) => {
   const {
@@ -30,6 +43,11 @@ const PieceRow = ({
 
   // Handle outside click for color dropdown
   React.useEffect(() => {
+    /**
+     * Handles clicks outside the color dropdown to close it
+     *
+     * @param {Event} event - The click event
+     */
     function handleClickOutside(event) {
       if (
         colorDropdownRef.current &&
@@ -45,7 +63,12 @@ const PieceRow = ({
     };
   }, [colorDropdownRef]);
 
-  // Color selection dropdown
+  console.log(showColorDropdown);
+  /**
+   * Renders the color dropdown component
+   *
+   * @returns {JSX.Element} The color dropdown component
+   */
   const ColorDropdown = () => {
     const colorOptions =
       availableColors && availableColors.length > 0
@@ -59,7 +82,7 @@ const PieceRow = ({
     return (
       <div
         ref={colorDropdownRef}
-        className="absolute z-30 top-14 left-0 w-56 max-h-64 overflow-y-auto bg-slate-800 border border-slate-600 rounded-md shadow-xl animate-fadeIn"
+        className="absolute z-60 top-14 left-0 w-56 max-h-64 overflow-y-auto bg-slate-800 border border-slate-600 rounded-md shadow-xl animate-fadeIn animate-slideDown"
       >
         <div className="py-1 divide-y divide-slate-700">
           {colorOptions.map((color) => (
@@ -83,7 +106,11 @@ const PieceRow = ({
     );
   };
 
-  // Style based on completion status
+  /**
+   * Gets the row style based on completion and highlight status
+   *
+   * @returns {string} CSS class string for row styling
+   */
   const getRowStyle = () => {
     if (highlighted)
       return "bg-pink-900/40 hover:bg-pink-800/40 border-pink-700/30";
@@ -92,7 +119,12 @@ const PieceRow = ({
     return "bg-slate-800/70 hover:bg-slate-700/50 border-slate-700/40";
   };
 
-  // Update handlers
+  /**
+   * Handles changes to quantity fields
+   *
+   * @param {string} field - The field to update
+   * @param {string|number} value - The new value
+   */
   const handleQuantityChange = (field, value) => {
     const parsedValue = parseInt(value, 10) || 0;
     onChange(originalId, field, parsedValue);
@@ -105,19 +137,27 @@ const PieceRow = ({
     </div>
   ) : null;
 
-  // Handle delete piece with confirmation
+  /**
+   * Handles delete button click with confirmation
+   */
   const handleDeleteClick = () => {
     onDelete(originalId);
   };
 
-  // Toggle expanded view for mobile
+  /**
+   * Toggles the expanded view for mobile
+   */
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
 
-  // Mobile view
+  /**
+   * Mobile view component
+   *
+   * @returns {JSX.Element} The mobile view
+   */
   const MobileView = () => (
-    <div className="md:hidden">
+    <div className="switch:hidden">
       {/* Mobile Card Header - Always visible */}
       <div
         className={`relative flex items-center justify-between p-4 ${getRowStyle()} rounded-t-lg border-l-4 ${
@@ -145,7 +185,7 @@ const PieceRow = ({
             )}
           </div>
 
-          <div className="min-w-0">
+          <div className="min-w-0 max-w-[calc(100%-3rem)] flex-1 truncate">
             <div className="font-medium text-slate-200 truncate">
               {elementName}
             </div>
@@ -155,7 +195,7 @@ const PieceRow = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 absolute z-20 right-0 px-4">
           <div className="text-right">
             <div className="text-xs text-slate-400">Count</div>
             <div className="text-slate-200 font-medium">
@@ -186,7 +226,7 @@ const PieceRow = ({
 
       {/* Mobile Expanded View - Only visible when expanded */}
       {isExpanded && (
-        <div className="bg-slate-800/90 p-4 rounded-b-lg border border-t-0 border-slate-700/40 animate-slideDown">
+        <div className="bg-slate-800/90 p-4 rounded-b-lg border border-t-0 border-slate-700/40 ">
           <div className="grid grid-cols-1 gap-4">
             {/* Name */}
             <div>
@@ -334,17 +374,18 @@ const PieceRow = ({
     </div>
   );
 
-  // Desktop view
   const DesktopView = () => (
     <div
-      className={`hidden md:flex items-center min-w-max w-full px-2 py-1 mx-1 my-1 ${
+      className={`hidden switch:flex items-center w-full px-2 py-1 mx-1 my-1 ${
         isLast ? "mb-4" : ""
       } rounded-lg border-l-4 ${getRowStyle()}`}
     >
       {LoadingOverlay}
 
       {/* Image */}
-      <div className="w-20 flex-shrink-0 flex justify-center px-2 ">
+      <div
+        className={`${columns[0].width} flex-shrink-0 flex justify-center px-2`}
+      >
         <div className="h-12 w-12 bg-slate-700 rounded overflow-hidden flex items-center justify-center">
           {availableColors?.find((color) => color.colorId == elementColorId)
             ?.elementImage ? (
@@ -363,7 +404,7 @@ const PieceRow = ({
       </div>
 
       {/* Name */}
-      <div className="w-48 xl:w-56 flex-shrink-0 px-2">
+      <div className={`${columns[1].width} flex-shrink-0 px-2`}>
         <input
           type="text"
           value={elementName || ""}
@@ -373,7 +414,7 @@ const PieceRow = ({
       </div>
 
       {/* ID */}
-      <div className="w-32 flex-shrink-0 px-2">
+      <div className={`${columns[2].width} flex-shrink-0 px-2`}>
         <input
           type="text"
           value={elementId || ""}
@@ -383,7 +424,7 @@ const PieceRow = ({
       </div>
 
       {/* Color */}
-      <div className="w-40 flex-shrink-0 px-2 relative">
+      <div className={`${columns[3].width} flex-shrink-0 px-2 relative`}>
         <div
           className="flex items-center w-full bg-transparent border border-transparent hover:border-slate-600 hover:bg-slate-700/30 px-2 py-1.5 rounded text-slate-200 cursor-pointer transition-colors duration-150"
           onClick={() => setShowColorDropdown(!showColorDropdown)}
@@ -413,7 +454,7 @@ const PieceRow = ({
       </div>
 
       {/* On Hand */}
-      <div className="w-28 flex-shrink-0 px-2">
+      <div className={`${columns[4].width} flex-shrink-0 px-2`}>
         <input
           type="number"
           min="0"
@@ -426,7 +467,7 @@ const PieceRow = ({
       </div>
 
       {/* Required */}
-      <div className="w-28 flex-shrink-0 px-2">
+      <div className={`${columns[5].width} flex-shrink-0 px-2`}>
         <input
           type="number"
           min="0"
@@ -439,7 +480,9 @@ const PieceRow = ({
       </div>
 
       {/* Complete Status */}
-      <div className="w-32 flex-shrink-0 px-2 flex justify-center">
+      <div
+        className={`${columns[6].width} flex-shrink-0 px-2 flex justify-center`}
+      >
         <div
           className={`px-3 py-1 text-sm rounded-full inline-flex items-center transition-colors duration-150 ${
             countComplete == null
@@ -454,7 +497,9 @@ const PieceRow = ({
       </div>
 
       {/* Actions */}
-      <div className="w-32 flex-shrink-0 px-2 flex justify-end gap-2">
+      <div
+        className={`${columns[7].width} flex-shrink-0 px-2 flex 2xl:justify-end gap-2`}
+      >
         <button
           onClick={() => setHighlighted(!highlighted)}
           className={`p-1.5 rounded transition-colors duration-150 ${
@@ -506,7 +551,13 @@ const PieceRow = ({
   );
 };
 
-// Improved memoization with are equal check
+/**
+ * Checks if the component needs to be re-rendered
+ *
+ * @param {Object} prevProps - Previous props
+ * @param {Object} nextProps - Next props
+ * @returns {boolean} Whether the component should update
+ */
 function areEqual(prevProps, nextProps) {
   // Check if any props have changed
   const basicPropsEqual =
@@ -533,4 +584,5 @@ function areEqual(prevProps, nextProps) {
     prevPiece.countComplete === nextPiece.countComplete
   );
 }
+
 export default memo(PieceRow, areEqual);

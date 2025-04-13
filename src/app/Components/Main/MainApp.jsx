@@ -67,7 +67,7 @@ const MainApp = () => {
   }, [selectedTable]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white p-4 sm:p-6 md:p-8">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white p-4 md:p-8">
       <div className="max-w-[100rem] mx-auto">
         {/* Header */}
         <Header />

@@ -482,7 +482,7 @@ export default function PieceTable() {
       {/* Control Panel */}
       <div className="bg-slate-800 rounded-xl shadow-lg  border border-slate-700">
         <div className="p-4 sm:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-end gap-6">
+          <div className="flex flex-col xl:flex-row xl:items-end gap-6">
             {/* Table Selection */}
             <div className="flex-1 space-y-4">
               <div className="flex items-center justify-between">
@@ -542,8 +542,8 @@ export default function PieceTable() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 w-full">
-                <div className="flex-1 md:w-[50%]">
+              <div className="flex flex-col md:flex-row gap-3 w-full">
+                <div className="flex-1 w-full md:w-[50%] ">
                   {/* Search Input */}
                   <SearchPiece
                     searchTerm={searchTerm}
@@ -552,7 +552,7 @@ export default function PieceTable() {
                 </div>
 
                 {/* View Tabs */}
-                <div className="h-12 md:w-[50%] rounded-lg overflow-hidden">
+                <div className="h-12 w-full md:w-[50%]  rounded-lg overflow-hidden">
                   <FilterTabs
                     setActiveView={setActiveView}
                     activeView={activeView}

@@ -10,6 +10,17 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import PieceRow from "@/Components/Table/PieceRow";
 import DeletePieceModal from "../Modals/DeletePieceModal";
 
+/**
+ * VirtualTable component for efficiently rendering large lists of pieces
+ *
+ * @param {Array} pieces - The array of pieces to display
+ * @param {Function} onChange - Function to handle changes to piece properties
+ * @param {Function} onDelete - Function to handle piece deletion
+ * @param {Function} sort - Function to handle sorting
+ * @param {Object} sortConfig - Current sort configuration
+ * @param {Function} isUpdating - Function to check if a piece is being updated
+ * @returns {JSX.Element} The rendered virtual table
+ */
 export default function VirtualTable({
   pieces,
   onChange,
@@ -71,6 +82,13 @@ export default function VirtualTable({
   // Get virtualized rows
   const virtualRows = rowVirtualizer.getVirtualItems();
 
+  // Scroll to top whenever pieces change significantly
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop = 0;
+    }
+  }, [sortConfig, pieces.length]);
+
   // Empty state content
   const EmptyState = () => (
     <div className="flex flex-col items-center justify-center h-64 text-slate-400">
@@ -95,46 +113,73 @@ export default function VirtualTable({
     </div>
   );
 
+  const columns = [
+    {
+      key: null,
+      label: "",
+      className: "",
+      width: "w-[5%] min-w-20",
+      sortable: false,
+    },
+    {
+      key: "elementName",
+      label: "Name",
+      width: "w-[20%] min-w-[10%]",
+      className: "",
+      sortable: true,
+    },
+    {
+      key: "elementId",
+      label: "ID",
+      className: "",
+      width: "w-[10%]",
+      sortable: true,
+    },
+    {
+      key: "elementColor",
+      label: "Color",
+      className: "",
+      width: "w-[15%]",
+      sortable: true,
+    },
+    {
+      key: "elementQuantityOnHand",
+      label: "On Hand",
+      className: "",
+      width: "w-[10%]",
+      sortable: true,
+    },
+    {
+      key: "elementQuantityRequired",
+      label: "Required",
+      className: "",
+      width: "w-[10%]",
+      sortable: true,
+    },
+    {
+      key: "countComplete",
+      label: "Complete",
+      className: "flex",
+      width: "w-[15%]",
+      sortable: true,
+    },
+    {
+      key: null,
+      label: "Actions",
+      className: "flex 2xl:justify-end",
+      width: "w-[15%]",
+      sortable: false,
+    },
+  ];
+
   // Table header component
   const TableHeader = () => {
-    // Header columns configuration
-    const columns = [
-      { key: null, label: "", width: "w-20", sortable: false },
-      {
-        key: "elementName",
-        label: "Name",
-        width: "w-48 xl:w-56",
-        sortable: true,
-      },
-      { key: "elementId", label: "ID", width: "w-32", sortable: true },
-      { key: "elementColor", label: "Color", width: "w-40", sortable: true },
-      {
-        key: "elementQuantityOnHand",
-        label: "On Hand",
-        width: "w-28",
-        sortable: true,
-      },
-      {
-        key: "elementQuantityRequired",
-        label: "Required",
-        width: "w-28",
-        sortable: true,
-      },
-      {
-        key: "countComplete",
-        label: "Complete",
-        width: "w-32",
-        sortable: true,
-      },
-      { key: null, label: "Actions", width: "w-32", sortable: false },
-    ];
-
     // Render a header cell with sort functionality if sortable
     const HeaderCell = ({ column }) => {
       if (!column.sortable) {
         return (
           <div
-            className={`px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium`}
+            className={`${column.className} px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium`}
           >
             {column.label}
           </div>
@@ -143,7 +188,7 @@ export default function VirtualTable({
 
       return (
         <div
-          className={`px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium cursor-pointer group`}
+          className={`${column.className} px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium cursor-pointer group`}
           onClick={() => sort(column.key)}
         >
           <div className="flex items-center">
@@ -200,7 +245,7 @@ export default function VirtualTable({
     };
 
     return (
-      <div className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700 flex items-center min-w-max rounded-t-xl">
+      <div className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700 flex items-center w-full rounded-t-xl">
         {columns.map((column, index) => (
           <HeaderCell key={column.key || `col-${index}`} column={column} />
         ))}
@@ -230,6 +275,7 @@ export default function VirtualTable({
             onChange={onChange}
             onDelete={handleDeleteInitiate}
             isUpdating={isUpdating(piece.uuid)}
+            columns={columns}
             index={virtualRow.index}
             isLast={virtualRow.index === pieces.length - 1}
           />
@@ -238,47 +284,11 @@ export default function VirtualTable({
     });
   }, [virtualRows, pieces, onChange, handleDeleteInitiate, isUpdating]);
 
-  // Scroll to top whenever pieces change significantly
-  useEffect(() => {
-    if (tableContainerRef.current) {
-      tableContainerRef.current.scrollTop = 0;
-    }
-  }, [sortConfig, pieces.length]);
-
-  // Mobile card view for small screens
-  const MobileCardView = () => (
-    <div className="md:hidden space-y-3 p-2">
-      {pieces.length > 0 ? (
-        pieces
-          .slice(0, 50)
-          .map((piece) => (
-            <PieceRow
-              key={piece.uuid}
-              piece={piece}
-              originalId={piece.uuid}
-              onChange={onChange}
-              onDelete={handleDeleteInitiate}
-              isUpdating={isUpdating(piece.uuid)}
-            />
-          ))
-      ) : (
-        <EmptyState />
-      )}
-
-      {pieces.length > 50 && (
-        <div className="text-center p-3 text-slate-400">
-          Showing 50 of {pieces.length} pieces. Use filters to narrow down
-          results.
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <>
       <div className="bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-slate-700 w-full h-full">
         {/* Desktop Table View */}
-        <div className="hidden md:block w-full h-full">
+        <div className="hidden switch:block w-full h-full">
           <TableHeader />
 
           <div
@@ -290,7 +300,7 @@ export default function VirtualTable({
               <EmptyState />
             ) : (
               <div
-                className="relative min-w-max"
+                className="relative w-full"
                 style={{
                   height: `${rowVirtualizer.getTotalSize()}px`,
                 }}
@@ -302,7 +312,25 @@ export default function VirtualTable({
         </div>
 
         {/* Mobile Card View */}
-        <MobileCardView />
+        <div className="switch:hidden space-y-3 p-2">
+          <div
+            ref={tableContainerRef}
+            style={{ height: `${containerHeight}px` }}
+          >
+            {pieces.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <div
+                className="relative w-full"
+                style={{
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                }}
+              >
+                {renderedRows}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}
