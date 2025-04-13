@@ -40,6 +40,9 @@ const PieceRow = ({
   const [highlighted, setHighlighted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const colorDropdownRef = useRef(null);
+  // Add a separate ref for the color container to position dropdowns properly
+  const mobileColorContainerRef = useRef(null);
+  const desktopColorContainerRef = useRef(null);
 
   // Handle outside click for color dropdown
   React.useEffect(() => {
@@ -63,13 +66,13 @@ const PieceRow = ({
     };
   }, [colorDropdownRef]);
 
-  console.log(showColorDropdown);
   /**
    * Renders the color dropdown component
    *
+   * @param {boolean} isMobile - Whether the dropdown is in mobile view
    * @returns {JSX.Element} The color dropdown component
    */
-  const ColorDropdown = () => {
+  const ColorDropdown = ({ isMobile }) => {
     const colorOptions =
       availableColors && availableColors.length > 0
         ? colors.filter((c) =>
@@ -79,10 +82,15 @@ const PieceRow = ({
           )
         : colors;
 
+    // Use different positioning classes for mobile vs desktop
+    const positionClasses = isMobile
+      ? "absolute z-60 top-full left-0 mt-1" // Position below the parent for mobile
+      : "absolute z-60 top-14 left-0"; // Original positioning for desktop
+
     return (
       <div
         ref={colorDropdownRef}
-        className="absolute z-60 top-14 left-0 w-56 max-h-64 overflow-y-auto bg-slate-800 border border-slate-600 rounded-md shadow-xl animate-fadeIn animate-slideDown"
+        className={`${positionClasses} w-56 max-h-64 overflow-y-auto bg-slate-800 border border-slate-600 rounded-md shadow-xl animate-fadeIn animate-slideDown`}
       >
         <div className="py-1 divide-y divide-slate-700">
           {colorOptions.map((color) => (
@@ -226,7 +234,7 @@ const PieceRow = ({
 
       {/* Mobile Expanded View - Only visible when expanded */}
       {isExpanded && (
-        <div className="bg-slate-800/90 p-4 rounded-b-lg border border-t-0 border-slate-700/40 ">
+        <div className="bg-slate-800/90 p-4 rounded-b-lg border border-t-0 border-slate-700/40 animate-slideDown ">
           <div className="grid grid-cols-1 gap-4">
             {/* Name */}
             <div>
@@ -255,7 +263,7 @@ const PieceRow = ({
             </div>
 
             {/* Color */}
-            <div>
+            <div className="relative" ref={mobileColorContainerRef}>
               <label className="block text-xs text-slate-400 mb-1">Color</label>
               <div
                 className="flex items-center w-full bg-slate-700/50 border border-slate-600/50 rounded-md px-3 py-2 text-slate-200 cursor-pointer"
@@ -289,7 +297,7 @@ const PieceRow = ({
                   />
                 </svg>
               </div>
-              {showColorDropdown && <ColorDropdown />}
+              {showColorDropdown && <ColorDropdown isMobile={true} />}
             </div>
 
             {/* Quantities */}
