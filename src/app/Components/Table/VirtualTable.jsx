@@ -159,7 +159,7 @@ export default function VirtualTable({
     {
       key: "countComplete",
       label: "Complete",
-      className: "flex",
+      className: "flex 2xl:justify-center",
       width: "w-[15%]",
       sortable: true,
     },

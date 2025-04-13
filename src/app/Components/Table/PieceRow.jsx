@@ -1,5 +1,5 @@
 // src/app/Components/Table/PieceRow.jsx
-import React, { useState, memo, useRef } from "react";
+import React, { useState, memo, useRef, useEffect } from "react";
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import colors from "@/Colors/colors.js";
 
@@ -36,13 +36,21 @@ const PieceRow = ({
     availableColors,
   } = piece;
 
+  // Store the expanded state in a ref to persist through rerenders
+  const expandedStateRef = useRef(false);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const [highlighted, setHighlighted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const colorDropdownRef = useRef(null);
-  // Add a separate ref for the color container to position dropdowns properly
   const mobileColorContainerRef = useRef(null);
   const desktopColorContainerRef = useRef(null);
+  const expandedContentRef = useRef(null);
+
+  // Initialize isExpanded from the ref on first render
+  useEffect(() => {
+    setIsExpanded(expandedStateRef.current);
+  }, []);
 
   // Handle outside click for color dropdown
   React.useEffect(() => {
@@ -154,9 +162,18 @@ const PieceRow = ({
 
   /**
    * Toggles the expanded view for mobile
+   * We update both the state and the ref to persist through rerenders
    */
   const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
+    const newExpandedState = !expandedStateRef.current;
+    expandedStateRef.current = newExpandedState;
+    setIsExpanded(newExpandedState);
+    setIsAnimating(true);
+
+    // After animation completes, reset the animating flag
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 300); // Should match your animation duration
   };
 
   /**
@@ -233,152 +250,156 @@ const PieceRow = ({
       </div>
 
       {/* Mobile Expanded View - Only visible when expanded */}
-      {isExpanded && (
-        <div className="bg-slate-800/90 p-4 rounded-b-lg border border-t-0 border-slate-700/40 animate-slideDown ">
-          <div className="grid grid-cols-1 gap-4">
-            {/* Name */}
+      <div
+        ref={expandedContentRef}
+        className={`bg-slate-800/90 rounded-b-lg border border-t-0 border-slate-700/40 overflow-hidden transition-all duration-300 ease-in-out ${
+          isExpanded ? "max-h-[500px] opacity-100 p-4" : "max-h-0 opacity-0 p-0"
+        }`}
+      >
+        <div className="grid grid-cols-1 gap-4">
+          {/* Name */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Name</label>
+            <input
+              type="text"
+              value={elementName || ""}
+              onChange={(e) =>
+                onChange(originalId, "elementName", e.target.value)
+              }
+              className="w-full bg-slate-700/50 border border-slate-600/50 rounded-md px-3 py-2 text-slate-200"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          {/* ID */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">ID</label>
+            <input
+              type="text"
+              value={elementId || ""}
+              onChange={(e) =>
+                onChange(originalId, "elementId", e.target.value)
+              }
+              className="w-full bg-slate-700/50 border border-slate-600/50 rounded-md px-3 py-2 text-slate-200"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          {/* Color */}
+          <div className="relative" ref={mobileColorContainerRef}>
+            <label className="block text-xs text-slate-400 mb-1">Color</label>
+            <div
+              className="flex items-center w-full bg-slate-700/50 border border-slate-600/50 rounded-md px-3 py-2 text-slate-200 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowColorDropdown(!showColorDropdown);
+              }}
+            >
+              {elementColor ? (
+                <>
+                  <div
+                    style={getColorStyle(elementColor)}
+                    className="w-5 h-5 rounded-full mr-2"
+                  />
+                  <span>{elementColor}</span>
+                </>
+              ) : (
+                <span className="text-slate-400">Select color</span>
+              )}
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 ml-auto text-slate-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            {showColorDropdown && <ColorDropdown isMobile={true} />}
+          </div>
+
+          {/* Quantities */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Name</label>
+              <label className="block text-xs text-slate-400 mb-1">
+                On Hand
+              </label>
               <input
-                type="text"
-                value={elementName || ""}
+                type="number"
+                min="0"
+                value={elementQuantityOnHand || 0}
                 onChange={(e) =>
-                  onChange(originalId, "elementName", e.target.value)
+                  handleQuantityChange("elementQuantityOnHand", e.target.value)
                 }
                 className="w-full bg-slate-700/50 border border-slate-600/50 rounded-md px-3 py-2 text-slate-200"
+                onClick={(e) => e.stopPropagation()}
               />
             </div>
 
-            {/* ID */}
             <div>
-              <label className="block text-xs text-slate-400 mb-1">ID</label>
+              <label className="block text-xs text-slate-400 mb-1">
+                Required
+              </label>
               <input
-                type="text"
-                value={elementId || ""}
+                type="number"
+                min="0"
+                value={elementQuantityRequired || 0}
                 onChange={(e) =>
-                  onChange(originalId, "elementId", e.target.value)
+                  handleQuantityChange(
+                    "elementQuantityRequired",
+                    e.target.value
+                  )
                 }
                 className="w-full bg-slate-700/50 border border-slate-600/50 rounded-md px-3 py-2 text-slate-200"
+                onClick={(e) => e.stopPropagation()}
               />
-            </div>
-
-            {/* Color */}
-            <div className="relative" ref={mobileColorContainerRef}>
-              <label className="block text-xs text-slate-400 mb-1">Color</label>
-              <div
-                className="flex items-center w-full bg-slate-700/50 border border-slate-600/50 rounded-md px-3 py-2 text-slate-200 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowColorDropdown(!showColorDropdown);
-                }}
-              >
-                {elementColor ? (
-                  <>
-                    <div
-                      style={getColorStyle(elementColor)}
-                      className="w-5 h-5 rounded-full mr-2"
-                    />
-                    <span>{elementColor}</span>
-                  </>
-                ) : (
-                  <span className="text-slate-400">Select color</span>
-                )}
-
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 ml-auto text-slate-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              {showColorDropdown && <ColorDropdown isMobile={true} />}
-            </div>
-
-            {/* Quantities */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">
-                  On Hand
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={elementQuantityOnHand || 0}
-                  onChange={(e) =>
-                    handleQuantityChange(
-                      "elementQuantityOnHand",
-                      e.target.value
-                    )
-                  }
-                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-md px-3 py-2 text-slate-200"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">
-                  Required
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={elementQuantityRequired || 0}
-                  onChange={(e) =>
-                    handleQuantityChange(
-                      "elementQuantityRequired",
-                      e.target.value
-                    )
-                  }
-                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-md px-3 py-2 text-slate-200"
-                />
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-700/30">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={highlighted}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setHighlighted(e.target.checked);
-                  }}
-                  className="w-4 h-4 accent-pink-500 mr-2"
-                />
-                <span className="text-sm text-slate-300">Highlight</span>
-              </div>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteClick();
-                }}
-                className="flex items-center px-3 py-1.5 bg-rose-600/20 text-rose-400 rounded-md hover:bg-rose-600/30 transition-colors"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 mr-1"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Delete
-              </button>
             </div>
           </div>
+
+          {/* Actions */}
+          <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-700/30">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={highlighted}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setHighlighted(e.target.checked);
+                }}
+                className="w-4 h-4 accent-pink-500 mr-2"
+              />
+              <span className="text-sm text-slate-300">Highlight</span>
+            </div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick();
+              }}
+              className="flex items-center px-3 py-1.5 bg-rose-600/20 text-rose-400 rounded-md hover:bg-rose-600/30 transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 mr-1"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Delete
+            </button>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 
@@ -432,7 +453,10 @@ const PieceRow = ({
       </div>
 
       {/* Color */}
-      <div className={`${columns[3].width} flex-shrink-0 px-2 relative`}>
+      <div
+        className={`${columns[3].width} flex-shrink-0 px-2 relative`}
+        ref={desktopColorContainerRef}
+      >
         <div
           className="flex items-center w-full bg-transparent border border-transparent hover:border-slate-600 hover:bg-slate-700/30 px-2 py-1.5 rounded text-slate-200 cursor-pointer transition-colors duration-150"
           onClick={() => setShowColorDropdown(!showColorDropdown)}
@@ -458,7 +482,7 @@ const PieceRow = ({
           </svg>
         </div>
 
-        {showColorDropdown && <ColorDropdown />}
+        {showColorDropdown && <ColorDropdown isMobile={false} />}
       </div>
 
       {/* On Hand */}
@@ -489,7 +513,7 @@ const PieceRow = ({
 
       {/* Complete Status */}
       <div
-        className={`${columns[6].width} flex-shrink-0 px-2 flex justify-center`}
+        className={`${columns[6].width} flex-shrink-0 px-2 flex 2xl:justify-center`}
       >
         <div
           className={`px-3 py-1 text-sm rounded-full inline-flex items-center transition-colors duration-150 ${
@@ -551,7 +575,7 @@ const PieceRow = ({
 
   return (
     <>
-      <div className="animate-fadeIn animate-slideDown">
+      <div className="animate-fadeIn">
         <MobileView />
         <DesktopView />
       </div>
