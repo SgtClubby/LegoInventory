@@ -1,4 +1,5 @@
 // src/app/Components/Table/VirtualTable.jsx
+
 import React, {
   useState,
   useEffect,
@@ -10,17 +11,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import PieceRow from "@/Components/Table/PieceRow";
 import DeletePieceModal from "../Modals/DeletePieceModal";
 
-/**
- * VirtualTable component for efficiently rendering large lists of pieces
- *
- * @param {Array} pieces - The array of pieces to display
- * @param {Function} onChange - Function to handle changes to piece properties
- * @param {Function} onDelete - Function to handle piece deletion
- * @param {Function} sort - Function to handle sorting
- * @param {Object} sortConfig - Current sort configuration
- * @param {Function} isUpdating - Function to check if a piece is being updated
- * @returns {JSX.Element} The rendered virtual table
- */
 export default function VirtualTable({
   pieces,
   onChange,
@@ -28,9 +18,12 @@ export default function VirtualTable({
   sort,
   sortConfig,
   isUpdating = () => false,
+  expandedRows,
+  handleRowExpand,
 }) {
   // Table refs and state
-  const tableContainerRef = useRef(null);
+  const desktopContainerRef = useRef(null);
+  const mobileContainerRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(600);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [pieceToDelete, setPieceToDelete] = useState(null);
@@ -38,11 +31,9 @@ export default function VirtualTable({
   // Update container height on mount and resize
   useEffect(() => {
     const updateContainerHeight = () => {
-      if (tableContainerRef.current) {
-        // Calculate available height (95vh minus some padding for other elements)
-        const availableHeight = Math.floor(window.innerHeight * 0.95) - 180;
-        setContainerHeight(Math.max(400, availableHeight)); // Set minimum height of 400px
-      }
+      // Calculate available height (95vh minus some padding for other elements)
+      const availableHeight = Math.floor(window.innerHeight * 0.95) - 180;
+      setContainerHeight(Math.max(400, availableHeight)); // Set minimum height of 400px
     };
 
     updateContainerHeight();
@@ -50,16 +41,24 @@ export default function VirtualTable({
     return () => window.removeEventListener("resize", updateContainerHeight);
   }, []);
 
-  // Set up virtualizer with dynamic row height
-  const rowVirtualizer = useVirtualizer({
+  // Set up desktop virtualizer
+  const desktopVirtualizer = useVirtualizer({
     count: pieces.length,
-    getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 72, // Default row height
-    overscan: 10, // Show more rows for smoother scrolling
+    getScrollElement: () => desktopContainerRef.current,
+    estimateSize: () => 72,
+    overscan: 10,
     getItemKey: (index) => pieces[index]?.uuid || index,
   });
 
-  // Handle piece deletion
+  // Set up mobile virtualizer with dynamic row sizing
+  const mobileVirtualizer = useVirtualizer({
+    count: pieces.length,
+    getScrollElement: () => mobileContainerRef.current,
+    estimateSize: () => 72,
+    overscan: 10,
+    getItemKey: (index) => pieces[index]?.uuid || index,
+  });
+
   const handleDeleteInitiate = useCallback(
     (pieceId) => {
       const piece = pieces.find((p) => p.uuid === pieceId);
@@ -78,40 +77,6 @@ export default function VirtualTable({
       setPieceToDelete(null);
     }
   }, [pieceToDelete, onDelete]);
-
-  // Get virtualized rows
-  const virtualRows = rowVirtualizer.getVirtualItems();
-
-  // Scroll to top whenever pieces change significantly
-  useEffect(() => {
-    if (tableContainerRef.current) {
-      tableContainerRef.current.scrollTop = 0;
-    }
-  }, [sortConfig, pieces.length]);
-
-  // Empty state content
-  const EmptyState = () => (
-    <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-16 w-16 mb-4 text-slate-500"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-        />
-      </svg>
-      <p className="text-lg font-medium">No pieces found</p>
-      <p className="text-sm mt-1 text-slate-500">
-        Try adjusting your search or filters
-      </p>
-    </div>
-  );
 
   const columns = [
     {
@@ -179,7 +144,7 @@ export default function VirtualTable({
       if (!column.sortable) {
         return (
           <div
-            className={`${column.className} px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium`}
+            className={`px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium`}
           >
             {column.label}
           </div>
@@ -188,7 +153,7 @@ export default function VirtualTable({
 
       return (
         <div
-          className={`${column.className} px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium cursor-pointer group`}
+          className={`px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium cursor-pointer group`}
           onClick={() => sort(column.key)}
         >
           <div className="flex items-center">
@@ -245,7 +210,7 @@ export default function VirtualTable({
     };
 
     return (
-      <div className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700 flex items-center w-full rounded-t-xl">
+      <div className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700 flex items-center min-w-max rounded-t-xl">
         {columns.map((column, index) => (
           <HeaderCell key={column.key || `col-${index}`} column={column} />
         ))}
@@ -253,8 +218,38 @@ export default function VirtualTable({
     );
   };
 
-  const renderedRows = useMemo(() => {
-    return virtualRows.map((virtualRow) => {
+  // Get virtualized rows for desktop
+  const desktopVirtualRows = desktopVirtualizer.getVirtualItems();
+  // Get virtualized rows for mobile
+  const mobileVirtualRows = mobileVirtualizer.getVirtualItems();
+
+  // Empty state content
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-16 w-16 mb-4 text-slate-500"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+        />
+      </svg>
+      <p className="text-lg font-medium">No pieces found</p>
+      <p className="text-sm mt-1 text-slate-500">
+        Try adjusting your search or filters
+      </p>
+    </div>
+  );
+
+  // Render desktop rows
+  const renderedDesktopRows = useMemo(() => {
+    return desktopVirtualRows.map((virtualRow) => {
       const piece = pieces[virtualRow.index];
       if (!piece) return null;
 
@@ -274,53 +269,83 @@ export default function VirtualTable({
             originalId={piece.uuid}
             onChange={onChange}
             onDelete={handleDeleteInitiate}
-            isUpdating={isUpdating(piece.uuid)}
             columns={columns}
+            isUpdating={isUpdating(piece.uuid)}
             index={virtualRow.index}
             isLast={virtualRow.index === pieces.length - 1}
           />
         </div>
       );
     });
-  }, [virtualRows, pieces, onChange, handleDeleteInitiate, isUpdating]);
+  }, [
+    desktopVirtualRows,
+    pieces,
+    onChange,
+    handleDeleteInitiate,
+    columns,
+    isUpdating,
+  ]);
 
-  // Mobile card view for small screens
-  const MobileCardView = () => (
-    <div className="switch:hidden space-y-3 p-2">
-      {pieces.length > 0 ? (
-        pieces.map((piece) => (
+  // Render mobile rows
+  const renderedMobileRows = useMemo(() => {
+    return mobileVirtualRows.map((virtualRow) => {
+      const piece = pieces[virtualRow.index];
+      if (!piece) return null;
+
+      return (
+        <div
+          key={`mobile-${piece.uuid}`}
+          data-index={virtualRow.index}
+          className="absolute w-full"
+          style={{
+            transform: `translateY(${virtualRow.start}px)`,
+            height: `${virtualRow.size}px`,
+            zIndex: pieces.length - virtualRow.index,
+          }}
+        >
           <PieceRow
-            key={piece.uuid}
             piece={piece}
             originalId={piece.uuid}
             onChange={onChange}
-            columns={columns}
             onDelete={handleDeleteInitiate}
+            columns={columns}
             isUpdating={isUpdating(piece.uuid)}
+            index={virtualRow.index}
+            isLast={virtualRow.index === pieces.length - 1}
           />
-        ))
-      ) : (
-        <EmptyState />
-      )}
-
-      {pieces.length > 50 && (
-        <div className="text-center p-3 text-slate-400">
-          Showing 50 of {pieces.length} pieces. Use filters to narrow down
-          results.
         </div>
-      )}
-    </div>
-  );
+      );
+    });
+  }, [
+    mobileVirtualRows,
+    pieces,
+    onChange,
+    handleDeleteInitiate,
+    columns,
+    isUpdating,
+    expandedRows,
+    handleRowExpand,
+  ]);
+
+  // Scroll to top whenever pieces change significantly
+  useEffect(() => {
+    if (desktopContainerRef.current) {
+      desktopContainerRef.current.scrollTop = 0;
+    }
+    if (mobileContainerRef.current) {
+      mobileContainerRef.current.scrollTop = 0;
+    }
+  }, [sortConfig, pieces.length]);
 
   return (
     <>
       <div className="bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-slate-700 w-full h-full">
         {/* Desktop Table View */}
-        <div className="hidden switch:block w-full h-full">
+        <div className="hidden md:block w-full h-full">
           <TableHeader />
 
           <div
-            ref={tableContainerRef}
+            ref={desktopContainerRef}
             className="overflow-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent w-full"
             style={{ height: `${containerHeight}px` }}
           >
@@ -328,19 +353,36 @@ export default function VirtualTable({
               <EmptyState />
             ) : (
               <div
-                className="relative w-full"
+                className="relative min-w-max"
                 style={{
-                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  height: `${desktopVirtualizer.getTotalSize()}px`,
                 }}
               >
-                {renderedRows}
+                {renderedDesktopRows}
               </div>
             )}
           </div>
         </div>
 
-        {/* Mobile Card View */}
-        <MobileCardView />
+        {/* Mobile Table View */}
+        <div
+          ref={mobileContainerRef}
+          className="md:hidden overflow-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent w-full"
+          style={{ height: `${containerHeight}px` }}
+        >
+          {pieces.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div
+              className="relative"
+              style={{
+                height: `${mobileVirtualizer.getTotalSize()}px`,
+              }}
+            >
+              {renderedMobileRows}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}

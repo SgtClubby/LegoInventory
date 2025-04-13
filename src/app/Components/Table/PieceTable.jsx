@@ -138,6 +138,7 @@ export default function PieceTable() {
    */
   const handleUpdatePiece = useCallback(
     async (uuid, field, value) => {
+      console.log(`Updating piece ${uuid}: ${field} = ${value}`);
       const currentRequestId = ++requestIdentifier.current;
       const tableId = selectedTable.id;
       const currentPiece = pieces.find((p) => p.uuid === uuid);
@@ -195,6 +196,11 @@ export default function PieceTable() {
             : currentPiece.elementQuantityRequired;
 
         updates.countComplete = required === 0 ? null : onHand >= required;
+      }
+
+      if (field === "highlighted") {
+        console.log("Highlighting piece:", uuid, value);
+        updates.highlighted = value;
       }
 
       // Generate a unique key for this update

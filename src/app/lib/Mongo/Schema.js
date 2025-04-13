@@ -30,6 +30,7 @@ const userBrickSchema = new Schema(
     elementQuantityRequired: { type: Number, default: 0 },
     invalid: { type: Boolean, default: false },
     countComplete: { type: Boolean, default: false },
+    highlighted: { type: Boolean, default: false },
     tableId: { type: String, required: true, index: true },
     ownerId: { type: String, required: true, default: "default", index: true },
   },
