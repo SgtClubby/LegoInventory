@@ -1,4 +1,4 @@
-// src/app/api/part/[pieceId]/details/route.js
+// \Users\Clomby\Projects\LegoInventory\src\app\api\part\[pieceId]\details\route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
 import { BrickMetadata } from "@/lib/Mongo/Schema";
@@ -10,6 +10,8 @@ import { BrickMetadata } from "@/lib/Mongo/Schema";
  * @param {Object} params - Route parameters containing pieceId
  * @returns {Response} JSON response with part details
  */
+// In src/app/api/part/[pieceId]/details/route.js
+// Modify the GET handler
 export async function GET(req, { params }) {
   const { pieceId } = await params;
 
@@ -20,9 +22,15 @@ export async function GET(req, { params }) {
       { elementId: pieceId },
       {
         _id: 0,
-        "availableColors._id": 0,
+        invalid: 1,
+        elementName: 1,
       }
     ).lean();
+
+    // If we have an invalid entry already, return that
+    if (existingMetadata?.invalid === true) {
+      return Response.json({ error: "Invalid piece ID" }, { status: 404 });
+    }
 
     // If we have complete metadata with at least one color that has an image
     if (
@@ -56,22 +64,21 @@ export async function GET(req, { params }) {
     );
 
     if (!res.ok) {
-      return Response.json({ error: "No part found" }, { status: 404 });
-    }
-
-    if (res.status == 404) {
+      // Mark as invalid in the database for future lookups
+      await updateBrickMetadata(pieceId, null, true);
       return Response.json({ error: "No part found" }, { status: 404 });
     }
 
     const data = await res.json();
 
-    updateBrickMetadata(pieceId, data);
+    // Update the metadata with valid data
+    await updateBrickMetadata(pieceId, data, false);
 
     return Response.json({
       partNum: data.part_num,
       name: data.name,
       partUrl: data.part_url,
-      partImgUrl: data.elementImage,
+      partImgUrl: data.part_img_url,
     });
   } catch (error) {
     console.error(`Error fetching details for piece ${pieceId}:`, error);
@@ -87,17 +94,33 @@ export async function GET(req, { params }) {
  *
  * @param {string} partId - Brick element ID
  * @param {Object} data - Brick data from Rebrickable API
+ * @param {boolean} isInvalid - Whether this part is invalid
  */
-function updateBrickMetadata(partId, data) {
-  // Check if this is a valid part before updating
-  const isValid = data && data.name;
+async function updateBrickMetadata(partId, data, isInvalid) {
+  // If part is invalid, store it with the invalid flag
+  if (isInvalid) {
+    return BrickMetadata.updateOne(
+      { elementId: partId },
+      {
+        $set: {
+          elementName: "Invalid/Missing ID",
+          invalid: true,
+          availableColors: [{ empty: true }],
+        },
+      },
+      { upsert: true }
+    ).catch((err) => {
+      console.error(`Error updating invalid metadata for part ${partId}:`, err);
+    });
+  }
 
-  BrickMetadata.updateOne(
+  // Otherwise store the valid data
+  return BrickMetadata.updateOne(
     { elementId: partId },
     {
       $set: {
-        elementName: isValid ? data.name : "Invalid/Missing ID",
-        invalid: !isValid, // Very important - set invalid flag correctly!
+        elementName: data.name,
+        invalid: false,
       },
       $setOnInsert: { elementId: partId },
     },

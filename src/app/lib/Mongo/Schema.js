@@ -8,6 +8,7 @@ const brickMetadataSchema = new Schema(
     elementId: { type: String, required: true, unique: true, index: true },
     elementName: { type: String, required: true },
     invalid: { type: Boolean, default: false },
+    cacheIncomplete: { type: Boolean, default: false },
     availableColors: [
       {
         colorId: { type: String, required: true },

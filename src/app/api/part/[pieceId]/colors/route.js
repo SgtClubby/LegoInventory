@@ -10,11 +10,32 @@ import { BrickMetadata } from "@/lib/Mongo/Schema";
  * @param {Object} params - Route parameters containing pieceId
  * @returns {Response} JSON response with available colors
  */
+// In src/app/api/part/[pieceId]/colors/route.js
 export async function GET(req, { params }) {
-  const { pieceId } = await params;
+  let { pieceId } = await params;
+  if (!pieceId) {
+    return Response.json({ error: "Missing piece ID" }, { status: 400 });
+  }
+
+  let cacheIncomplete = false;
+  if (pieceId.endsWith("-ic")) {
+    pieceId = pieceId.slice(0, -3); // Remove the "-ic" suffix
+    cacheIncomplete = true;
+  }
 
   try {
     await dbConnect();
+
+    // First check if this part is marked as invalid
+    const invalidCheck = await BrickMetadata.findOne(
+      { elementId: pieceId, invalid: true },
+      { _id: 0 }
+    );
+
+    if (invalidCheck) {
+      console.log(`Part ${pieceId} is marked as invalid, returning 404`);
+      return Response.json({ error: "Invalid part ID" }, { status: 404 });
+    }
 
     // Try to find colors in cache first
     const ColorCache = await BrickMetadata.findOne(
@@ -29,7 +50,7 @@ export async function GET(req, { params }) {
     );
 
     // Validate cache data
-    if (ColorCache) {
+    if (ColorCache?.availableColors?.length > 0 && !cacheIncomplete) {
       console.log("HIT! Cache found for pieceId:", pieceId);
       return Response.json(ColorCache.availableColors);
     }
@@ -47,6 +68,19 @@ export async function GET(req, { params }) {
     );
 
     if (!res.ok) {
+      // Mark as invalid in database
+      await BrickMetadata.updateOne(
+        { elementId: pieceId },
+        {
+          $set: {
+            invalid: true,
+            elementName: "Invalid/Missing ID",
+            availableColors: [{ empty: true }],
+          },
+        },
+        { upsert: true }
+      );
+
       return Response.json(
         { error: "Failed to fetch!" },
         { status: res.status }
@@ -55,7 +89,20 @@ export async function GET(req, { params }) {
 
     const data = await res.json();
 
-    if (!data.results.length > 0) {
+    if (!data.results || !data.results.length) {
+      // If no colors found but API response was OK, mark part as having no colors
+      await BrickMetadata.updateOne(
+        { elementId: pieceId },
+        {
+          $set: {
+            availableColors: [],
+            invalid: false, // Not invalid, just no colors
+            cacheIncomplete: true, // Mark as cache incomplete
+          },
+        },
+        { upsert: true }
+      );
+
       return Response.json({ error: "No colors found" }, { status: 404 });
     }
 
@@ -66,44 +113,24 @@ export async function GET(req, { params }) {
       elementImage: item.part_img_url,
     }));
 
-    // Short delay to avoid race conditions
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
     // Update the cache with the new data
-    // Check if formattedResults is empty or null
-    // If it is, set the cache to null
-    // This is to avoid storing all the key-value pairs in the database for pices that dont exist
-    if (!formattedResults || formattedResults.length === 0) {
-      await updateBrickMetadata(null, formattedResults);
-    } else {
-      await updateBrickMetadata(pieceId, formattedResults);
-    }
+    await BrickMetadata.updateOne(
+      { elementId: pieceId },
+      {
+        $set: {
+          availableColors: formattedResults,
+          invalid: false, // Explicitly mark as valid
+          cacheIncomplete: false,
+        },
+        $setOnInsert: { elementId: pieceId },
+      },
+      { upsert: true }
+    );
 
-    // Update both cache and metadata
     console.log("MISS! Cache created for pieceId:", pieceId);
-
     return Response.json(formattedResults);
   } catch (error) {
     console.error(`Error fetching colors for piece ${pieceId}:`, error);
     return Response.json({ error: "Failed to fetch colors" }, { status: 500 });
   }
-}
-/**
- * Update brick metadata with color information
- *
- * @param {string} pieceId - Brick element ID
- * @param {Array} colors - Array of color objects
- * @returns {Promise} Promise resolving to the database operation result
- */
-function updateBrickMetadata(pieceId, colors) {
-  return BrickMetadata.updateOne(
-    { elementId: pieceId },
-    {
-      $set: { availableColors: colors },
-      $setOnInsert: { elementId: pieceId },
-    },
-    { upsert: true }
-  ).catch((err) => {
-    console.error(`Error updating metadata colors for part ${pieceId}:`, err);
-  });
 }

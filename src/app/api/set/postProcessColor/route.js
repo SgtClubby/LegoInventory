@@ -2,6 +2,7 @@
 
 import dbConnect from "@/lib/Mongo/Mongo";
 import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
+import { cache } from "react";
 
 /**
  * Processes LEGO piece IDs to fetch and store their available colors
@@ -79,6 +80,9 @@ async function processPiecesInBatches(pieceIds, tableId, ownerId) {
     try {
       // First check cache for pieces in this specific batch only
       const cachedResults = await getColorCache(unprocessedBatch);
+      console.log(
+        `Found ${cachedResults.length} cached pieces in batch ${batchNumber}`
+      );
 
       // Split into cached and uncached pieces
       const cachedPieceIds = cachedResults.map((item) => item.elementId);
@@ -100,17 +104,21 @@ async function processPiecesInBatches(pieceIds, tableId, ownerId) {
       // Fetch uncached pieces from API
       if (uncachedPieceIds.length > 0) {
         console.log(`Fetching ${uncachedPieceIds.length} pieces from API`);
-        const fetchResult = await fetchColorsForPieces(
+        const { results, rateLimited } = await fetchColorsForPieces(
           uncachedPieceIds,
           tableId,
           ownerId
+        );
+
+        console.log(
+          `Fetched ${results.length} pieces from API in batch ${batchNumber}`
         );
 
         // Mark fetched pieces as processed
         uncachedPieceIds.forEach((id) => processedPieceIds.add(id));
 
         // If we hit rate limits, increase delay for next batch
-        if (fetchResult.rateLimited) {
+        if (rateLimited) {
           console.log(`Rate limit detected. Increasing delay for next batch.`);
           batchDelay = RATE_LIMIT_DELAY;
         } else {
@@ -141,10 +149,12 @@ async function processPiecesInBatches(pieceIds, tableId, ownerId) {
  */
 async function getColorCache(pieceIds) {
   try {
-    const cacheEntries = await BrickMetadata.find(
-      { elementId: { $in: pieceIds } },
-      { elementId: 1, availableColors: 1, _id: 0 }
-    );
+    const cacheEntries = await BrickMetadata.find({
+      elementId: { $in: pieceIds },
+      availableColors: { $ne: [] },
+      invalid: false,
+      cacheIncomplete: false,
+    });
 
     if (cacheEntries.length > 0) {
       console.log(
@@ -206,20 +216,33 @@ async function updateUserBricksWithCachedColors(
   }
 }
 
-/**
- * Fetch colors for pieces from the Rebrickable API
- *
- * @param {string[]} pieceIds - Array of piece IDs to fetch colors for
- * @param {string} tableId - Table ID for the database query
- * @param {string} ownerId - Owner ID for the database query
- * @returns {Object} - Result object with rateLimited flag
- */
 async function fetchColorsForPieces(pieceIds, tableId, ownerId) {
   const result = { rateLimited: false };
 
   // Create an array of promises for each API fetch
   const fetchPromises = pieceIds.map(async (pieceId) => {
     try {
+      // First check if this part is already marked as invalid
+      const invalidCheck = await BrickMetadata.findOne(
+        { elementId: pieceId, invalid: true },
+        { _id: 0 }
+      );
+
+      // If it's already marked as invalid, skip API call
+      if (invalidCheck) {
+        console.log(
+          `Piece ${pieceId} is already marked as invalid, skipping API call`
+        );
+
+        // Update the user brick to mark it as invalid
+        await UserBrick.updateMany(
+          { elementId: pieceId, tableId, ownerId },
+          { $set: { invalid: true } }
+        );
+
+        return null;
+      }
+
       const response = await fetch(
         `https://rebrickable.com/api/v3/lego/parts/${pieceId}/colors`,
         {
@@ -239,7 +262,27 @@ async function fetchColorsForPieces(pieceIds, tableId, ownerId) {
       }
 
       if (response.status === 404) {
-        console.warn(`Piece ${pieceId} not found`);
+        console.warn(`Piece ${pieceId} not found, marking as invalid`);
+
+        // Mark as invalid in the database
+        await BrickMetadata.updateOne(
+          { elementId: pieceId },
+          {
+            $set: {
+              invalid: true,
+              elementName: "Invalid/Missing ID",
+              availableColors: [{ empty: true }],
+            },
+          },
+          { upsert: true }
+        );
+
+        // Also update the user bricks
+        await UserBrick.updateMany(
+          { elementId: pieceId, tableId, ownerId },
+          { $set: { invalid: true } }
+        );
+
         return null;
       }
 
@@ -248,6 +291,31 @@ async function fetchColorsForPieces(pieceIds, tableId, ownerId) {
       }
 
       const data = await response.json();
+
+      console.log(`Fetched ${data.results.length} colors for piece ${pieceId}`);
+
+      // Only proceed if we have actual results
+      if (!data.results || data.results.length === 0) {
+        console.warn(
+          `No colors found for piece ${pieceId}, but API response was OK`
+        );
+
+        // Update metadata to indicate no colors (but not invalid)
+        await BrickMetadata.updateOne(
+          { elementId: pieceId },
+          {
+            $set: {
+              availableColors: [],
+              invalid: false,
+              elementName: (await fetchPartName(pieceId)) || `Part ${pieceId}`,
+              cacheIncomplete: true, // Mark as cache incomplete
+            },
+          },
+          { upsert: true }
+        );
+
+        return null;
+      }
 
       // Map the API response to our schema format
       const colorData = {
@@ -259,16 +327,34 @@ async function fetchColorsForPieces(pieceIds, tableId, ownerId) {
         })),
       };
 
+      // Fetch part name if we don't have it
+      const partName = await fetchPartName(pieceId);
+
       // Save to cache, update user brick, and update metadata
       await Promise.all([
         // Update brick metadata
         BrickMetadata.updateOne(
           { elementId: pieceId },
           {
-            $set: { availableColors: colorData.availableColors },
-            $setOnInsert: { elementId: pieceId },
+            $set: {
+              availableColors: colorData.availableColors,
+              invalid: false,
+              elementName: partName || `Part ${pieceId}`,
+              cacheIncomplete: false,
+            },
           },
           { upsert: true }
+        ),
+
+        // Update user bricks to make sure they're marked as valid
+        UserBrick.updateMany(
+          { elementId: pieceId, tableId, ownerId },
+          {
+            $set: {
+              availableColors: colorData.availableColors,
+              invalid: false,
+            },
+          }
         ),
       ]);
 
@@ -281,6 +367,54 @@ async function fetchColorsForPieces(pieceIds, tableId, ownerId) {
   });
 
   // Wait for all fetch operations to complete
-  await Promise.all(fetchPromises);
-  return result;
+  const processed = await Promise.all(fetchPromises);
+  return {
+    results: processed.filter((item) => item !== null),
+    rateLimited: result.rateLimited,
+  };
+}
+
+/**
+ * Helper function to fetch part name if not already known
+ *
+ * @param {string} pieceId - The piece ID to fetch name for
+ * @returns {Promise<string|null>} The part name or null if not found
+ */
+async function fetchPartName(pieceId) {
+  try {
+    // Check if we already have the name in metadata
+    const existingMetadata = await BrickMetadata.findOne(
+      { elementId: pieceId },
+      { elementName: 1, _id: 0 }
+    );
+
+    if (
+      existingMetadata?.elementName &&
+      existingMetadata.elementName !== "Invalid/Missing ID"
+    ) {
+      return existingMetadata.elementName;
+    }
+
+    // Otherwise fetch from API
+    const res = await fetch(
+      `https://rebrickable.com/api/v3/lego/parts/${pieceId}`,
+      {
+        headers: {
+          Authorization: `key ${process.env.REBRICKABLE_APIKEY}`,
+          "User-Agent":
+            "LegoInventoryBot/1.0 (+https://github.com/SgtClubby/LegoInventory)",
+        },
+      }
+    );
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const data = await res.json();
+    return data.name;
+  } catch (error) {
+    console.error(`Error fetching part name for ${pieceId}:`, error);
+    return null;
+  }
 }

@@ -9,6 +9,7 @@ export default function PieceImage({ piece, colBase, columnWidths }) {
   const elementImage =
     availableColors?.find((color) => color.colorId == piece.elementColorId)
       ?.elementImage || null;
+
   // Create image URL, with fallback handling
   const resizedImage = elementImage
     ? (elementImage + "/48x48p.jpg").replace("parts", "thumbs/parts")
@@ -27,7 +28,7 @@ export default function PieceImage({ piece, colBase, columnWidths }) {
     return () => {
       setLoaded(false);
     };
-  }, [elementImage]);
+  }, [elementImage, piece]);
 
   return (
     <div className={`${colBase} ${columnWidths.image}`}>

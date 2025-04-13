@@ -72,33 +72,23 @@ export function useImportSetSubmit() {
 
       // Map API results to our piece format
       const importedPieces = results.map((item) => {
-        // Find color ID from our colors collection
-        const colorId =
-          colors.find((c) => c.colorName === item.color.name)?.colorId || 0;
-
         // Create base piece object
-        const pieceObj = {
+        const piece = {
           uuid: uuidv4(),
-          elementName: item.part.name,
-          elementId: item.part.part_num,
-          elementImage: item.part.part_img_url,
-          elementColor: item.color.name || "Black",
-          elementColorId: colorId || 0,
+          elementName: item.elementName,
+          elementId: item.elementId,
+          elementColor: item.elementColor || "Black",
+          elementColorId: item.elementColorId || 0,
           elementQuantityOnHand: 0,
           elementQuantityRequired: item.quantity,
           countComplete: false,
           tableId: newTable.id,
           ownerId: "default",
+          availableColors: item.availableColors || [],
+          cacheIncomplete: item.cacheIncomplete || false,
         };
 
-        // Add availableColors if we have them from cache
-        if (item.availableColors) {
-          pieceObj.availableColors = item.availableColors;
-        } else {
-          pieceObj.availableColors = [];
-        }
-
-        return pieceObj;
+        return piece;
       });
 
       // Create the table in the database
@@ -138,19 +128,23 @@ export function useImportSetSubmit() {
       }
 
       // Update client-side state with the new pieces
-      setPiecesByTable((prev) => ({
-        ...prev,
-        [newTable.id]: importedPieces,
-      }));
+      setTimeout(() => {
+        setPiecesByTable((prev) => ({
+          ...prev,
+          [newTable.id]: importedPieces,
+        }));
+      }, 1000);
 
       // Collect part IDs that still need color data
+      // we supply the response with one set of the original color data, so the imported pieces will always have ATLEAST one color in availableColors
+      // check if we have more than one color, if it does we fetch the rest
       const piecesNeedingColors = importedPieces
-        .filter((p) => !p.availableColors || p.availableColors.length === 0)
+        .filter((p) => p.availableColors.length <= 1 || !p.availableColors)
         .map((p) => p.elementId);
 
       console.log(`${piecesNeedingColors.length} pieces still need color data`);
 
-      // Only run post-processing for pieces without color data
+      //Only run post-processing for pieces without color data
       if (piecesNeedingColors.length > 0) {
         fetch("/api/set/postProcessColor/", {
           method: "POST",

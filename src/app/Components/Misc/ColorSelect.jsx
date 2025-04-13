@@ -1,6 +1,6 @@
 // src/app/Components/Misc/ColorSelect.jsx
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import colors from "@/Colors/colors";
 import { useLego } from "@/Context/LegoContext";
@@ -10,53 +10,16 @@ export default function ColorSelect({
   colorName,
   onChange,
   isNew = true,
-  availablePieceColors = [],
+  availablePieceColors,
   className = "",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [localColors, setLocalColors] = useState(availablePieceColors);
+  const [hasSuccessfullyFetched, setHasSuccessfullyFetched] = useState(false);
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
-  const { setPiecesByTable } = useLego();
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target) &&
-        !buttonRef.current.contains(event.target)
-      ) {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // When availablePieceColors changes from props, and check whenever the dropdown is opened
-  useEffect(() => {
-    console.log("[ColorSelect] availablePieceColors:", availablePieceColors);
-    if (availablePieceColors && availablePieceColors.length > 0) {
-      // If availablePieceColors is not empty, set it to localColors
-      console.log(
-        "[ColorSelect] availablePieceColors is not empty, setting localColors"
-      );
-      setLocalColors(availablePieceColors);
-    } else {
-      setLocalColors([{ empty: true }]);
-    }
-  }, [availablePieceColors, isOpen]);
-
-  // Check if colors need to be fetched
-  const needToFetchColors =
-    !localColors ||
-    localColors.length === 0 ||
-    localColors.some((color) => !color?.color || !color?.colorId);
+  const { setPiecesByTable, selectedTable } = useLego();
 
   // Function to fetch colors from API
   async function fetchAvailableColors() {
@@ -64,8 +27,12 @@ export default function ColorSelect({
 
     setIsLoading(true);
     try {
-      // Fetch available colors from the API
-      const res = await fetch(`/api/part/${piece.elementId}/colors`, {
+      const url =
+        piece.cacheIncomplete === true
+          ? `/api/part/${piece.elementId}-ic/colors`
+          : `/api/part/${piece.elementId}/colors`;
+
+      const res = await fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -80,6 +47,7 @@ export default function ColorSelect({
 
       // Update local state first for immediate UI update
       setLocalColors(data);
+      setHasSuccessfullyFetched(true);
 
       // If we have colors and no current selection, select the first one
       if (data && data.length > 0 && !colorName) {
@@ -87,22 +55,24 @@ export default function ColorSelect({
       }
 
       // Update the piece data in global state if we have tableId
-      if (piece.tableId && setPiecesByTable) {
+      if (setPiecesByTable && selectedTable && piece.uuid) {
         setPiecesByTable((prev) => {
-          const tablePieces = prev[piece.tableId] || [];
-          const updatedPieces = tablePieces.map((p) => {
+          // Create a new array for the table's pieces, with the updated piece
+          const updatedPieces = prev[selectedTable.id].map((p) => {
             if (p.uuid === piece.uuid) {
               return {
                 ...p,
                 availableColors: data,
+                cacheIncomplete: false,
               };
             }
             return p;
           });
 
+          // Return new state object with updated table pieces
           return {
             ...prev,
-            [piece.tableId]: updatedPieces,
+            [selectedTable.id]: updatedPieces,
           };
         });
       }
@@ -118,19 +88,27 @@ export default function ColorSelect({
 
   // Handle toggle dropdown
   const handleToggleDropdown = async () => {
-    setIsOpen(!isOpen);
+    const newIsOpen = !isOpen;
+    setIsOpen(newIsOpen);
 
-    // Only fetch if we're opening the dropdown and don't have valid colors
+    // Only fetch if we're opening the dropdown, don't have valid colors, and haven't already successfully fetched
     if (
-      isOpen &&
-      needToFetchColors &&
+      newIsOpen &&
+      !hasSuccessfullyFetched &&
       !isNew &&
       piece.elementId &&
+      (needToFetchColors || piece.cacheIncomplete) &&
       !availablePieceColors[0]?.empty
     ) {
       await fetchAvailableColors();
     }
   };
+
+  // Check if colors need to be fetched
+  const needToFetchColors =
+    !localColors ||
+    localColors.length === 0 ||
+    localColors.some((color) => !color?.color || !color?.colorId);
 
   // Filter the colors to just show available ones
   const colorOptions =
@@ -206,7 +184,6 @@ export default function ColorSelect({
             </div>
           ) : !needToFetchColors ? (
             availablePieceColors[0]?.empty &&
-            !isNew &&
             piece.elementId && (
               <div className="px-4 py-4 text-sm text-center text-gray-400">
                 <button

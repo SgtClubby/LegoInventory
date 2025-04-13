@@ -92,7 +92,7 @@ export default function AddNewPieceForm() {
     if (
       newPiece.elementColorId &&
       newPiece.elementId &&
-      !newPiece.availableColors
+      newPiece.availableColors.length === 0
     ) {
       console.log(
         "No piece color metadata loaded... Fetching single image for elementId and elementColorId"
@@ -254,9 +254,6 @@ export default function AddNewPieceForm() {
               onChange={(colorName) => {
                 const colorId =
                   colors.find((c) => c.colorName === colorName)?.colorId || 0;
-                const colorImage = newPiece.availableColors.find(
-                  (c) => c.colorId === colorId
-                )?.part_img_url;
 
                 setNewPiece((prev) => ({
                   ...prev,

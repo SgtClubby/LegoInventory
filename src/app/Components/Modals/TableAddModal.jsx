@@ -1,4 +1,4 @@
-// src/app/components/Modals/TableAddModal.jsx
+// src/app/Components/Modals/TableAddModal.jsx
 
 import { useEffect } from "react";
 
@@ -42,7 +42,10 @@ export default function TableAddModal({
           <button onClick={handleClose} className="cancel-btn">
             Cancel
           </button>
-          <button onClick={() => handleSubmit(details)} className="blue-btn">
+          <button
+            onClick={() => handleSubmit(newTableName)}
+            className="blue-btn"
+          >
             Add
           </button>
         </div>

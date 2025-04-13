@@ -71,6 +71,11 @@ export async function GET(req, { params }) {
         };
       }
 
+      // if metadata.cacheIncomplete is true, set elementColorId and elementColor to null
+      if (metadata.cacheIncomplete === true) {
+        userBrick.cacheIncomplete = true;
+      }
+
       return {
         ...userBrick,
         elementName: metadata.elementName,
@@ -132,13 +137,10 @@ export async function POST(req, { params }) {
           update: {
             $set: {
               elementName: brick.elementName,
+              availableColors: brick.availableColors || [],
+              cacheIncomplete: brick.cacheIncomplete || false,
+              invalid: false,
             },
-            // Only update availableColors if provided and not empty
-            ...(brick.availableColors && brick.availableColors.length > 0
-              ? {
-                  $setOnInsert: { availableColors: brick.availableColors },
-                }
-              : {}),
           },
           upsert: true,
         },

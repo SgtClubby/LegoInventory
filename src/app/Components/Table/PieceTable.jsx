@@ -585,6 +585,10 @@ export default function PieceTable() {
     deleteTable(selectedTable.id);
     setDeleteShowModal(false);
     setSelectedTable(updatedTables.find((t) => t.id === "1") || null);
+    setPiecesByTable((prev) => {
+      const { [selectedTable.id]: _, ...rest } = prev;
+      return rest;
+    });
   };
 
   // Sorting function
