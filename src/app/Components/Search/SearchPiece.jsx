@@ -1,7 +1,10 @@
 // src/app/Components/Search/SearchPiece.jsx
 
+// Functions and Helpers
+import { useState, useRef } from "react";
+
+// Icons
 import { ClearRounded, SearchRounded } from "@mui/icons-material";
-import { useState, useRef, useEffect } from "react";
 
 export default function SearchPiece({ searchTerm, setSearchTerm }) {
   const inputRef = useRef(null);

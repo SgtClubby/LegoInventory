@@ -1,6 +1,16 @@
 // src/app/Components/Search/SearchSet.jsx
 
+// Functions and Helpers
 import React, { useState, useEffect, useRef } from "react";
+
+// Icons
+import {
+  ArrowCircleDownRounded,
+  ClearRounded,
+  SearchRounded,
+} from "@mui/icons-material";
+import LoaderIcon from "../Misc/LoaderIcon";
+import BrickIcon from "../Misc/BrickIcon";
 
 export default function SearchSet({ setSetSearchResult }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -144,39 +154,9 @@ export default function SearchSet({ setSetSearchResult }) {
           {/* Search icon */}
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
             {isLoading ? (
-              <svg
-                className="animate-spin h-5 w-5"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
+              <LoaderIcon />
             ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <SearchRounded className="h-5 w-5" fontSize="medium" />
             )}
           </div>
 
@@ -186,18 +166,7 @@ export default function SearchSet({ setSetSearchResult }) {
               onClick={() => setSearchTerm("")}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <ClearRounded className="h-5 w-5" fontSize="medium" />
             </button>
           )}
         </div>
@@ -228,20 +197,7 @@ export default function SearchSet({ setSetSearchResult }) {
                     />
                   ) : (
                     <div className="w-14 h-14 bg-slate-700 rounded flex items-center justify-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-slate-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                        />
-                      </svg>
+                      <BrickIcon className="w-8 h-8 text-slate-500" />
                     </div>
                   )}
 
@@ -263,18 +219,7 @@ export default function SearchSet({ setSetSearchResult }) {
                   </div>
 
                   <div className="flex-shrink-0 text-amber-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
+                    <ArrowCircleDownRounded className="h-6 w-6" />
                   </div>
                 </div>
               ))}

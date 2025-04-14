@@ -17,22 +17,21 @@ import useInit from "@/hooks/useInit";
 import {
   Add,
   FilterListRounded,
-  ImportContacts,
   ImportExportRounded,
-  PublishRounded,
-  TableChartRounded,
-  TocRounded,
   VerticalAlignBottomRounded,
 } from "@mui/icons-material";
+import Footer from "../Misc/Footer";
+import { useLego } from "@/Context/LegoContext";
 
 const MainApp = () => {
   // Modal state for set import
   const [showImportModal, setShowImportModal] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
-  const [activeTab, setActiveTab] = useState("all"); // "all", "add", "import", "export"
+
+  const { activeTab, setActiveTab } = useLego();
 
   // Initialization: Load Tables
-  const { piecesByTable, setPiecesByTable, selectedTable } = useInit();
+  const { setPiecesByTable, selectedTable } = useInit();
 
   // Handle import modal
   useEffect(() => {
@@ -67,15 +66,15 @@ const MainApp = () => {
   }, [selectedTable]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white p-4 md:p-8">
-      <div className="max-w-[100rem] mx-auto">
+    <div className="min-h-screen w-full flex flex-col bg-gradient-to-b from-slate-900 to-slate-800 text-white">
+      <div className="max-w-[100rem] w-full mx-auto p-4 md:p-8">
         {/* Header */}
         <Header />
-
+    
         {/* Main Tabs */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 h">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 h ">
           <div
-            className={`p-5 rounded-xl border ${
+            className={`p-3 md:p-5 rounded-xl border ${
               activeTab === "all"
                 ? "bg-blue-600/30 border-blue-500"
                 : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
@@ -88,7 +87,7 @@ const MainApp = () => {
           </div>
 
           <div
-            className={`p-5 rounded-xl border ${
+            className={`p-3 md:p-5 rounded-xl border ${
               activeTab === "add"
                 ? "bg-emerald-600/30 border-emerald-500"
                 : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
@@ -100,7 +99,7 @@ const MainApp = () => {
           </div>
 
           <div
-            className={`p-5 rounded-xl border ${
+            className={`p-3 md:p-5 rounded-xl border ${
               activeTab === "import"
                 ? "bg-amber-600/30 border-amber-500"
                 : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
@@ -115,7 +114,7 @@ const MainApp = () => {
           </div>
 
           <div
-            className={`p-5 rounded-xl border ${
+            className={`p-3 md:p-5 rounded-xl border ${
               activeTab === "export"
                 ? "bg-rose-600/30 border-rose-500"
                 : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
@@ -206,6 +205,9 @@ const MainApp = () => {
           />
         )}
       </div>
+      {/* Footer */}
+      <div className="flex-grow mt-16 switch:mt-0" />
+      <Footer className="items-end" />
     </div>
   );
 };

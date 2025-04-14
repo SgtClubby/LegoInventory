@@ -15,7 +15,7 @@ import colors from "@/Colors/colors.js";
 import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import getColorStyle from "@/lib/Misc/getColorStyle";
-import { Add, BrokenImage } from "@mui/icons-material";
+import { Add, BrokenImage, InsertPhotoRounded } from "@mui/icons-material";
 
 export default function AddNewPieceForm() {
   // Context
@@ -157,7 +157,6 @@ export default function AddNewPieceForm() {
   // Handle add piece
   const handleAddPiece = async () => {
     if (!formValid) {
-      alert("Please fill out all required fields (Name, ID, and Color)");
       return;
     }
 
@@ -186,7 +185,6 @@ export default function AddNewPieceForm() {
     // Save new piece via API call
     const success = await addPieceToTable(updatedNewPiece, tableId);
     if (!success) {
-      alert("Failed to add piece.");
       return;
     }
 
@@ -299,7 +297,7 @@ export default function AddNewPieceForm() {
                 }`}
               />
             ) : (
-              <BrokenImage className="h-10 w-10 text-slate-500" />
+              <InsertPhotoRounded className="h-6 w-6 text-slate-400" />
             )}
           </div>
         </div>
@@ -437,12 +435,13 @@ export default function AddNewPieceForm() {
         <button
           onClick={handleAddPiece}
           disabled={!formValid}
-          className={`px-6 py-3 rounded-lg text-white font-medium transition-colors 
-        ${
-          formValid
-            ? "bg-blue-600 hover:bg-blue-700"
-            : "bg-slate-600 cursor-not-allowed"
-        }`}
+          className={`px-6 py-3 rounded-lg text-white font-medium transition-all
+          ${
+            formValid
+              ? "bg-blue-600 hover:bg-blue-700 transition-opacity duration-200 ease-in-out"
+              : "bg-slate-600 opacity-50 cursor-not-allowed pointer-events-none"
+          }
+        `}
         >
           <div className="flex items-center justify-center">
             <Add className="h-5 w-5 mr-2" />
