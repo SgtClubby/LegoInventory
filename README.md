@@ -1,10 +1,12 @@
+![Version](https://img.shields.io/badge/LegoInventory-1.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 # Lego Inventory Piece Manager
 
-A web application for tracking your LEGO® piece inventory and needs. Built with Next.js and MongoDB.
-- A side-project that started with simple roots, that have since just grown and grown, figured i had to put this out here!
+A modern web application for organizing and tracking your LEGO® collection — built with **Next.js**, **MongoDB**, and a whole lot of curiosity.
 
-![LegoInventory](https://img.shields.io/badge/LegoInventory-1.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+> What started as a simple side project has grown far beyond its roots.  
+> It’s now a full-featured tool that I figured deserved to be shared.
 
 ## Features
 
@@ -81,7 +83,7 @@ bun dev
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-## Usage
+## General Overview and Usage
 
 ### Adding Pieces
 
@@ -111,7 +113,10 @@ bun dev
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for full details.
+
+> This is a personal passion project. Feel free to explore, use, and build on it!  
+> If you find it useful or make something cool with it, I'd love to hear about it.
 
 ## Acknowledgements
 
@@ -119,6 +124,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Next.js](https://nextjs.org/) for the React framework
 - [TailwindCSS](https://tailwindcss.com/) for styling
 - [MongoDB](https://www.mongodb.com/) for database storage
+- [Material UI Icons](https://mui.com/) for UI components
+- [TanStack Virtual](https://tanstack.com/virtual) for efficient rendering of large lists
+- [Lodash](https://lodash.com/) for utility functions
 
 ## Disclaimer
 
