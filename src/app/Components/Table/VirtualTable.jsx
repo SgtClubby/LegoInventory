@@ -1,5 +1,6 @@
 // src/app/Components/Table/VirtualTable.jsx
 
+// Functions and Helpers
 import React, {
   useState,
   useEffect,
@@ -11,6 +12,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import PieceRow from "@/Components/Table/PieceRow";
 import DeletePieceModal from "../Modals/DeletePieceModal";
 
+// Icons
+import BrickIcon from "../Misc/BrickIcon";
+import { HeightRounded, NorthRounded, SouthRounded } from "@mui/icons-material";
+
 export default function VirtualTable({
   pieces,
   onChange,
@@ -18,8 +23,6 @@ export default function VirtualTable({
   sort,
   sortConfig,
   isUpdating = () => false,
-  expandedRows,
-  handleRowExpand,
 }) {
   // Table refs and state
   const desktopContainerRef = useRef(null);
@@ -78,6 +81,7 @@ export default function VirtualTable({
     }
   }, [pieceToDelete, onDelete]);
 
+  // Table header component
   const columns = [
     {
       key: null,
@@ -137,14 +141,13 @@ export default function VirtualTable({
     },
   ];
 
-  // Table header component
   const TableHeader = () => {
     // Render a header cell with sort functionality if sortable
     const HeaderCell = ({ column }) => {
       if (!column.sortable) {
         return (
           <div
-            className={`px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium`}
+            className={`px-4 py-3 ${column.width} ${column.className} flex-shrink-0 text-slate-300 font-medium`}
           >
             {column.label}
           </div>
@@ -153,7 +156,7 @@ export default function VirtualTable({
 
       return (
         <div
-          className={`px-4 py-3 ${column.width} flex-shrink-0 text-slate-300 font-medium cursor-pointer group`}
+          className={`px-4 py-3 ${column.width} ${column.className} flex-shrink-0 text-slate-300 font-medium cursor-pointer group`}
           onClick={() => sort(column.key)}
         >
           <div className="flex items-center">
@@ -167,41 +170,21 @@ export default function VirtualTable({
             >
               {sortConfig.key === column.key ? (
                 sortConfig.direction === "ascending" ? (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 text-blue-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  <NorthRounded
+                    className="absolute h-4 w-4 text-blue-400 top-4"
+                    fontSize="small"
+                  />
                 ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 text-blue-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  <SouthRounded
+                    className="absolute h-4 w-4 text-blue-400 top-4"
+                    fontSize="small"
+                  />
                 )
               ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path d="M5 8l5 5 5-5H5z" />
-                </svg>
+                <HeightRounded
+                  className="absolute h-4 w-4 text-blue-400 top-4"
+                  fontSize="small"
+                />
               )}
             </span>
           </div>
@@ -226,20 +209,7 @@ export default function VirtualTable({
   // Empty state content
   const EmptyState = () => (
     <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-16 w-16 mb-4 text-slate-500"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-        />
-      </svg>
+      <BrickIcon className="h-`24` w-24 mb-4" />
       <p className="text-lg font-medium">No pieces found</p>
       <p className="text-sm mt-1 text-slate-500">
         Try adjusting your search or filters
@@ -269,22 +239,16 @@ export default function VirtualTable({
             originalId={piece.uuid}
             onChange={onChange}
             onDelete={handleDeleteInitiate}
-            columns={columns}
             isUpdating={isUpdating(piece.uuid)}
+            columns={columns}
             index={virtualRow.index}
+            zIndex={-virtualRow.index + pieces.length}
             isLast={virtualRow.index === pieces.length - 1}
           />
         </div>
       );
     });
-  }, [
-    desktopVirtualRows,
-    pieces,
-    onChange,
-    handleDeleteInitiate,
-    columns,
-    isUpdating,
-  ]);
+  }, [desktopVirtualRows, pieces, onChange, handleDeleteInitiate, isUpdating]);
 
   // Render mobile rows
   const renderedMobileRows = useMemo(() => {
@@ -294,13 +258,13 @@ export default function VirtualTable({
 
       return (
         <div
-          key={`mobile-${piece.uuid}`}
+          key={piece.uuid}
           data-index={virtualRow.index}
           className="absolute w-full"
           style={{
             transform: `translateY(${virtualRow.start}px)`,
             height: `${virtualRow.size}px`,
-            zIndex: pieces.length - virtualRow.index,
+            zIndex: -virtualRow.index + pieces.length,
           }}
         >
           <PieceRow
@@ -308,24 +272,16 @@ export default function VirtualTable({
             originalId={piece.uuid}
             onChange={onChange}
             onDelete={handleDeleteInitiate}
-            columns={columns}
             isUpdating={isUpdating(piece.uuid)}
+            columns={columns}
             index={virtualRow.index}
+            zIndex={-virtualRow.index + pieces.length}
             isLast={virtualRow.index === pieces.length - 1}
           />
         </div>
       );
     });
-  }, [
-    mobileVirtualRows,
-    pieces,
-    onChange,
-    handleDeleteInitiate,
-    columns,
-    isUpdating,
-    expandedRows,
-    handleRowExpand,
-  ]);
+  }, [mobileVirtualRows, pieces, onChange, handleDeleteInitiate, isUpdating]);
 
   // Scroll to top whenever pieces change significantly
   useEffect(() => {
@@ -341,7 +297,7 @@ export default function VirtualTable({
     <>
       <div className="bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-slate-700 w-full h-full">
         {/* Desktop Table View */}
-        <div className="hidden md:block w-full h-full">
+        <div className="hidden switch:block w-full h-full">
           <TableHeader />
 
           <div
@@ -365,23 +321,32 @@ export default function VirtualTable({
         </div>
 
         {/* Mobile Table View */}
-        <div
-          ref={mobileContainerRef}
-          className="md:hidden overflow-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent w-full"
-          style={{ height: `${containerHeight}px` }}
-        >
-          {pieces.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div
-              className="relative"
-              style={{
-                height: `${mobileVirtualizer.getTotalSize()}px`,
-              }}
-            >
-              {renderedMobileRows}
-            </div>
-          )}
+        <div className="switch:hidden block w-full h-full">
+          <div className="sticky top-0 z-100 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 h-16 rounded-t-xl">
+            {/* Left Side */}
+            <div className="text-slate-300 font-medium ml-2">Piece</div>
+
+            {/* Right Side */}
+            <div className="text-slate-300 font-medium mr-2">Count</div>
+          </div>
+          <div
+            ref={mobileContainerRef}
+            className="switch:hidden overflow-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent w-full"
+            style={{ height: `${containerHeight}px` }}
+          >
+            {pieces.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <div
+                className="relative"
+                style={{
+                  height: `${mobileVirtualizer.getTotalSize()}px`,
+                }}
+              >
+                {renderedMobileRows}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

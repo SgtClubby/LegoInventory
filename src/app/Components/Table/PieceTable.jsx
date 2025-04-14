@@ -1,23 +1,26 @@
 // src/app/Components/Table/PieceTable.jsx
+
+// Functions and Helpers
 import { useState, useMemo, useCallback, useRef } from "react";
 import { debounce } from "lodash";
-
-// Components
 import { addTable, deleteTable } from "@/lib/Table/TableManager";
 import { useLego } from "@/Context/LegoContext";
 import { fetchPartDetails, fetchPartColors } from "@/lib/Pieces/PiecesManager";
 import colors from "@/Colors/colors.js";
+
+// Components
 import TableAddModal from "@/Components/Modals/TableAddModal";
 import TableDeleteModal from "@/Components/Modals/TableDeleteModal";
 import VirtualTable from "@/Components/Table/VirtualTable";
 import SearchPiece from "../Search/SearchPiece";
+import FilterTabs from "../Misc/FilterTabs";
+
+// Icons
 import {
-  Add,
   AddRounded,
   DeleteForever,
   ExpandMoreRounded,
 } from "@mui/icons-material";
-import FilterTabs from "../Misc/FilterTabs";
 
 export default function PieceTable() {
   const {
@@ -133,6 +136,13 @@ export default function PieceTable() {
     [setPiecesByTable]
   );
 
+  const checkIsUpdating = useCallback(
+    (uuid) => {
+      return updatingPieces.has(uuid);
+    },
+    [updatingPieces]
+  );
+
   /**
    * Handles updating a piece's properties with debouncing and special field handling
    */
@@ -187,19 +197,30 @@ export default function PieceTable() {
       ) {
         const onHand =
           field === "elementQuantityOnHand"
-            ? value
-            : currentPiece.elementQuantityOnHand;
+            ? parseInt(value)
+            : parseInt(currentPiece.elementQuantityOnHand);
 
         const required =
           field === "elementQuantityRequired"
-            ? value
-            : currentPiece.elementQuantityRequired;
+            ? parseInt(value)
+            : parseInt(currentPiece.elementQuantityRequired);
 
-        updates.countComplete = required === 0 ? null : onHand >= required;
+        // Use consistent logic for countComplete regardless of which field is updated
+        const isComplete = required === 0 ? null : onHand >= required;
+
+        console.log(isComplete, onHand, required);
+
+        if (field === "elementQuantityOnHand") {
+          updates.elementQuantityOnHand = onHand;
+        } else {
+          updates.elementQuantityRequired = required;
+        }
+
+        // Always set countComplete using the same logic
+        updates.countComplete = isComplete;
       }
 
       if (field === "highlighted") {
-        console.log("Highlighting piece:", uuid, value);
         updates.highlighted = value;
       }
 
@@ -219,6 +240,7 @@ export default function PieceTable() {
 
       // Handle special cases that need additional API calls
       if (field === "elementId") {
+        console.log("Handling elementId update");
         try {
           // Fetch part details in parallel
           if (!value || value.length === 0) {
@@ -243,6 +265,8 @@ export default function PieceTable() {
             clearUpdatingState(uuid);
             return;
           }
+
+          console.log("Fetched color and piece data");
 
           const additionalUpdates = {};
 
@@ -270,7 +294,10 @@ export default function PieceTable() {
             );
 
             // If current color isn't available, select the first one
-            if (!currentColorExists && availableColors.length > 0) {
+            if (
+              (!currentColorExists && availableColors.length > 0) ||
+              (partDetails?.name && currentPiece.elementColorId)
+            ) {
               additionalUpdates.elementColor = availableColors[0].color;
               additionalUpdates.elementColorId = availableColors[0].colorId;
             }
@@ -287,6 +314,17 @@ export default function PieceTable() {
             ) {
               additionalUpdates.elementColorId = null;
               additionalUpdates.elementColor = null;
+            }
+            // If we did fetch a valid ID, but no colors, we can set the color to "default"
+            if (
+              partDetails?.name &&
+              currentPiece.elementColorId == null &&
+              currentPiece.elementColor == null
+            ) {
+              additionalUpdates.elementColor =
+                availableColors[0]?.color || null;
+              additionalUpdates.elementColorId =
+                availableColors[0]?.colorId || null;
             }
           }
 
@@ -332,8 +370,6 @@ export default function PieceTable() {
    */
   const handleDeletePiece = useCallback(
     async (uuid) => {
-      if (!confirm("Are you sure you want to delete this piece?")) return;
-
       const tableId = selectedTable.id;
 
       // Optimistically remove from UI first
@@ -366,8 +402,6 @@ export default function PieceTable() {
           const updatedPieces = [...(prev[tableId] || []), restoredPiece];
           return { ...prev, [tableId]: updatedPieces };
         });
-
-        alert("Failed to delete piece. Please try again.");
       }
     },
     [pieces, selectedTable, setPiecesByTable]
@@ -608,7 +642,7 @@ export default function PieceTable() {
         pieces={sortedPieces}
         onChange={handleUpdatePiece}
         onDelete={handleDeletePiece}
-        isUpdating={(uuid) => updatingPieces.has(uuid)}
+        isUpdating={checkIsUpdating}
         sort={handleSort}
         sortConfig={sortConfig}
       />
