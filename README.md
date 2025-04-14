@@ -1,12 +1,12 @@
-![Version](https://img.shields.io/badge/LegoInventory-1.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-
 # Lego Inventory Piece Manager
 
 A modern web application for organizing and tracking your LEGO® collection — built with **Next.js**, **MongoDB**, and a whole lot of curiosity.
 
 > What started as a simple side project has grown far beyond its roots.  
 > It’s now a full-featured tool that I figured deserved to be shared.
+
+![Version](https://img.shields.io/badge/LegoInventory-1.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
