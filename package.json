@@ -14,7 +14,6 @@
     "@mui/icons-material": "^7.0.1",
     "@mui/material": "^7.0.1",
     "@tanstack/react-virtual": "^3.13.6",
-    "idb-keyval": "^6.2.1",
     "lodash": "^4.17.21",
     "mongoose": "^8.13.2",
     "next": "15.2.4",
