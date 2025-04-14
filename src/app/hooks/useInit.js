@@ -10,8 +10,6 @@ export default function useInit() {
   const {
     piecesByTable,
     setPiecesByTable,
-    pieceImages,
-    setPieceImages,
     availableTables,
     setAvailableTables,
     selectedTable,
@@ -48,8 +46,6 @@ export default function useInit() {
   }, []);
 
   return {
-    pieceImages,
-    setPieceImages,
     piecesByTable,
     setPiecesByTable,
     availableTables,
