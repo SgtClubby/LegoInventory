@@ -41,16 +41,6 @@
     }
   }
 
-  /* Helper classes to apply to select */
-  .color-select {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
-    background-repeat: no-repeat;
-    background-position: right 8px center;
-  }
-
   /* Color preview badge - can be added next to select */
   .color-preview {
     display: inline-block;
@@ -128,18 +118,18 @@
   }
 
   .animate-slideDown {
-    animation: slideDown 300ms ease-out forwards;
+    animation: slideDown 150ms ease-out forwards;
   }
 
   .animate-slideUp {
-    animation: slideUp 300ms ease-in forwards;
+    animation: slideUp 150ms ease-in forwards;
   }
 
   .animate-fadeIn {
-    animation: fadeIn 300ms ease-out forwards;
+    animation: fadeIn 150ms ease-out forwards;
   }
 
   .animate-fadeOut {
-    animation: fadeOut 250ms ease-in forwards;
+    animation: fadeOut 150ms ease-in forwards;
   }
 }

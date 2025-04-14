@@ -1,4 +1,4 @@
-// \Users\Clomby\Projects\LegoInventory\src\app\api\table\[tableId]\brick\[brickId]\route.js
+// src/app/api/table/[tableId]/brick/[brickId]/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
 import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
@@ -40,7 +40,13 @@ export async function PATCH(req, { params }) {
   const { brickId: uuid, tableId } = await params;
   const body = await req.json();
 
-  console.log(`[PATCH] Received update for brick ${uuid} in table ${tableId}`);
+  console.log(
+    `[PATCH] Received update for brick ${uuid}: ${JSON.stringify(
+      body,
+      null,
+      2
+    )}`
+  );
 
   if (!tableId || !uuid || !body) {
     return Response.json(

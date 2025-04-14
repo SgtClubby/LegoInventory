@@ -144,23 +144,23 @@ export function useImportSetSubmit() {
 
       console.log(`${piecesNeedingColors.length} pieces still need color data`);
 
-      //Only run post-processing for pieces without color data
-      if (piecesNeedingColors.length > 0) {
-        fetch("/api/set/postProcessColor/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            pieceIds: piecesNeedingColors,
-            ownerId: "default",
-            tableId: newTable.id,
-          }),
-        }).catch((error) => {
-          console.error("Error processing colors:", error);
-          // Non-blocking error - user will still have basic functionality
-        });
-      }
+      // Only run post-processing for pieces without color data
+      // if (piecesNeedingColors.length > 0) {
+      //   fetch("/api/set/postProcessColor/", {
+      //     method: "POST",
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //     },
+      //     body: JSON.stringify({
+      //       pieceIds: piecesNeedingColors,
+      //       ownerId: "default",
+      //       tableId: newTable.id,
+      //     }),
+      //   }).catch((error) => {
+      //     console.error("Error processing colors:", error);
+      //     // Non-blocking error - user will still have basic functionality
+      //   });
+      // }
 
       console.log(`Set "${details.name}" imported successfully!`);
     } catch (err) {
