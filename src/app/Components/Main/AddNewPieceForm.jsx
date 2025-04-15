@@ -16,11 +16,18 @@ import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import { Add, BrokenImage, InsertPhotoRounded } from "@mui/icons-material";
+import { useStatus } from "@/Context/StatusContext";
 
 export default function AddNewPieceForm() {
   // Context
-  const { setPiecesByTable, selectedTable } = useLego();
-
+  const {
+    setPiecesByTable,
+    selectedTable,
+    availableTables,
+    setSelectedTable,
+    setActiveTab,
+  } = useLego();
+  const { showSuccess, showError, showWarning } = useStatus();
   // Component state
   const [searchNewPieceResult, setSearchNewPieceResult] = useState(null);
   const [newPiece, setNewPiece] = useState({
@@ -85,6 +92,9 @@ export default function AddNewPieceForm() {
             }));
           }
         } catch (error) {
+          showError("Error fetching piece. Please try again later.", {
+            autoCloseDelay: 5000,
+          });
           console.error("Error fetching colors:", error);
         } finally {
           setImageLoading(false);
@@ -116,6 +126,10 @@ export default function AddNewPieceForm() {
             setFade(false); // Ensure it's reset
           }
         } catch (error) {
+          setImage(null);
+          showError("Error fetching piece image.", {
+            autoCloseDelay: 5000,
+          });
           console.error("Error fetching image:", error);
         }
       };
@@ -157,6 +171,9 @@ export default function AddNewPieceForm() {
   // Handle add piece
   const handleAddPiece = async () => {
     if (!formValid) {
+      showWarning("Please fill in all required fields.", {
+        autoCloseDelay: 3000,
+      });
       return;
     }
 
@@ -185,8 +202,19 @@ export default function AddNewPieceForm() {
     // Save new piece via API call
     const success = await addPieceToTable(updatedNewPiece, tableId);
     if (!success) {
+      showError("Error adding piece. Please try again later.", {
+        autoCloseDelay: 5000,
+      });
       return;
     }
+
+    // Show success message
+    showSuccess("Piece added successfully!", {
+      position: "top",
+      autoCloseDelay: 3000,
+    });
+
+    setActiveTab("all");
 
     // Reset form state
     setSearchNewPieceResult(null);
@@ -203,6 +231,12 @@ export default function AddNewPieceForm() {
       elementQuantityRequired: 0,
       countComplete: false,
     });
+  };
+
+  const handleTableSelect = (event) => {
+    const selectedId = event.target.value;
+    const table = availableTables.find((table) => table.id === selectedId);
+    setSelectedTable(table);
   };
 
   // Color selection dropdown
@@ -271,11 +305,30 @@ export default function AddNewPieceForm() {
       {/* Search (Left) and Image (Right) */}
       <div className="flex flex-col sm:flex-row gap-6 mb-6">
         {/* Left: Search */}
-        <div className="w-full sm:w-2/3">
-          <SearchNewPiece
-            searchNewPieceResult={searchNewPieceResult}
-            setSearchNewPieceResult={setSearchNewPieceResult}
-          />
+        <div className="flex flex-col w-full sm:w-2/3">
+          <div className="w-full sm:w-2/3">
+            <SearchNewPiece
+              searchNewPieceResult={searchNewPieceResult}
+              setSearchNewPieceResult={setSearchNewPieceResult}
+            />
+          </div>
+          <div className="w-full sm:w-2/3 mt-3">
+            <select
+              value={selectedTable ? selectedTable.id : "1"}
+              onChange={handleTableSelect}
+              className="w-full h-12 pl-4 pr-10 text-base text-white bg-slate-700 border border-slate-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {availableTables.map((table) => (
+                <option key={table.id} value={table.id}>
+                  {table.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs text-slate-400">
+              Select the table where you want to add this piece. If you don't
+              see your table, you can create one in the "Browse All Pieces" tab.
+            </p>
+          </div>
         </div>
 
         {/* Right: Image Preview */}

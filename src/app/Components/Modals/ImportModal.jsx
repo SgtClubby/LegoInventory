@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useImportSetSubmit } from "@/hooks/useImportSetSubmit";
-import {
-  AlignVerticalBottomRounded,
-  SyncRounded,
-  VerticalAlignBottomRounded,
-} from "@mui/icons-material";
+import { VerticalAlignBottomRounded } from "@mui/icons-material";
+import { useStatus } from "@/Context/StatusContext";
+import { useLego } from "@/Context/LegoContext";
+import LoaderIcon from "../Misc/LoaderIcon";
 
 export default function ImportModal({ toggleModal, searchResult }) {
   const [setDetails, setSetDetails] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const handleImportSetSubmit = useImportSetSubmit();
+  const { setActiveTab } = useLego();
+  const { showSuccess, showError, showWarning } = useStatus();
 
   // Handle set import search result
   useEffect(() => {
@@ -39,9 +40,19 @@ export default function ImportModal({ toggleModal, searchResult }) {
     setIsImporting(true);
 
     try {
-      await handleImportSetSubmit(setDetails);
+      const response = await handleImportSetSubmit(setDetails);
+
+      showSuccess(`Set ${setDetails.set_num} imported successfully!`, {
+        position: "top",
+        autoCloseDelay: 3000,
+      });
+      setActiveTab("all");
       toggleModal(false);
     } catch (error) {
+      showError(`Failed to import set: ${error.message}`, {
+        position: "top",
+        autoCloseDelay: 5000,
+      });
       console.error("Error importing set:", error);
       // We'll leave the modal open so they can try again
     } finally {
@@ -144,7 +155,7 @@ export default function ImportModal({ toggleModal, searchResult }) {
             >
               {isImporting ? (
                 <>
-                  <SyncRounded className="animate-spin h-5 w-5 mr-2" />
+                  <LoaderIcon className="h-5 w-5 mr-2" />
                   Importing...
                 </>
               ) : (

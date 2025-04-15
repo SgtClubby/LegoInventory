@@ -20,9 +20,9 @@ function Icon() {
   );
 }
 
-export default function LoaderIcon() {
+export default function LoaderIcon({ className = "" }) {
   return (
-    <div className="animate-spin h-5 w-5">
+    <div className={`animate-spin ${className}`}>
       <Icon />
     </div>
   );

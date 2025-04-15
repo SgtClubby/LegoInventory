@@ -11,6 +11,7 @@ import {
 } from "@mui/icons-material";
 import LoaderIcon from "../Misc/LoaderIcon";
 import BrickIcon from "../Misc/BrickIcon";
+import { useStatus } from "@/Context/StatusContext";
 
 export default function SearchSet({ setSetSearchResult }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,6 +20,7 @@ export default function SearchSet({ setSetSearchResult }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
+  const { showSuccess, showError, showWarning } = useStatus();
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
   const searchTimeout = useRef(null);
@@ -47,6 +49,15 @@ export default function SearchSet({ setSetSearchResult }) {
       setIsDropdownOpen(false);
       return;
     }
+
+    showWarning(
+      `NOTE: ${233} pieces still need additional color and image data, additional data may be unavailable.\n
+        You will be notified when its available, this may take a moment...`,
+      {
+        position: "bottom",
+        autoCloseDelay: 15000,
+      }
+    );
 
     // Clear previous timeout
     if (searchTimeout.current) {
@@ -79,6 +90,9 @@ export default function SearchSet({ setSetSearchResult }) {
       } catch (error) {
         console.error("Error fetching search results:", error);
         setResults([]);
+        showError("Failed to fetch search results. Please try again later.", {
+          autoCloseDelay: 5000,
+        });
         setIsDropdownOpen(false);
       } finally {
         setIsLoading(false);

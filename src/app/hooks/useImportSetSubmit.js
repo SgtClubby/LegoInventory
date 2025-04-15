@@ -3,8 +3,8 @@
 "use client";
 import { useLego } from "@/Context/LegoContext";
 import { addTable } from "@/lib/Table/TableManager";
-import colors from "@/Colors/colors.js";
 import { v4 as uuidv4 } from "uuid";
+import { useStatus } from "@/Context/StatusContext";
 
 export function useImportSetSubmit() {
   const {
@@ -15,6 +15,7 @@ export function useImportSetSubmit() {
     setPiecesByTable,
   } = useLego();
 
+  const { showSuccess, showError, showWarning } = useStatus();
   const handleImportSetSubmit = async (details) => {
     try {
       // Show loading state to the user
@@ -29,13 +30,23 @@ export function useImportSetSubmit() {
       });
 
       if (!res.ok) {
+        showError(`Failed to fetch set data: ${res.statusText}`, {
+          position: "top",
+        });
         throw new Error(`Failed to fetch set data: ${res.statusText}`);
       }
 
       const data = await res.json();
 
       if (!data.results || data.results.length === 0) {
-        throw new Error("No parts found for this set");
+        showWarning(`No parts found for set "${details.name}", try again`, {
+          position: "top",
+          autoCloseDelay: 3000,
+        });
+        return {
+          success: false,
+          error: `Set "${details.name}" already imported.`,
+        };
       }
 
       // Save original table for rollback if needed
@@ -57,8 +68,14 @@ export function useImportSetSubmit() {
         (table) => table.name === details.name
       );
       if (alreadyExists) {
-        alert("This set is already imported!");
-        return;
+        showWarning(`Set "${details.name}" already imported.`, {
+          position: "top",
+          autoCloseDelay: 3000,
+        });
+        return {
+          success: false,
+          error: `Set "${details.name}" already imported.`,
+        };
       }
 
       // Create new table
@@ -96,7 +113,12 @@ export function useImportSetSubmit() {
       const tableReady = await addTable(tableName);
 
       if (!tableReady) {
-        throw new Error("Failed to create table");
+        resetTableState();
+        showError("Failed to create table, try again later...", {
+          position: "top",
+          autoCloseDelay: 3000,
+        });
+        return { success: false, error: "Failed to create table" };
       }
 
       // Update local state for tables
@@ -116,15 +138,29 @@ export function useImportSetSubmit() {
       });
 
       if (!ready.ok) {
+        showError("Failed to save set pieces, try again later...", {
+          position: "top",
+          autoCloseDelay: 3000,
+        });
         resetTableState();
-        throw new Error("Failed to save pieces to table");
+        return {
+          success: false,
+          error: `[DATABASE ERROR] Failed to save set pieces, try again later...`,
+        };
       }
 
       const readyData = await ready.json();
 
       if (!readyData.success) {
         resetTableState();
-        throw new Error("Database operation failed");
+        showError("Failed to save pieces, try again later...", {
+          position: "top",
+          autoCloseDelay: 3000,
+        });
+        return {
+          success: false,
+          error: `[DATABASE ERROR] Failed to save set pieces, try again later...`,
+        };
       }
 
       // Update client-side state with the new pieces
@@ -133,36 +169,18 @@ export function useImportSetSubmit() {
           ...prev,
           [newTable.id]: importedPieces,
         }));
+        showSuccess(`Set ${details.set_num} imported successfully!`, {
+          position: "top",
+          autoCloseDelay: 5000,
+        });
+        postProcessColorCache(
+          importedPieces,
+          newTable,
+          showWarning,
+          showSuccess
+        );
       }, 1000);
-
-      // Collect part IDs that still need color data
-      // we supply the response with one set of the original color data, so the imported pieces will always have ATLEAST one color in availableColors
-      // check if we have more than one color, if it does we fetch the rest
-      const piecesNeedingColors = importedPieces
-        .filter((p) => p.availableColors.length <= 1 || !p.availableColors)
-        .map((p) => p.elementId);
-
-      console.log(`${piecesNeedingColors.length} pieces still need color data`);
-
-      // Only run post-processing for pieces without color data
-      // if (piecesNeedingColors.length > 0) {
-      //   fetch("/api/set/postProcessColor/", {
-      //     method: "POST",
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify({
-      //       pieceIds: piecesNeedingColors,
-      //       ownerId: "default",
-      //       tableId: newTable.id,
-      //     }),
-      //   }).catch((error) => {
-      //     console.error("Error processing colors:", error);
-      //     // Non-blocking error - user will still have basic functionality
-      //   });
-      // }
-
-      console.log(`Set "${details.name}" imported successfully!`);
+      return { success: true };
     } catch (err) {
       console.error("Error during set import:", err);
       alert(`Failed to import set: ${err.message}`);
@@ -170,4 +188,67 @@ export function useImportSetSubmit() {
   };
 
   return handleImportSetSubmit;
+}
+
+async function postProcessColorCache(
+  importedPieces,
+  newTable,
+  showWarning,
+  showSuccess
+) {
+  const piecesNeedingColors = importedPieces
+    .filter((p) => p.availableColors.length <= 1 || !p.availableColors)
+    .map((p) => p.elementId);
+
+  console.log(`${piecesNeedingColors.length} pieces still need color data`);
+
+  // Only run post-processing for pieces without color data
+  if (piecesNeedingColors.length > 0) {
+    setTimeout(() => {
+      showWarning(
+        `NOTE: ${piecesNeedingColors.length} pieces still need additional color and image data, additional data may be unavailable.\n
+        You will be notified when its available, this may take a moment...`,
+        {
+          position: "bottom",
+          autoCloseDelay: 15000,
+        }
+      );
+    }, 6000);
+    await fetch("/api/set/postProcessColor/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        pieceIds: piecesNeedingColors,
+        ownerId: "default",
+        tableId: newTable.id,
+      }),
+    })
+      .catch((error) => {
+        console.error("Error processing colors:", error);
+        // Non-blocking error - user will still have basic functionality
+      })
+      .finally(() => {
+        setTimeout(() => {
+          showSuccess(
+            `
+Saved piece color and image data! 
+If you have missing images, refresh!`,
+            {
+              position: "top",
+              autoCloseDelay: 3000,
+            }
+          );
+          setPiecesByTable(newTable.id).then((savedData) => {
+            if (savedData) {
+              setPiecesByTable((prev) => ({
+                ...prev,
+                [newTable.id]: savedData,
+              }));
+            }
+          });
+        }, 2000);
+      });
+  }
 }
