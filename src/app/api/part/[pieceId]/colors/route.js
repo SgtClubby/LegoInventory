@@ -50,7 +50,11 @@ export async function GET(req, { params }) {
     );
 
     // Validate cache data
-    if (ColorCache?.availableColors?.length > 0 && !cacheIncomplete) {
+    if (
+      ColorCache?.availableColors?.length > 0 &&
+      !cacheIncomplete &&
+      !ColorCache.cacheIncomplete
+    ) {
       console.log("HIT! Cache found for pieceId:", pieceId);
       return Response.json(ColorCache.availableColors);
     }
@@ -130,7 +134,6 @@ export async function GET(req, { params }) {
     console.log("MISS! Cache created for pieceId:", pieceId);
     return Response.json(formattedResults);
   } catch (error) {
-    console.error(`Error fetching colors for piece ${pieceId}:`, error);
     return Response.json({ error: "Failed to fetch colors" }, { status: 500 });
   }
 }

@@ -73,8 +73,11 @@ export async function GET(req, { params }) {
         quantity: item.quantity,
       };
 
-      // Add availableColors from cache if we have it
-      if (colorData[partId]) {
+      // Add availableColors from cache if we have it, and the cached data has the same color id in its availabeColors
+      if (
+        colorData[partId] &&
+        parseInt(colorData[partId].colorId) === parseInt(item.color.id)
+      ) {
         result.availableColors = colorData[partId].map((color) => ({
           colorId: color.colorId,
           color: color.color,
