@@ -2,6 +2,7 @@
 
 import "./globals.css";
 import { LegoProvider } from "@/Context/LegoContext";
+import { StatusProvider } from "@/Context/StatusContext";
 
 export const metadata = {
   title: "LEGO Inventory",
@@ -12,7 +13,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <body>
-        <LegoProvider>{children}</LegoProvider>
+        <StatusProvider>
+          <LegoProvider>{children}</LegoProvider>
+        </StatusProvider>
       </body>
     </html>
   );
