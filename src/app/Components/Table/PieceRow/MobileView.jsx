@@ -1,6 +1,4 @@
 // src/app/Components/Table/PieceRow/MobileView.jsx
-// src/app/Components/Table/PieceRow/DesktopView.jsx
-
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import React, { useState, memo, useRef, useEffect, useCallback } from "react";
 
@@ -8,8 +6,8 @@ import {
   BookmarkRounded,
   DeleteForever,
   ExpandMoreRounded,
+  RefreshRounded,
 } from "@mui/icons-material";
-
 import ColorDropdown from "./ColorDropdown";
 
 export default function MobileView({
@@ -20,6 +18,7 @@ export default function MobileView({
   LoadingOverlay,
   setHighlighted,
   highlighted,
+  isUpdating,
   countComplete,
 }) {
   const { piece } = originalProps;
@@ -98,7 +97,12 @@ export default function MobileView({
         className={`relative z-10 flex items-center justify-between ${getRowStyle()} rounded-t-lg border-l-4 ${
           isExpanded ? "shadow-[0px_8px_16px_rgba(0,0,0,0.3)]" : "rounded-b-lg"
         } transition-colors duration-200 cursor-pointer px-4 py-3 mx-1 my-1`}
-        onClick={toggleExpanded}
+        onClick={toggleExpanded && handleChange}
+        onMouseEnter={() => {
+          if (!isExpanded) {
+            setAnimationClass("animate-fadeIn");
+          }
+        }}
       >
         {LoadingOverlay}
 
@@ -116,9 +120,26 @@ export default function MobileView({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-xs text-center text-slate-500">
-                No image
-              </span>
+              <>
+                {!piece?.invalid && (
+                  <RefreshRounded
+                    className={`h-6 w-6 text-slate-300 absolute cursor-pointer ${
+                      isUpdating ? "animate-spin" : ""
+                    }`}
+                    onClick={() => {
+                      handleChange({
+                        field: "elementId",
+                        value: fields.elementId,
+                      });
+                    }}
+                    title="refresh image"
+                    fontSize="small"
+                  />
+                )}
+                <span className="text-xs text-center text-slate-500">
+                  No image
+                </span>
+              </>
             )}
           </div>
 

@@ -6,6 +6,7 @@ import {
   BookmarkRounded,
   DeleteForever,
   ExpandMoreRounded,
+  RefreshRounded,
 } from "@mui/icons-material";
 import ColorDropdown from "./ColorDropdown";
 
@@ -17,6 +18,7 @@ export default function DesktopView({
   LoadingOverlay,
   setHighlighted,
   highlighted,
+  isUpdating,
   countComplete,
 }) {
   const { piece, columns, isLast = false } = originalProps;
@@ -69,21 +71,39 @@ export default function DesktopView({
           className={`${columns[0]?.width} flex-shrink-0 flex justify-center px-2`}
         >
           <div className="h-12 w-12 bg-slate-700 rounded overflow-hidden flex items-center justify-center">
-            {availableColors?.find((color) => color.colorId == elementColorId)
-              ?.elementImage ? (
+            {availableColors?.find(
+              (color) => color.colorId == piece.elementColorId
+            )?.elementImage ? (
               <img
                 src={
                   availableColors.find(
-                    (color) => color.colorId == elementColorId
+                    (color) => color.colorId == piece.elementColorId
                   )?.elementImage
                 }
                 alt={fields.elementName}
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-xs text-center text-slate-500">
-                No image
-              </span>
+              <>
+                {!piece?.invalid && (
+                  <RefreshRounded
+                    className={`h-6 w-6 text-slate-300 absolute cursor-pointer pointer-events-auto ${
+                      isUpdating ? "animate-spin" : ""
+                    }`}
+                    onClick={() => {
+                      handleChange({
+                        field: "elementId",
+                        value: fields.elementId,
+                      });
+                    }}
+                    title="refresh image"
+                    fontSize="small"
+                  />
+                )}
+                <span className="text-xs text-center text-slate-500">
+                  No image
+                </span>
+              </>
             )}
           </div>
         </div>

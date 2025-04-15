@@ -2,6 +2,7 @@
 
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
+import { useStatus } from "./StatusContext";
 
 const LegoContext = createContext();
 
@@ -12,14 +13,12 @@ export function LegoProvider({ children }) {
   const [statusMessage, setStatusMessage] = useState({ type: "", message: "" });
   const [activeTab, setActiveTab] = useState("all"); // "all", "add", "import", "export"
 
-  useEffect(() => {
-    // clear status message after 3 seconds
-    console.log(statusMessage.message);
-    const timer = setTimeout(() => {
-      setStatusMessage({ type: "", message: "" });
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [statusMessage]);
+  const { showSuccess, showError, showWarning } = useStatus();
+
+  const setSelectedTableWithStatus = (table) => {
+    setSelectedTable(table);
+    showSuccess(`Switched to ${table.name}`);
+  };
 
   return (
     <LegoContext.Provider
@@ -31,13 +30,7 @@ export function LegoProvider({ children }) {
         selectedTable,
         statusMessage,
         setStatusMessage,
-        setSelectedTable: (table) => {
-          setSelectedTable(table);
-          setStatusMessage({
-            type: "success",
-            message: `Switched to ${table.name}`,
-          });
-        },
+        setSelectedTable: setSelectedTableWithStatus,
         setActiveTab,
         activeTab,
       }}

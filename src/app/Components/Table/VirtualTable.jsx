@@ -15,6 +15,7 @@ import DeletePieceModal from "../Modals/DeletePieceModal";
 // Icons
 import BrickIcon from "../Misc/BrickIcon";
 import { HeightRounded, NorthRounded, SouthRounded } from "@mui/icons-material";
+import { useStatus } from "@/Context/StatusContext";
 
 export default function VirtualTable({
   pieces,
@@ -30,6 +31,8 @@ export default function VirtualTable({
   const [containerHeight, setContainerHeight] = useState(600);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [pieceToDelete, setPieceToDelete] = useState(null);
+
+  const { showSuccess } = useStatus();
 
   // Update container height on mount and resize
   useEffect(() => {
@@ -76,6 +79,10 @@ export default function VirtualTable({
   const handleDeleteConfirm = useCallback(() => {
     if (pieceToDelete) {
       onDelete(pieceToDelete.id);
+      showSuccess(`Piece ${pieceToDelete.piece.elementName} deleted`, {
+        position: "top",
+        autoCloseDelay: 3000,
+      });
       setDeleteModalOpen(false);
       setPieceToDelete(null);
     }

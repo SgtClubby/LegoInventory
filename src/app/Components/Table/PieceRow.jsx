@@ -57,7 +57,7 @@ const PieceRow = ({
     });
     // Clear any pending updates since we're getting fresh data
     pendingFieldsRef.current = {};
-  }, [piece]);
+  }, [piece, piece.invalid, piece.elementName, piece.elementId]);
 
   // Normal controlled updates from user input
   const sendUpdate = useCallback(
@@ -140,6 +140,8 @@ const PieceRow = ({
     }));
   };
 
+  piece.elementId === "54200" ? console.log(piece) : "";
+
   // Loading overlay
   const LoadingOverlay = isUpdating ? (
     <div className="absolute inset-0 bg-blue-500/10 backdrop-blur-[1px] pointer-events-none z-10 flex items-center justify-center">
@@ -164,11 +166,13 @@ const PieceRow = ({
           isLast,
         }}
         handleChange={handleChange}
-        handleDeleteClick={onDelete}
+        handleDeleteClick={handleDeleteClick}
         fields={fields}
         LoadingOverlay={LoadingOverlay}
         setHighlighted={setHighlighted}
         highlighted={highlighted}
+        isUpdating={isUpdating}
+        setFields={setFields}
         countComplete={fields.countComplete}
       />
       {/* Mobile View */}
@@ -182,6 +186,7 @@ const PieceRow = ({
         LoadingOverlay={LoadingOverlay}
         setHighlighted={setHighlighted}
         highlighted={highlighted}
+        isUpdating={isUpdating}
         countComplete={fields.countComplete}
       />
     </>

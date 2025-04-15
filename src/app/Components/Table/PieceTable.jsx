@@ -1,8 +1,8 @@
 // src/app/Components/Table/PieceTable.jsx
 
 // Functions and Helpers
-import { useState, useMemo, useCallback, useRef } from "react";
-import { debounce } from "lodash";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { debounce, set } from "lodash";
 import { addTable, deleteTable } from "@/lib/Table/TableManager";
 import { useLego } from "@/Context/LegoContext";
 import { fetchPartDetails, fetchPartColors } from "@/lib/Pieces/PiecesManager";
@@ -143,9 +143,29 @@ export default function PieceTable() {
     [updatingPieces]
   );
 
+  useEffect(() => {
+    // Clear pending updates when the component unmounts
+    return () => {
+      pendingUpdatesRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    // clear updating after interval
+    const interval = setInterval(() => {
+      setUpdatingPieces((prev) => {
+        const newSet = new Set(prev);
+        newSet.clear();
+        return newSet;
+      });
+    }, 6500);
+    return () => clearInterval(interval);
+  }, []);
+
   /**
    * Handles updating a piece's properties with debouncing and special field handling
    */
+
   const handleUpdatePiece = useCallback(
     async (uuid, field, value) => {
       console.log(`Updating piece ${uuid}: ${field} = ${value}`);
@@ -158,10 +178,10 @@ export default function PieceTable() {
       // Mark piece as updating
       setUpdatingState(uuid);
 
-      // Cancel any pending updates for this piece
-      if (updatePieceInDb.cancel) {
-        updatePieceInDb.cancel();
-      }
+      // // Cancel any pending updates for this piece
+      // if (updatePieceInDb.cancel) {
+      //   updatePieceInDb.cancel();
+      // }
 
       // Special case for elementId, set to "0" if empty
       if (field === "elementId" && (!value || value.length === 0)) {
@@ -356,6 +376,7 @@ export default function PieceTable() {
       pieces,
       selectedTable,
       colors,
+      updatingPieces,
       updateLocalPiece,
       updatePieceInDb,
       setUpdatingState,
