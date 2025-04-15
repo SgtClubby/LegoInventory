@@ -128,10 +128,6 @@ This project is licensed under the MIT License. See the [LICENSE](./LICENSE) fil
 - [TanStack Virtual](https://tanstack.com/virtual) for efficient rendering of large lists
 - [Lodash](https://lodash.com/) for utility functions
 
-# Attributions
-
-- [LEGO Brick icons](https://thenounproject.com/creator/marialuisa.iborra/) for the amazing lego brick icons used in the app
-
 ## Disclaimer
 
 LEGO® is a trademark of the LEGO Group, which does not sponsor, authorize or endorse this application.
