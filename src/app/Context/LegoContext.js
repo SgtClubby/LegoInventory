@@ -12,6 +12,9 @@ export function LegoProvider({ children }) {
   const [selectedTable, setSelectedTable] = useState(null);
   const [statusMessage, setStatusMessage] = useState({ type: "", message: "" });
   const [activeTab, setActiveTab] = useState("all"); // "all", "add", "import", "export"
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showAddModal, setAddShowModal] = useState(false);
+  const [showDeleteModal, setDeleteShowModal] = useState(false);
 
   const { showSuccess, showError, showWarning } = useStatus();
 
@@ -33,6 +36,12 @@ export function LegoProvider({ children }) {
         setSelectedTable: setSelectedTableWithStatus,
         setActiveTab,
         activeTab,
+        setShowImportModal,
+        showImportModal,
+        setAddShowModal,
+        showAddModal,
+        setDeleteShowModal,
+        showDeleteModal,
       }}
     >
       {children}

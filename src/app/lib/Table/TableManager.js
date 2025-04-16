@@ -1,4 +1,4 @@
-// src/app/lib/Table/TableManager.js
+// \Users\Clomby\Projects\LegoInventory\src\app\lib\Table\TableManager.js
 
 export async function fetchTables() {
   try {
@@ -19,7 +19,7 @@ export async function fetchTables() {
   return null;
 }
 
-export async function addTable(name) {
+export async function addTable(name, description, isMinifig) {
   try {
     const res = await fetch(`/api/table/tables`, {
       method: "POST",
@@ -27,7 +27,7 @@ export async function addTable(name) {
         "Content-Type": "application/json",
         "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
       },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, description, isMinifig }),
     });
     const data = await res.json();
 

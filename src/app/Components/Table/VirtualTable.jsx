@@ -14,8 +14,15 @@ import DeletePieceModal from "../Modals/DeletePieceModal";
 
 // Icons
 import BrickIcon from "../Misc/BrickIcon";
-import { HeightRounded, NorthRounded, SouthRounded } from "@mui/icons-material";
+import {
+  HeightRounded,
+  NorthRounded,
+  Person2Outlined,
+  SouthRounded,
+} from "@mui/icons-material";
 import { useStatus } from "@/Context/StatusContext";
+import { useLego } from "@/Context/LegoContext";
+import MinifigIcon from "../Misc/MinifigIcon";
 
 export default function VirtualTable({
   pieces,
@@ -31,6 +38,7 @@ export default function VirtualTable({
   const [containerHeight, setContainerHeight] = useState(600);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [pieceToDelete, setPieceToDelete] = useState(null);
+  const { selectedTable } = useLego();
 
   const { showSuccess } = useStatus();
 
@@ -96,6 +104,7 @@ export default function VirtualTable({
       className: "",
       width: "w-[5%] min-w-20",
       sortable: false,
+      minifig: true,
     },
     {
       key: "elementName",
@@ -103,6 +112,7 @@ export default function VirtualTable({
       width: "w-[20%] min-w-[10%]",
       className: "",
       sortable: true,
+      minifig: true,
     },
     {
       key: "elementId",
@@ -110,6 +120,7 @@ export default function VirtualTable({
       className: "",
       width: "w-[10%]",
       sortable: true,
+      minifig: true,
     },
     {
       key: "elementColor",
@@ -117,6 +128,7 @@ export default function VirtualTable({
       className: "",
       width: "w-[15%]",
       sortable: true,
+      minifig: false,
     },
     {
       key: "elementQuantityOnHand",
@@ -124,6 +136,7 @@ export default function VirtualTable({
       className: "",
       width: "w-[10%]",
       sortable: true,
+      minifig: true,
     },
     {
       key: "elementQuantityRequired",
@@ -131,6 +144,7 @@ export default function VirtualTable({
       className: "",
       width: "w-[10%]",
       sortable: true,
+      minifig: false,
     },
     {
       key: "countComplete",
@@ -138,6 +152,7 @@ export default function VirtualTable({
       className: "flex 2xl:justify-center",
       width: "w-[15%]",
       sortable: true,
+      minifig: false,
     },
     {
       key: null,
@@ -145,65 +160,76 @@ export default function VirtualTable({
       className: "flex 2xl:justify-end",
       width: "w-[15%]",
       sortable: false,
+      minifig: true,
     },
   ];
 
   const TableHeader = () => {
     // Render a header cell with sort functionality if sortable
-    const HeaderCell = ({ column }) => {
-      if (!column.sortable) {
+    const HeaderCell = ({ column, isMinifig }) => {
+      if (!isMinifig || column.minifig) {
+        if (!column.sortable) {
+          return (
+            <div
+              className={`px-4 py-3 ${column.width} ${column.className} flex-shrink-0 text-slate-300 font-medium`}
+            >
+              {column.label}
+            </div>
+          );
+        }
+
         return (
           <div
-            className={`px-4 py-3 ${column.width} ${column.className} flex-shrink-0 text-slate-300 font-medium`}
+            className={`px-4 py-3 ${column.width} ${column.className} flex-shrink-0 text-slate-300 font-medium cursor-pointer group`}
+            onClick={() => sort(column.key)}
           >
-            {column.label}
+            <div className="flex items-center">
+              <span>{column.label}</span>
+              <span
+                className={`ml-1.5 text-xs ${
+                  sortConfig.key === column.key
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-50"
+                } transition-opacity duration-200`}
+              >
+                {sortConfig.key === column.key ? (
+                  sortConfig.direction === "ascending" ? (
+                    <NorthRounded
+                      className="absolute h-4 w-4 text-blue-400 top-4"
+                      fontSize="small"
+                    />
+                  ) : (
+                    <SouthRounded
+                      className="absolute h-4 w-4 text-blue-400 top-4"
+                      fontSize="small"
+                    />
+                  )
+                ) : (
+                  <HeightRounded
+                    className="absolute h-4 w-4 text-blue-400 top-4"
+                    fontSize="small"
+                  />
+                )}
+              </span>
+            </div>
           </div>
         );
       }
-
-      return (
-        <div
-          className={`px-4 py-3 ${column.width} ${column.className} flex-shrink-0 text-slate-300 font-medium cursor-pointer group`}
-          onClick={() => sort(column.key)}
-        >
-          <div className="flex items-center">
-            <span>{column.label}</span>
-            <span
-              className={`ml-1.5 text-xs ${
-                sortConfig.key === column.key
-                  ? "opacity-100"
-                  : "opacity-0 group-hover:opacity-50"
-              } transition-opacity duration-200`}
-            >
-              {sortConfig.key === column.key ? (
-                sortConfig.direction === "ascending" ? (
-                  <NorthRounded
-                    className="absolute h-4 w-4 text-blue-400 top-4"
-                    fontSize="small"
-                  />
-                ) : (
-                  <SouthRounded
-                    className="absolute h-4 w-4 text-blue-400 top-4"
-                    fontSize="small"
-                  />
-                )
-              ) : (
-                <HeightRounded
-                  className="absolute h-4 w-4 text-blue-400 top-4"
-                  fontSize="small"
-                />
-              )}
-            </span>
-          </div>
-        </div>
-      );
     };
 
     return (
-      <div className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700 flex items-center min-w-max rounded-t-xl">
-        {columns.map((column, index) => (
-          <HeaderCell key={column.key || `col-${index}`} column={column} />
-        ))}
+      <div className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700 flex items-center min-w-max rounded-t-xl ">
+        {columns.map((column, index) => {
+          return !selectedTable?.isMinifig ? (
+            <HeaderCell key={column.key || `col-${index}`} column={column} />
+          ) : (
+            <HeaderCell
+              key={column.key || `col-${index}`}
+              column={column}
+              isMinifig={true}
+            />
+          );
+        })}
       </div>
     );
   };
@@ -214,10 +240,20 @@ export default function VirtualTable({
   const mobileVirtualRows = mobileVirtualizer.getVirtualItems();
 
   // Empty state content
-  const EmptyState = () => (
+  const EmptyElementListState = () => (
     <div className="flex flex-col items-center justify-center h-64 text-slate-400">
       <BrickIcon className="h-`24` w-24 mb-4" />
       <p className="text-lg font-medium">No pieces found</p>
+      <p className="text-sm mt-1 text-slate-500">
+        Try adjusting your search or filters
+      </p>
+    </div>
+  );
+
+  const EmptyMinifigListState = () => (
+    <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+      <MinifigIcon className="h-`24` w-24 mb-4" />
+      <p className="text-lg font-medium">No minfigs found</p>
       <p className="text-sm mt-1 text-slate-500">
         Try adjusting your search or filters
       </p>
@@ -251,6 +287,7 @@ export default function VirtualTable({
             index={virtualRow.index}
             zIndex={-virtualRow.index + pieces.length}
             isLast={virtualRow.index === pieces.length - 1}
+            selectedTable={selectedTable}
           />
         </div>
       );
@@ -284,6 +321,7 @@ export default function VirtualTable({
             index={virtualRow.index}
             zIndex={-virtualRow.index + pieces.length}
             isLast={virtualRow.index === pieces.length - 1}
+            selectedTable={selectedTable}
           />
         </div>
       );
@@ -313,7 +351,11 @@ export default function VirtualTable({
             style={{ height: `${containerHeight}px` }}
           >
             {pieces.length === 0 ? (
-              <EmptyState />
+              !selectedTable?.isMinifig ? (
+                <EmptyElementListState />
+              ) : (
+                <EmptyMinifigListState />
+              )
             ) : (
               <div
                 className="relative min-w-max"
@@ -342,7 +384,11 @@ export default function VirtualTable({
             style={{ height: `${containerHeight}px` }}
           >
             {pieces.length === 0 ? (
-              <EmptyState />
+              !selectedTable?.isMinifig ? (
+                <EmptyElementListState />
+              ) : (
+                <EmptyMinifigListState />
+              )
             ) : (
               <div
                 className="relative"

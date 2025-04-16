@@ -22,6 +22,8 @@ export async function GET(req) {
       await Table.create({
         id: "1",
         name: "Main",
+        description: "",
+        isMinifig: false,
         ownerId,
       });
       return Response.json([{ id: "1", name: "Main" }]);
@@ -30,8 +32,10 @@ export async function GET(req) {
     const data = tables.map((table) => ({
       id: table.id,
       name: table.name,
+      description: table.description,
+      isMinifig: table.isMinifig,
     }));
-    
+
     return Response.json(data);
   } catch (e) {
     console.error("Error fetching tables:", e);
@@ -49,7 +53,7 @@ export async function POST(req) {
   await dbConnect();
 
   const ownerId = req.headers.get("ownerId") || "default";
-  const { name } = await req.json();
+  const { name, description, isMinifig } = await req.json();
 
   if (!name) {
     return Response.json({ error: "Missing table name" }, { status: 400 });
@@ -64,11 +68,18 @@ export async function POST(req) {
     const newTable = new Table({
       id: newId.toString(),
       name,
+      description,
+      isMinifig,
       ownerId,
     });
 
     await newTable.save();
-    return Response.json({ id: newId.toString(), name });
+    return Response.json({
+      id: newId.toString(),
+      name,
+      description,
+      isMinifig,
+    });
   } catch (e) {
     console.error("Error creating table:", e);
     return Response.json({ error: "Failed to create table" }, { status: 500 });

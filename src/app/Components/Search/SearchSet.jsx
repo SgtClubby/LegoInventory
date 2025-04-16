@@ -50,15 +50,6 @@ export default function SearchSet({ setSetSearchResult }) {
       return;
     }
 
-    showWarning(
-      `NOTE: ${233} pieces still need additional color and image data, additional data may be unavailable.\n
-        You will be notified when its available, this may take a moment...`,
-      {
-        position: "bottom",
-        autoCloseDelay: 15000,
-      }
-    );
-
     // Clear previous timeout
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);

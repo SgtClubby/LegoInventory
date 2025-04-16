@@ -17,6 +17,39 @@ const brickMetadataSchema = new Schema(
       },
     ],
   },
+  { timestamps: true, expires: "30d" }
+);
+
+const minifigMetadataSchema = new Schema(
+  {
+    minifigId: { type: String, required: true },
+    minifigIdInternal: { type: String, required: true },
+    minifigName: { type: String, required: true },
+    minifigImage: { type: String, required: true },
+    priceData: {
+      minPrice: { type: String, required: true },
+      avgPrice: { type: String, required: true },
+    },
+    expireAt: {
+      type: Date,
+      // 7 days in second cache expiration
+      expires: 604800,
+    },
+  },
+  { timestamps: true }
+);
+
+const userMinifigSchema = new Schema(
+  {
+    uuid: { type: String, required: true },
+    minifigId: { type: String, required: true, index: true },
+    minifigQuantityOnHand: { type: Number, default: 0 },
+    minifigQuantityRequired: { type: Number, default: 0 },
+    countComplete: { type: Boolean, default: false },
+    highlighted: { type: Boolean, default: false },
+    tableId: { type: String, required: true, index: true },
+    ownerId: { type: String, required: true, default: "default", index: true },
+  },
   { timestamps: true }
 );
 
@@ -37,46 +70,40 @@ const userBrickSchema = new Schema(
   { timestamps: true }
 );
 
-// Create a compound index for faster querying
-userBrickSchema.index({ tableId: 1, ownerId: 1, elementId: 1 });
-
 const tableSchema = new Schema(
   {
     id: { type: String, required: true },
     name: { type: String, required: true },
+    isMinifig: { type: Boolean, default: false },
+    description: { type: String, default: "" },
     ownerId: { type: String, required: true, default: "default" },
   },
   { timestamps: true }
 );
 
+// Create a compound index for user brick querying
+userBrickSchema.index({ tableId: 1, ownerId: 1, elementId: 1 });
+// Create a compound index for user minifig lookup
+userMinifigSchema.index({ tableId: 1, ownerId: 1, minifigId: 1 });
 // Create a compound index for table lookup
 tableSchema.index({ id: 1, ownerId: 1 }, { unique: true });
 
-// Create the models
+// Update models export to include UserMinifig
+export const UserMinifig =
+  mongoose.models.UserMinifig ||
+  mongoose.model("UserMinifig", userMinifigSchema);
+
+// Keep your other exports unchanged
 export const BrickMetadata =
   mongoose.models.BrickMetadata ||
   mongoose.model("BrickMetadata", brickMetadataSchema);
+
 export const UserBrick =
   mongoose.models.UserBrick || mongoose.model("UserBrick", userBrickSchema);
+
 export const Table =
   mongoose.models.Table || mongoose.model("Table", tableSchema);
 
-// For backward compatibility during migration
-export const Brick =
-  mongoose.models.Brick || mongoose.model("Brick", userBrickSchema);
-
-// Add a fixed internal invalid metadata entry if it doesn't exist
-export const addInvalidMetadataEntry = async () => {
-  const invalidMetadata = await BrickMetadata.findOne({
-    invalid: true,
-  });
-
-  if (!invalidMetadata || invalidMetadata.length === 0) {
-    await BrickMetadata.create({
-      elementId: "invalid",
-      availableColors: [],
-      elementName: "Invalid/Missing ID",
-      invalid: true,
-    });
-  }
-};
+export const MinifigMetadata =
+  mongoose.models.MinifigMetadata ||
+  mongoose.model("MinifigMetadata", minifigMetadataSchema);

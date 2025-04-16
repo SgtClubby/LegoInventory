@@ -1,14 +1,22 @@
 // src/app/Components/Modals/TableDeleteModal.jsx
 
+import { useLego } from "@/Context/LegoContext";
+import { deleteTable } from "@/lib/Table/TableManager";
 import { DeleteForeverRounded, DeleteRounded } from "@mui/icons-material";
 import { useEffect } from "react";
 
-export default function TableDeleteModal({
-  toggleModal,
-  handleSubmit,
-  tableName,
-}) {
-  // Handle escape key press
+export default function TableDeleteModal({ toggleModal }) {
+  const {
+    availableTables,
+    setAvailableTables,
+    setDeleteShowModal,
+    selectedTable,
+    setSelectedTable,
+    setPiecesByTable,
+  } = useLego();
+
+  const tableName = selectedTable?.name || tableName;
+
   useEffect(() => {
     const handleEscapeKey = (e) => {
       if (e.key === "Escape") {
@@ -22,6 +30,23 @@ export default function TableDeleteModal({
 
   const handleClose = () => {
     toggleModal(false);
+  };
+
+  const handleDelete = () => {
+    const updatedTables = availableTables.filter(
+      (table) => table.id != selectedTable.id
+    );
+
+    setAvailableTables(updatedTables);
+    deleteTable(selectedTable.id);
+    setDeleteShowModal(false);
+    setSelectedTable(
+      updatedTables.find((t) => t.id === "1") || updatedTables[0] || null
+    );
+    setPiecesByTable((prev) => {
+      const { [selectedTable.id]: _, ...rest } = prev;
+      return rest;
+    });
   };
 
   return (
@@ -63,7 +88,7 @@ export default function TableDeleteModal({
             </button>
 
             <button
-              onClick={handleSubmit}
+              onClick={handleDelete}
               className="inline-flex justify-center items-center px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 transition-colors duration-200"
             >
               <DeleteForeverRounded

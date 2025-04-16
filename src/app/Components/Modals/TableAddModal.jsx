@@ -1,15 +1,19 @@
-// src/app/Components/Modals/TableAddModal.jsx
+// \Users\Clomby\Projects\LegoInventory\src\app\Components\Modals\TableAddModal.jsx
 
 import { Add, DehazeRounded } from "@mui/icons-material";
+import { addTable } from "@/lib/Table/TableManager";
 import { useEffect, useState } from "react";
+import { useLego } from "@/Context/LegoContext";
+import { useStatus } from "@/Context/StatusContext";
+import ToggleSwitch from "@/Components/Misc/ToggleSwitch";
 
-export default function TableAddModal({
-  setNewTableName,
-  newTableName,
-  toggleModal,
-  handleSubmit,
-}) {
+export default function TableAddModal({ toggleModal }) {
   const [isValid, setIsValid] = useState(false);
+  const [newTableName, setNewTableName] = useState("");
+  const [newTableDescription, setnNewTableDescription] = useState("");
+  const [isMinifig, setIsMinifig] = useState(false);
+  const { availableTables, setAvailableTables, setAddShowModal } = useLego();
+  const { showSuccess } = useStatus();
 
   // Validate input
   useEffect(() => {
@@ -37,6 +41,35 @@ export default function TableAddModal({
 
   const handleClose = () => {
     toggleModal(false);
+    setNewTableName("");
+  };
+
+  const handleSubmit = async () => {
+    const newTable = await addTable(
+      newTableName || `Table ${availableTables.length + 1}`,
+      newTableDescription || "",
+      isMinifig
+    );
+
+    if (!newTable) {
+      showError("Error creating table. Please try again.", {
+        position: "top",
+        autoCloseDelay: 3000,
+      });
+      setNewTableName("");
+      setnNewTableDescription("");
+      setIsMinifig(false);
+      setIsValid(false);
+      handleClose();
+      return;
+    }
+
+    setAvailableTables([...availableTables, newTable]);
+    showSuccess(`Table "${newTableName}" has been added successfully!`, {
+      position: "top",
+      autoCloseDelay: 3000,
+    });
+    setAddShowModal(false);
     setNewTableName("");
   };
 
@@ -77,8 +110,43 @@ export default function TableAddModal({
               className="w-full py-3 px-4 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-blue-500 focus:ring focus:ring-blue-500/20 transition-colors duration-200"
             />
             <p className="mt-2 text-sm text-slate-400">
-              Give your table a descriptive name like "Star Wars Collection" or
-              "Summer 2023 Sets"
+              Give your table a short descriptive name like "Inventory count
+              2025" or "Pieces i need for my next build".
+            </p>
+          </div>
+          <div className="mb-6">
+            <label
+              htmlFor="table-name"
+              className="block text-sm font-medium text-slate-300 mb-2"
+            >
+              Table Description
+            </label>
+            <input
+              id="table-name"
+              type="text"
+              placeholder="Enter a description"
+              value={newTableDescription}
+              onChange={(e) => setnNewTableDescription(e.target.value)}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              className="w-full py-3 px-4 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-blue-500 focus:ring focus:ring-blue-500/20 transition-colors duration-200"
+            />
+            <p className="mt-2 text-sm text-slate-400">
+              Give your table a description?
+            </p>
+          </div>
+          <div className="mb-6">
+            <ToggleSwitch
+              label="Is this a minifig table?"
+              checked={isMinifig}
+              onChange={() => setIsMinifig(!isMinifig)}
+              size="md"
+              color="blue"
+              disabled={false}
+            />
+            <p className="mt-2 text-sm text-slate-400">
+              This will show pricing information in this table.<br></br> Only
+              available for minifigs.
             </p>
           </div>
 

@@ -15,8 +15,14 @@ import colors from "@/Colors/colors.js";
 import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import getColorStyle from "@/lib/Misc/getColorStyle";
-import { Add, BrokenImage, InsertPhotoRounded } from "@mui/icons-material";
+import {
+  Add,
+  BrokenImage,
+  ExpandMoreRounded,
+  InsertPhotoRounded,
+} from "@mui/icons-material";
 import { useStatus } from "@/Context/StatusContext";
+import TableSelectDropdown from "../Misc/TableSelectDropdown";
 
 export default function AddNewPieceForm() {
   // Context
@@ -233,12 +239,6 @@ export default function AddNewPieceForm() {
     });
   };
 
-  const handleTableSelect = (event) => {
-    const selectedId = event.target.value;
-    const table = availableTables.find((table) => table.id === selectedId);
-    setSelectedTable(table);
-  };
-
   // Color selection dropdown
   const ColorDropdown = () => {
     // Filter colors to show available ones first, if we have availability data
@@ -312,18 +312,8 @@ export default function AddNewPieceForm() {
               setSearchNewPieceResult={setSearchNewPieceResult}
             />
           </div>
-          <div className="w-full sm:w-2/3 mt-3">
-            <select
-              value={selectedTable ? selectedTable.id : "1"}
-              onChange={handleTableSelect}
-              className="w-full h-12 pl-4 pr-10 text-base text-white bg-slate-700 border border-slate-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {availableTables.map((table) => (
-                <option key={table.id} value={table.id}>
-                  {table.name}
-                </option>
-              ))}
-            </select>
+          <div className="w-full sm:w-2/3 mt-4 relative">
+            <TableSelectDropdown />
             <p className="mt-2 text-xs text-slate-400">
               Select the table where you want to add this piece. If you don't
               see your table, you can create one in the "Browse All Pieces" tab.
@@ -390,6 +380,28 @@ export default function AddNewPieceForm() {
 
           <div>
             <label className="block text-sm font-medium mb-1.5 text-slate-300">
+              Quantity On Hand
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={newPiece.elementQuantityOnHand}
+              onChange={(e) =>
+                handleInputChange(
+                  "elementQuantityOnHand",
+                  parseInt(e.target.value) || 0
+                )
+              }
+              className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
+            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        {/* Column 2: Quantities */}
+        <div className="flex flex-col space-y-4 justify-between">
+          <div>
+            <label className="block text-sm font-medium mb-1.5 text-slate-300">
               Color <span className="text-red-400">*</span>
             </label>
             <div className="relative">
@@ -409,35 +421,19 @@ export default function AddNewPieceForm() {
                 ) : (
                   <span className="text-slate-400">Select a color</span>
                 )}
-                <ExpandMoreIcon className="h-5 w-5 ml-auto text-slate-400" />
+                <div
+                  className={`pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 transition-transform duration-100 ${
+                    showColorDropdown ? "rotate-180" : ""
+                  }`}
+                >
+                  <ExpandMoreIcon className="h-5 w-5 ml-auto text-slate-400" />
+                </div>
               </div>
               {showColorDropdown && <ColorDropdown />}
             </div>
           </div>
-        </div>
 
-        {/* Column 2: Quantities */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1.5 text-slate-300">
-              Quantity On Hand
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={newPiece.elementQuantityOnHand}
-              onChange={(e) =>
-                handleInputChange(
-                  "elementQuantityOnHand",
-                  parseInt(e.target.value) || 0
-                )
-              }
-              className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
+          <div className="">
             <label className="block text-sm font-medium mb-1.5 text-slate-300">
               Quantity Required
             </label>
@@ -455,36 +451,35 @@ export default function AddNewPieceForm() {
             focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5 text-slate-300">
-              Completion Status
-            </label>
-            <div className="p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200">
-              <div
-                className={`px-3 py-0.5 text-sm rounded-full inline-flex items-center w-fit ${
-                  newPiece.elementQuantityRequired === 0
-                    ? "bg-slate-600 text-slate-200"
-                    : newPiece.elementQuantityOnHand >=
-                      newPiece.elementQuantityRequired
-                    ? "bg-emerald-200 text-emerald-900"
-                    : "bg-rose-200 text-rose-900"
-                }`}
-              >
-                {newPiece.elementQuantityRequired === 0
-                  ? "General"
-                  : newPiece.elementQuantityOnHand >=
-                    newPiece.elementQuantityRequired
-                  ? "Complete"
-                  : "Incomplete"}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Add Piece Button */}
       <div className="flex justify-end">
+        <div>
+          <label className="block text-sm font-medium mb-1.5 text-slate-300">
+            Completion Status
+          </label>
+          <div className="p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200">
+            <div
+              className={`px-3 py-0.5 text-sm rounded-full inline-flex items-center w-fit ${
+                newPiece.elementQuantityRequired === 0
+                  ? "bg-slate-600 text-slate-200"
+                  : newPiece.elementQuantityOnHand >=
+                    newPiece.elementQuantityRequired
+                  ? "bg-emerald-200 text-emerald-900"
+                  : "bg-rose-200 text-rose-900"
+              }`}
+            >
+              {newPiece.elementQuantityRequired === 0
+                ? "General"
+                : newPiece.elementQuantityOnHand >=
+                  newPiece.elementQuantityRequired
+                ? "Complete"
+                : "Incomplete"}
+            </div>
+          </div>
+        </div>
         <button
           onClick={handleAddPiece}
           disabled={!formValid}

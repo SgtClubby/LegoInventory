@@ -1,11 +1,7 @@
 // src/app/api/table/[tableId]/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
-import {
-  UserBrick,
-  BrickMetadata,
-  addInvalidMetadataEntry,
-} from "@/lib/Mongo/Schema";
+import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
 
 /**
  * GET all bricks for a specific table with metadata included
@@ -16,8 +12,6 @@ import {
  */
 export async function GET(req, { params }) {
   await dbConnect();
-
-  addInvalidMetadataEntry();
 
   const ownerId = req.headers.get("ownerId") || "default";
   const { tableId } = await params;
@@ -110,6 +104,8 @@ export async function POST(req, { params }) {
 
   // Assume body contains a single brick or array of bricks
   const bricks = Array.isArray(body) ? body : [body];
+
+  
 
   try {
     const bricksToInsert = [];

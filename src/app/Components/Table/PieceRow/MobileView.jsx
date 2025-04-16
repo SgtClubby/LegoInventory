@@ -97,7 +97,7 @@ export default function MobileView({
         className={`relative z-10 flex items-center justify-between ${getRowStyle()} rounded-t-lg border-l-4 ${
           isExpanded ? "shadow-[0px_8px_16px_rgba(0,0,0,0.3)]" : "rounded-b-lg"
         } transition-colors duration-200 cursor-pointer px-4 py-3 mx-1 my-1`}
-        onClick={toggleExpanded && handleChange}
+        onClick={toggleExpanded}
         onMouseEnter={() => {
           if (!isExpanded) {
             setAnimationClass("animate-fadeIn");

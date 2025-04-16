@@ -61,11 +61,14 @@ export async function GET(req, { params }) {
       metadataMap[entry.elementId] = entry;
     });
 
+    let mapResults = [];
+
     // Step 5: Enhance results with color data and update metadata if needed
-    const enhancedResults = results.map((item) => {
+    results.map((item) => {
+      let result = {};
       const partId = item.part.part_num;
 
-      let result = {
+      result = {
         elementName: item.part.name,
         elementId: partId,
         elementColor: item.color.name || "Black",
@@ -73,47 +76,83 @@ export async function GET(req, { params }) {
         quantity: item.quantity,
       };
 
-      // Add availableColors from cache if we have it, and the cached data has the same color id in its availabeColors
+      // Check if we the mapResult contains the partId, and index
+      const existingEntry = mapResults.find(
+        (entry) => entry.elementId === partId
+      );
+
+      // If we already have this partId in the mapResults, we add the color to the existing entry
+      if (existingEntry) {
+        const index = mapResults.findIndex(
+          (entry) => entry.elementId === partId
+        );
+
+        const existingAvailableColors = existingEntry.availableColors;
+
+        existingAvailableColors.push({
+          colorId: item.color.id || 0,
+          color: item.color.name || "Black",
+          elementImage: item.part.part_img_url,
+        });
+
+        // Update the existing entry in the mapResults
+        mapResults[index].availableColors = existingAvailableColors;
+        result.availableColors = existingAvailableColors;
+      }
+
+      // Add availableColors from cache if we have it, and the cached data has the same color id in its availableColors
       if (
         colorData[partId] &&
-        parseInt(colorData[partId].colorId) === parseInt(item.color.id)
+        parseInt(colorData[partId]?.colorId) === parseInt(item.color.id) &&
+        existingEntry.length === 0
       ) {
-        result.availableColors = colorData[partId].map((color) => ({
+        result.availableColors = colorData[partId]?.map((color) => ({
           colorId: color.colorId,
           color: color.color,
           elementImage: color.elementImage,
         }));
       } else {
-        // return single from origin
+        if (existingEntry) {
+          // If we don't have a cache hit, and we don't have an existing entry, we set cacheIncomplete to true
+          result.cacheIncomplete = true;
+        } else {
+          // return single from origin
 
-        result.availableColors = [
-          {
-            colorId: item.color.id || 0,
-            color: item.color.name || "Black",
-            elementImage: item.part.part_img_url,
-          },
-        ];
-        result.cacheIncomplete = true;
+          result.availableColors = [
+            {
+              colorId: item.color.id || 0,
+              color: item.color.name || "Black",
+              elementImage: item.part.part_img_url,
+            },
+          ];
+          result.cacheIncomplete = true;
+        }
       }
 
-      // Store/update metadata in the background (don't await to keep response fast)
-      updateBrickMetadata(partId, item.part.name, item.part.part_img_url);
-
+      mapResults.push(result);
       return result;
     });
 
     // Calculate how many parts we found colors for
-    const partsWithColors = enhancedResults.filter(
-      (item) => item.availableColors && item.availableColors.length > 1
-    ).length;
+    const partsWithColors = mapResults.filter(
+      (item) =>
+        item.availableColors &&
+        item.availableColors.length <= 1 &&
+        item.cacheIncomplete === true
+    );
+
+    console.log(
+      partsWithColors.filter((item) => item.cacheIncomplete === true)
+    );
+
     const totalTime = Date.now() - startTime;
 
     console.log(
-      `Response prepared with ${partsWithColors}/${results.length} parts having cached colors (${totalTime}ms)`
+      `Response prepared with ${partsWithColors.length}/${mapResults.length} parts having cached colors (${totalTime}ms)`
     );
 
     return Response.json({
-      results: enhancedResults,
+      results: mapResults,
       stats: {
         totalParts: results.length,
         uniqueParts: uniquePartIds.length,
@@ -148,28 +187,6 @@ async function fetchExistingMetadata(partIds) {
     console.error("Error fetching brick metadata:", error);
     return [];
   }
-}
-
-/**
- * Update brick metadata in the background
- *
- * @param {string} partId - Brick element ID
- * @param {string} name - Brick name
- */
-function updateBrickMetadata(partId, name) {
-  // Don't await this to keep the response fast - run in background
-  BrickMetadata.updateOne(
-    { elementId: partId, invalid: false },
-    {
-      $set: {
-        elementName: name,
-      },
-      $setOnInsert: { elementId: partId },
-    },
-    { upsert: true }
-  ).catch((err) => {
-    console.error(`Error updating metadata for part ${partId}:`, err);
-  });
 }
 
 /**
@@ -244,6 +261,7 @@ async function fetchCachedColorData(partIds) {
         elementId: { $in: partIds },
         invalid: false,
         availableColors: { $exists: true, $ne: [] },
+        $expr: { $gt: [{ $size: "$availableColors" }, 1] },
       },
       { elementId: 1, availableColors: 1, _id: 0 }
     ).lean();

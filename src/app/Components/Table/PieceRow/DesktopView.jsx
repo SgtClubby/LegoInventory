@@ -19,14 +19,14 @@ export default function DesktopView({
   setHighlighted,
   highlighted,
   isUpdating,
+
   countComplete,
 }) {
-  const { piece, columns, isLast = false } = originalProps;
+  const { piece, columns, isLast = false, selectedTable } = originalProps;
 
   // Use fields instead of piece for most display, but keep piece.availableColors and elementColorId
   // since those are used for the color dropdown logic
   const { availableColors } = piece;
-  const elementColorId = fields.elementColorId;
 
   const colorContainerRef = useRef(null);
   const [showColorDropdown, setShowColorDropdown] = useState(false);

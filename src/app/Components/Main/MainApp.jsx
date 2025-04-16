@@ -1,7 +1,7 @@
 // src/app/Components/Main/MainApp.jsx
 
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 // Components
 import Header from "@/Components/Misc/Header";
@@ -10,6 +10,8 @@ import SearchSet from "@/Components/Search/SearchSet";
 import ImportModal from "@/Components/Modals/ImportModal";
 import ImportExport from "@/Components/Misc/ImportExport";
 import AddNewPieceForm from "./AddNewPieceForm";
+import TableAddModal from "@/Components/Modals/TableAddModal";
+import TableDeleteModal from "@/Components/Modals/TableDeleteModal";
 
 // Functions & Helpers
 import { fetchPiecesFromTable } from "@/lib/Pieces/PiecesManager";
@@ -23,15 +25,69 @@ import {
 import Footer from "../Misc/Footer";
 import { useLego } from "@/Context/LegoContext";
 
+/**
+ * Main application component for the Lego manager
+ *
+ * @returns {JSX.Element} The rendered component
+ */
 const MainApp = () => {
   // Modal state for set import
-  const [showImportModal, setShowImportModal] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
+  const [prevActiveTab, setPrevActiveTab] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [containerHeight, setContainerHeight] = useState("auto");
 
-  const { activeTab, setActiveTab } = useLego();
+  const contentRefs = useRef({
+    all: useRef(null),
+    add: useRef(null),
+    import: useRef(null),
+    export: useRef(null),
+  });
+
+  const {
+    activeTab,
+    setActiveTab,
+    setShowImportModal,
+    showImportModal,
+    showAddModal,
+    setAddShowModal,
+    showDeleteModal,
+    setDeleteShowModal,
+  } = useLego();
+
+  const tabOrder = ["all", "add", "import", "export"];
 
   // Initialization: Load Tables
-  const { setPiecesByTable, selectedTable } = useInit();
+  const { setPiecesByTable, selectedTable, piecesByTable } = useInit();
+
+  // Measure and update container height when tab changes
+  useEffect(() => {
+    // Initially set to a minimum height
+    setContainerHeight(800);
+
+    // After animation completes, measure and set the actual height
+
+    const activeContent = contentRefs.current[activeTab]?.current;
+    if (activeContent) {
+      const height = activeContent.scrollHeight;
+      setContainerHeight(height + 50); // Add some padding
+    }
+
+    return () => {};
+  }, [activeTab, piecesByTable]);
+
+  // Handle tab changes with animation
+  useEffect(() => {
+    if (prevActiveTab !== null && prevActiveTab !== activeTab) {
+      setIsAnimating(true);
+      // Animation duration should match CSS transition duration
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 500); // 500ms matches the CSS transition
+      return () => clearTimeout(timer);
+    }
+    setPrevActiveTab(activeTab);
+  }, [activeTab, prevActiveTab]);
 
   // Handle import modal
   useEffect(() => {
@@ -65,21 +121,100 @@ const MainApp = () => {
     }
   }, [selectedTable]);
 
+  /**
+   * Handle tab change with animation
+   *
+   * @param {string} tab - The tab to switch to
+   */
+  const handleTabChange = (tab) => {
+    if (tab !== activeTab) {
+      setPrevActiveTab(activeTab);
+      setIsAnimating(true);
+      setActiveTab(tab);
+    }
+  };
+
+  /**
+   * Determine the direction of animation based on tab order
+   *
+   * @param {string} fromTab - The tab we're navigating from
+   * @param {string} toTab - The tab we're navigating to
+   * @returns {string} Direction of animation ('left' or 'right')
+   */
+  const getAnimationDirection = (fromTab, toTab) => {
+    if (!fromTab || !toTab) return "right"; // Default direction
+
+    const fromIndex = tabOrder.indexOf(fromTab);
+    const toIndex = tabOrder.indexOf(toTab);
+
+    // If moving to a tab that's later in the order, go right
+    // If moving to a tab that's earlier in the order, go left
+    return fromIndex < toIndex ? "right" : "left";
+  };
+
+  /**
+   * Determine the animation classes for a tab
+   *
+   * @param {string} tabName - The name of the tab
+   * @returns {string} CSS classes for the tab
+   */
+  const getTabClasses = (tabName) => {
+    const isActive = tabName === activeTab;
+    const wasActive = tabName === prevActiveTab && isAnimating;
+    const direction = getAnimationDirection(prevActiveTab, activeTab);
+
+    // Base classes without padding (padding will be part of child containers)
+    const baseClasses = "absolute w-full transition-all duration-500";
+
+    if (isActive && isAnimating) {
+      // Tab is becoming active
+      if (direction === "right") {
+        // Slide in from right when moving forward
+        return `${baseClasses} opacity-100 switch:translate-x-0 translate-y-0`;
+      } else {
+        // Slide in from left when moving backward
+        return `${baseClasses} opacity-100 switch:translate-x-0 translate-y-0`;
+      }
+    } else if (isActive && !isAnimating) {
+      // Tab is active and not animating
+      return `${baseClasses} opacity-100 switch:translate-x-0 translate-y-0`;
+    } else if (wasActive) {
+      // Tab was active and is being replaced
+      if (direction === "right") {
+        // Slide out to left when moving forward
+        return `${baseClasses} opacity-0 switch:-translate-x-full translate-y-full switch:translate-y-0`;
+      } else {
+        // Slide out to right when moving backward
+        return `${baseClasses} opacity-0 switch:translate-x-full -translate-y-full switch:-translate-y-0`;
+      }
+    } else {
+      // Inactive tab - position based on direction relative to active tab
+      const tabIndex = tabOrder.indexOf(tabName);
+      const activeIndex = tabOrder.indexOf(activeTab);
+
+      // If this tab is to the left of the active tab, position it left
+      // Otherwise, position it right
+      return tabIndex < activeIndex
+        ? `${baseClasses} opacity-0 switch:-translate-x-full translate-y-full switch:translate-y-0 pointer-events-none`
+        : `${baseClasses} opacity-0 switch:translate-x-full -translate-y-full switch:translate-y-0 pointer-events-none`;
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col bg-gradient-to-b from-slate-900 to-slate-800 text-white">
-      <div className="max-w-[100rem] w-full mx-auto p-4 md:p-8">
+      <div className="max-w-[100rem] w-full mx-auto p-4 md:p-8 h-full">
         {/* Header */}
         <Header />
-    
+
         {/* Main Tabs */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 h ">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div
             className={`p-3 md:p-5 rounded-xl border ${
               activeTab === "all"
                 ? "bg-blue-600/30 border-blue-500"
                 : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
             } cursor-pointer transition-all duration-300 flex flex-col items-center justify-center`}
-            onClick={() => setActiveTab("all")}
+            onClick={() => handleTabChange("all")}
           >
             <FilterListRounded className="h-7 w-7 mb-2" fontSize="large" />
 
@@ -92,7 +227,7 @@ const MainApp = () => {
                 ? "bg-emerald-600/30 border-emerald-500"
                 : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
             } cursor-pointer transition-all duration-300 flex flex-col items-center justify-center`}
-            onClick={() => setActiveTab("add")}
+            onClick={() => handleTabChange("add")}
           >
             <Add className="h-7 w-7 mb-2" fontSize="large" />
             <span className="font-medium">Add New Piece</span>
@@ -104,7 +239,7 @@ const MainApp = () => {
                 ? "bg-amber-600/30 border-amber-500"
                 : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
             } cursor-pointer transition-all duration-300 flex flex-col items-center justify-center`}
-            onClick={() => setActiveTab("import")}
+            onClick={() => handleTabChange("import")}
           >
             <VerticalAlignBottomRounded
               className="h-7 w-7 mb-2"
@@ -119,92 +254,115 @@ const MainApp = () => {
                 ? "bg-rose-600/30 border-rose-500"
                 : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
             } cursor-pointer transition-all duration-300 flex flex-col items-center justify-center`}
-            onClick={() => setActiveTab("export")}
+            onClick={() => handleTabChange("export")}
           >
-            <ImportExportRounded className="h-20 w-20 mb-2" fontSize="large" />
+            <ImportExportRounded className="h-7 w-7 mb-2" fontSize="large" />
             <span className="font-medium">Import/Export</span>
           </div>
         </div>
 
-        {/* Content based on active tab */}
-        {activeTab === "all" && (
-          <PieceTable
-            setPieces={(newPieces) => {
-              setPiecesByTable((prev) => ({
-                ...prev,
-                [selectedTable.id]: newPieces,
-              }));
-            }}
-          />
-        )}
+        {/* Tab Content Container - Dynamic height with overflow hidden during transitions */}
+        <div
+          className={`relative overflow-hidden transition-all duration-300 z-300`}
+          style={{
+            height: containerHeight,
+          }}
+        >
+          {/* All Pieces Tab */}
+          <div ref={contentRefs.current.all} className={getTabClasses("all")}>
+            <PieceTable
+              setPieces={(newPieces) => {
+                setPiecesByTable((prev) => ({
+                  ...prev,
+                  [selectedTable.id]: newPieces,
+                }));
+              }}
+            />
+          </div>
 
-        {activeTab === "add" && <AddNewPieceForm />}
+          {/* Add New Piece Tab */}
+          <div ref={contentRefs.current.add} className={getTabClasses("add")}>
+            <AddNewPieceForm />
+          </div>
 
-        {activeTab === "import" && (
-          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-            <div className="max-w-md mx-auto">
-              <h2 className="text-2xl font-semibold text-white mb-6">
-                Import Set
-              </h2>
-              <p className="text-slate-300 mb-6">
-                Search for a LEGO set by name or set number to import all its
-                pieces into a new table.
-              </p>
-              <SearchSet setSetSearchResult={setSearchResult} />
+          {/* Import Set Tab */}
+          <div
+            ref={contentRefs.current.import}
+            className={getTabClasses("import")}
+          >
+            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+              <div className="max-w-md mx-auto">
+                <h2 className="text-2xl font-semibold text-white mb-6">
+                  Import Set
+                </h2>
+                <p className="text-slate-300 mb-6">
+                  Search for a LEGO set by name or set number to import all its
+                  pieces into a new table.
+                </p>
+                <SearchSet setSetSearchResult={setSearchResult} />
 
-              <div className="mt-8 bg-slate-700/50 rounded-lg p-4 border border-slate-600">
-                <h3 className="text-lg font-medium mb-2 text-slate-200">
-                  How it works:
-                </h3>
-                <ol className="list-decimal list-inside space-y-2 text-slate-300">
-                  <li>Search for a set by name or set number</li>
-                  <li>Select the set from the search results</li>
-                  <li>Confirm the import in the dialog</li>
-                  <li>
-                    A new table will be created with all pieces from the set
-                  </li>
-                </ol>
+                <div className="mt-8 bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                  <h3 className="text-lg font-medium mb-2 text-slate-200">
+                    How it works:
+                  </h3>
+                  <ol className="list-decimal list-inside space-y-2 text-slate-300">
+                    <li>Search for a set by name or set number</li>
+                    <li>Select the set from the search results</li>
+                    <li>Confirm the import in the dialog</li>
+                    <li>
+                      A new table will be created with all pieces from the set
+                    </li>
+                  </ol>
+                </div>
               </div>
             </div>
           </div>
-        )}
 
-        {activeTab === "export" && (
-          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-            <div className="max-w-md mx-auto">
-              <h2 className="text-2xl font-semibold text-white mb-6">
-                Import/Export Data
-              </h2>
-              <p className="text-slate-300 mb-6">
-                Export your current piece data to JSON or import previously
-                exported data.
-              </p>
-              <ImportExport />
+          {/* Export Data Tab */}
+          <div
+            ref={contentRefs.current.export}
+            className={getTabClasses("export")}
+          >
+            <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+              <div className="max-w-md mx-auto">
+                <h2 className="text-2xl font-semibold text-white mb-6">
+                  Import/Export Data
+                </h2>
+                <p className="text-slate-300 mb-6">
+                  Export your current piece data to JSON or import previously
+                  exported data.
+                </p>
+                <ImportExport />
 
-              <div className="mt-8 bg-slate-700/50 rounded-lg p-4 border border-slate-600">
-                <h3 className="text-lg font-medium mb-2 text-slate-200">
-                  Notes:
-                </h3>
-                <ul className="list-disc list-inside space-y-2 text-slate-300">
-                  <li>Exported files are in JSON format</li>
-                  <li>Import will replace all pieces in the current table</li>
-                  <li>You can share exported files with other LEGO builders</li>
-                  <li>Make regular backups of your collections</li>
-                </ul>
+                <div className="mt-8 bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                  <h3 className="text-lg font-medium mb-2 text-slate-200">
+                    Notes:
+                  </h3>
+                  <ul className="list-disc list-inside space-y-2 text-slate-300">
+                    <li>Exported files are in JSON format</li>
+                    <li>Import will replace all pieces in the current table</li>
+                    <li>
+                      You can share exported files with other LEGO builders
+                    </li>
+                    <li>Make regular backups of your collections</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        )}
-
-        {/* Import Set Modal */}
-        {showImportModal && (
-          <ImportModal
-            toggleModal={setShowImportModal}
-            searchResult={searchResult}
-            setSearchResult={setSearchResult}
-          />
-        )}
+        </div>
       </div>
+      {showAddModal && <TableAddModal toggleModal={setAddShowModal} />}
+      {/* Modal for deleting a table */}
+      {showDeleteModal && <TableDeleteModal toggleModal={setDeleteShowModal} />}
+      {/* Import Set Modal */}
+      {showImportModal && (
+        <ImportModal
+          toggleModal={setShowImportModal}
+          searchResult={searchResult}
+          setSearchResult={setSearchResult}
+        />
+      )}
       {/* Footer */}
       <div className="flex-grow mt-16 switch:mt-0" />
       <Footer className="items-end" />

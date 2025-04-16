@@ -2,15 +2,12 @@
 
 // Functions and Helpers
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { debounce, set } from "lodash";
-import { addTable, deleteTable } from "@/lib/Table/TableManager";
+import { debounce } from "lodash";
 import { useLego } from "@/Context/LegoContext";
 import { fetchPartDetails, fetchPartColors } from "@/lib/Pieces/PiecesManager";
 import colors from "@/Colors/colors.js";
 
 // Components
-import TableAddModal from "@/Components/Modals/TableAddModal";
-import TableDeleteModal from "@/Components/Modals/TableDeleteModal";
 import VirtualTable from "@/Components/Table/VirtualTable";
 import SearchPiece from "../Search/SearchPiece";
 import FilterTabs from "../Misc/FilterTabs";
@@ -21,24 +18,23 @@ import {
   DeleteForever,
   ExpandMoreRounded,
 } from "@mui/icons-material";
+import TableSelectDropdown from "../Misc/TableSelectDropdown";
 
-export default function PieceTable() {
+export default function PieceTable({ newTableName, setNewTableName }) {
   const {
     availableTables,
-    setAvailableTables,
     selectedTable,
     setSelectedTable,
     piecesByTable,
     setPiecesByTable,
+    setAddShowModal,
+    setDeleteShowModal,
   } = useLego();
 
   // State management
-  const [showAddModal, setAddShowModal] = useState(false);
-  const [showDeleteModal, setDeleteShowModal] = useState(false);
-  const [newTableName, setNewTableName] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
-    key: "elementName",
+    key: "",
     direction: "ascending",
   });
   const pendingUpdatesRef = useRef(new Map());
@@ -428,46 +424,8 @@ export default function PieceTable() {
     [pieces, selectedTable, setPiecesByTable]
   );
 
-  // Table management functions
-  const handleTableSelect = (event) => {
-    const selectedId = event.target.value;
-    const table = availableTables.find((table) => table.id === selectedId);
-    setSelectedTable(table);
-  };
-
   const handleAddTable = () => setAddShowModal(true);
   const handleDeleteTable = () => setDeleteShowModal(true);
-
-  const handleAddModalSubmit = async () => {
-    const newId =
-      Math.max(...availableTables.map((t) => Number(t.id) || 0)) + 1;
-    const newTable = {
-      id: newId.toString(),
-      name: newTableName || `Table ${newId}`,
-    };
-
-    setAvailableTables([...availableTables, newTable]);
-    addTable(newTableName || `Table ${newId}`);
-    setAddShowModal(false);
-    setNewTableName("");
-  };
-
-  const handleDeleteModalSubmit = () => {
-    const updatedTables = availableTables.filter(
-      (table) => table.id != selectedTable.id
-    );
-
-    setAvailableTables(updatedTables);
-    deleteTable(selectedTable.id);
-    setDeleteShowModal(false);
-    setSelectedTable(
-      updatedTables.find((t) => t.id === "1") || updatedTables[0] || null
-    );
-    setPiecesByTable((prev) => {
-      const { [selectedTable.id]: _, ...rest } = prev;
-      return rest;
-    });
-  };
 
   // Sorting function
   const handleSort = (key) => {
@@ -546,8 +504,8 @@ export default function PieceTable() {
           <div className="flex flex-col xl:flex-row xl:items-end gap-6">
             {/* Table Selection */}
             <div className="flex-1 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-white">
+              <div className="flex items-center justify-between -mb-1">
+                <h3 className="text-xl font-semibold text-white transition-all duration-200 ease-in-out">
                   {selectedTable ? selectedTable.name : "Select a Table"}
                 </h3>
                 <div className="flex gap-2">
@@ -562,7 +520,7 @@ export default function PieceTable() {
                   {selectedTable?.id > 1 && (
                     <button
                       onClick={handleDeleteTable}
-                      className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md transition-all"
+                      className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md transition-colors"
                       title="Delete Table"
                     >
                       <DeleteForever className="" fontSize="medium" />
@@ -570,23 +528,12 @@ export default function PieceTable() {
                   )}
                 </div>
               </div>
-
-              <div className="relative">
-                <select
-                  value={selectedTable ? selectedTable.id : "1"}
-                  onChange={handleTableSelect}
-                  className="w-full h-12 pl-4 pr-10 text-base text-white bg-slate-700 border border-slate-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {availableTables.map((table) => (
-                    <option key={table.id} value={table.id}>
-                      {table.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
-                  <ExpandMoreRounded fontSize="small" />
-                </div>
-              </div>
+              {/* Table Select Dropdown */}
+              <p className="mb-2 text-xs text-slate-400">
+                Select your table. If you don't have any tables, create by
+                clicking the "+" button to the right.
+              </p>
+              <TableSelectDropdown />
             </div>
 
             {/* Search & Filters */}
@@ -602,7 +549,10 @@ export default function PieceTable() {
                   {pieces.length} pieces
                 </div>
               </div>
-
+              <p className="mb-2 text-xs text-slate-400 -mt-3">
+                Search for a piece by name, ID, or color. Use the filter tabs to
+                filter by completion.
+              </p>
               <div className="flex flex-col md:flex-row gap-3 w-full">
                 <div className="flex-1 w-full md:w-[50%] ">
                   {/* Search Input */}
@@ -669,22 +619,6 @@ export default function PieceTable() {
       />
 
       {/* Modal for adding a new table */}
-      {showAddModal && (
-        <TableAddModal
-          setNewTableName={setNewTableName}
-          newTableName={newTableName}
-          toggleModal={setAddShowModal}
-          handleSubmit={handleAddModalSubmit}
-        />
-      )}
-
-      {/* Modal for deleting a table */}
-      {showDeleteModal && (
-        <TableDeleteModal
-          toggleModal={setDeleteShowModal}
-          handleSubmit={handleDeleteModalSubmit}
-        />
-      )}
     </div>
   );
 }

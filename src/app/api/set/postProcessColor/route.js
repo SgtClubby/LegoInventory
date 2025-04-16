@@ -1,8 +1,14 @@
 // src/app/api/set/postProcessColor/route.js
 
+// This whole file could have been avoided if reBrickable had a better API for fetching bulk color data
+// As per 15/04/2025, they do not support (as far as im aware) bulk fetching of color data for parts.
+// Soo.. only option is to bruteforce one piece at a time in batched requests... Not what i want to do, it feels illegal...
+// Buut, have yet to have major problems with this approach, but it could be that this one day gets me perma banned.
+// Already been temp banned once during development of this post process step, not fun...
+// perhaps add support for dynamic timing of this effectively, due to the response when you get throttled.
+
 import dbConnect from "@/lib/Mongo/Mongo";
 import { UserBrick, BrickMetadata } from "@/lib/Mongo/Schema";
-import { cache } from "react";
 
 /**
  * Processes LEGO piece IDs to fetch and store their available colors

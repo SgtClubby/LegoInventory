@@ -5,6 +5,7 @@ import { useLego } from "@/Context/LegoContext";
 import { addTable } from "@/lib/Table/TableManager";
 import { v4 as uuidv4 } from "uuid";
 import { useStatus } from "@/Context/StatusContext";
+import { set } from "lodash";
 
 export function useImportSetSubmit() {
   const {
@@ -37,6 +38,8 @@ export function useImportSetSubmit() {
       }
 
       const data = await res.json();
+
+      console.log(data);
 
       if (!data.results || data.results.length === 0) {
         showWarning(`No parts found for set "${details.name}", try again`, {
@@ -206,10 +209,10 @@ async function postProcessColorCache(
   if (piecesNeedingColors.length > 0) {
     setTimeout(() => {
       showWarning(
-        `NOTE: ${piecesNeedingColors.length} pieces still need additional color and image data, additional data may be unavailable.\n
+        `NOTE: ${piecesNeedingColors.length} pieces still need additional color and image data, additional data may be unavailable.
         You will be notified when its available, this may take a moment...`,
         {
-          position: "bottom",
+          position: "top",
           autoCloseDelay: 15000,
         }
       );
@@ -233,21 +236,19 @@ async function postProcessColorCache(
         setTimeout(() => {
           showSuccess(
             `
-Saved piece color and image data! 
-If you have missing images, refresh!`,
+                  Saved piece color and image data!
+                  If you have missing images, refresh!`,
             {
               position: "top",
               autoCloseDelay: 3000,
             }
           );
-          setPiecesByTable(newTable.id).then((savedData) => {
-            if (savedData) {
-              setPiecesByTable((prev) => ({
-                ...prev,
-                [newTable.id]: savedData,
-              }));
-            }
-          });
+          // soft reset the table state
+          // to force a re-render
+          setPiecesByTable((prev) => ({
+            ...prev,
+            [newTable.id]: importedPieces,
+          }));
         }, 2000);
       });
   }
