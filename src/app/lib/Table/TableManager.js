@@ -1,4 +1,4 @@
-// \Users\Clomby\Projects\LegoInventory\src\app\lib\Table\TableManager.js
+// src/app/lib/Table/TableManager.js
 
 export async function fetchTables() {
   try {

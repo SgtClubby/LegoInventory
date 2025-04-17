@@ -22,18 +22,33 @@ const brickMetadataSchema = new Schema(
 
 const minifigMetadataSchema = new Schema(
   {
-    minifigId: { type: String, required: true },
-    minifigIdInternal: { type: String, required: true },
     minifigName: { type: String, required: true },
+    minifigIdRebrickable: { type: String, required: true },
+    minifigIdBricklink: { type: String },
     minifigImage: { type: String, required: true },
-    priceData: {
-      minPrice: { type: String, required: true },
-      avgPrice: { type: String, required: true },
+    expireAt: {
+      type: Date, // 7 days in second cache expiration
+      expires: 604800,
     },
+  },
+  { timestamps: true }
+);
+
+const minifigPriceSchema = new Schema(
+  {
+    minifigIdRebrickable: { type: String, required: true, index: true },
+    avgPriceNew: { type: mongoose.Types.Decimal128, default: 0 },
+    maxPriceNew: { type: mongoose.Types.Decimal128, default: 0 },
+    minPriceNew: { type: mongoose.Types.Decimal128, default: 0 },
+
+    avgPriceUsed: { type: mongoose.Types.Decimal128, default: 0 },
+    maxPriceUsed: { type: mongoose.Types.Decimal128, default: 0 },
+    minPriceUsed: { type: mongoose.Types.Decimal128, default: 0 },
+
+    currency: { type: String, default: "USD" },
     expireAt: {
       type: Date,
-      // 7 days in second cache expiration
-      expires: 604800,
+      expires: 172800, // 2 day expiration
     },
   },
   { timestamps: true }
@@ -42,10 +57,9 @@ const minifigMetadataSchema = new Schema(
 const userMinifigSchema = new Schema(
   {
     uuid: { type: String, required: true },
-    minifigId: { type: String, required: true, index: true },
-    minifigQuantityOnHand: { type: Number, default: 0 },
-    minifigQuantityRequired: { type: Number, default: 0 },
-    countComplete: { type: Boolean, default: false },
+    minifigIdRebrickable: { type: String, required: true },
+    minifigIdBricklink: { type: String },
+    minifigQuantity: { type: Number, default: 0 },
     highlighted: { type: Boolean, default: false },
     tableId: { type: String, required: true, index: true },
     ownerId: { type: String, required: true, default: "default", index: true },
@@ -107,3 +121,7 @@ export const Table =
 export const MinifigMetadata =
   mongoose.models.MinifigMetadata ||
   mongoose.model("MinifigMetadata", minifigMetadataSchema);
+
+export const MinifigPriceMetadata =
+  mongoose.models.MinifigPrice ||
+  mongoose.model("MinifigPrice", minifigPriceSchema);
