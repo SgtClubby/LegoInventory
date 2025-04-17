@@ -1,4 +1,4 @@
-// src/app/colors/bricklinkMap.js
+// src/app/Colors/bricklinkMap.js
 
 const bricklinkMap = {
   "Very Light Gray": 49,
