@@ -2,7 +2,10 @@
 
 import React from "react";
 import { useLego } from "@/Context/LegoContext";
-import { FormatListBulletedRounded } from "@mui/icons-material";
+import {
+  ChecklistRtlRounded,
+  FormatListBulletedRounded,
+} from "@mui/icons-material";
 
 export default function Header() {
   const { piecesByTable, selectedTable } = useLego();
@@ -57,17 +60,29 @@ export default function Header() {
       {/* Current table info */}
       {selectedTable && (
         <div className="bg-slate-800/40 py-3 px-4 rounded-lg border border-slate-700/50 flex flex-wrap items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FormatListBulletedRounded className="h-5 w-5 text-blue-400" />
-
-            <span className="font-medium text-white">Current Table:</span>
-            <span className="text-slate-300">{selectedTable.name}</span>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <FormatListBulletedRounded className="h-5 w-5 text-blue-400" />
+              <span className="font-medium text-white">Current Table:</span>
+              <span className="text-slate-300">{selectedTable.name}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <ChecklistRtlRounded className="h-5 w-5 text-blue-400" />
+              <span className="font-medium text-white">Table Type:</span>
+              <span className="text-slate-300">
+                {selectedTable?.isMinifig ? "Minifigs" : "Pieces/Sets"}
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 text-slate-300 text-sm">
             <span className="px-3 py-1 bg-slate-700/60 rounded-full">
               {currentTablePieces}{" "}
-              {currentTablePieces === 1 ? "piece" : "pieces"}
+              {selectedTable.isMinifig
+                ? "Minifigs"
+                : currentTablePieces === 1
+                ? "piece"
+                : "pieces"}
             </span>
             <span className="px-3 py-1 bg-slate-700/60 rounded-full">
               ID: {selectedTable.id}

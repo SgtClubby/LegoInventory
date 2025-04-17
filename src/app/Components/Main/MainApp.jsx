@@ -74,7 +74,7 @@ const MainApp = () => {
     }
 
     return () => {};
-  }, [activeTab, piecesByTable]);
+  }, [activeTab, selectedTable, piecesByTable]);
 
   // Handle tab changes with animation
   useEffect(() => {
@@ -134,13 +134,6 @@ const MainApp = () => {
     }
   };
 
-  /**
-   * Determine the direction of animation based on tab order
-   *
-   * @param {string} fromTab - The tab we're navigating from
-   * @param {string} toTab - The tab we're navigating to
-   * @returns {string} Direction of animation ('left' or 'right')
-   */
   const getAnimationDirection = (fromTab, toTab) => {
     if (!fromTab || !toTab) return "right"; // Default direction
 
@@ -152,12 +145,6 @@ const MainApp = () => {
     return fromIndex < toIndex ? "right" : "left";
   };
 
-  /**
-   * Determine the animation classes for a tab
-   *
-   * @param {string} tabName - The name of the tab
-   * @returns {string} CSS classes for the tab
-   */
   const getTabClasses = (tabName) => {
     const isActive = tabName === activeTab;
     const wasActive = tabName === prevActiveTab && isAnimating;
@@ -170,22 +157,22 @@ const MainApp = () => {
       // Tab is becoming active
       if (direction === "right") {
         // Slide in from right when moving forward
-        return `${baseClasses} opacity-100 switch:translate-x-0 translate-y-0`;
+        return `${baseClasses} opacity-100 md:translate-x-0 translate-y-0`;
       } else {
         // Slide in from left when moving backward
-        return `${baseClasses} opacity-100 switch:translate-x-0 translate-y-0`;
+        return `${baseClasses} opacity-100 md:translate-x-0 translate-y-0`;
       }
     } else if (isActive && !isAnimating) {
       // Tab is active and not animating
-      return `${baseClasses} opacity-100 switch:translate-x-0 translate-y-0`;
+      return `${baseClasses} opacity-100 md:translate-x-0 translate-y-0`;
     } else if (wasActive) {
       // Tab was active and is being replaced
       if (direction === "right") {
         // Slide out to left when moving forward
-        return `${baseClasses} opacity-0 switch:-translate-x-full translate-y-full switch:translate-y-0`;
+        return `${baseClasses} opacity-0 md:-translate-x-full translate-y-full md:translate-y-0`;
       } else {
         // Slide out to right when moving backward
-        return `${baseClasses} opacity-0 switch:translate-x-full -translate-y-full switch:-translate-y-0`;
+        return `${baseClasses} opacity-0 md:translate-x-full -translate-y-full md:-translate-y-0`;
       }
     } else {
       // Inactive tab - position based on direction relative to active tab
@@ -195,8 +182,8 @@ const MainApp = () => {
       // If this tab is to the left of the active tab, position it left
       // Otherwise, position it right
       return tabIndex < activeIndex
-        ? `${baseClasses} opacity-0 switch:-translate-x-full translate-y-full switch:translate-y-0 pointer-events-none`
-        : `${baseClasses} opacity-0 switch:translate-x-full -translate-y-full switch:translate-y-0 pointer-events-none`;
+        ? `${baseClasses} opacity-0 md:-translate-x-full translate-y-full md:translate-y-0 pointer-events-none`
+        : `${baseClasses} opacity-0 md:translate-x-full -translate-y-full md:translate-y-0 pointer-events-none`;
     }
   };
 
@@ -218,7 +205,9 @@ const MainApp = () => {
           >
             <FilterListRounded className="h-7 w-7 mb-2" fontSize="large" />
 
-            <span className="font-medium">Browse All Pieces</span>
+            <span className="font-medium">
+              {selectedTable?.isMinifig ? "Browse Minifigs" : "Browse Pieces"}
+            </span>
           </div>
 
           <div
@@ -230,7 +219,9 @@ const MainApp = () => {
             onClick={() => handleTabChange("add")}
           >
             <Add className="h-7 w-7 mb-2" fontSize="large" />
-            <span className="font-medium">Add New Piece</span>
+            <span className="font-medium">
+              {selectedTable?.isMinifig ? "Add New Minifig" : "Add New Piece"}
+            </span>
           </div>
 
           <div
@@ -263,7 +254,7 @@ const MainApp = () => {
 
         {/* Tab Content Container - Dynamic height with overflow hidden during transitions */}
         <div
-          className={`relative overflow-hidden transition-all duration-300 z-300`}
+          className={`relative overflow-hidden transition-all duration-150 z-300`}
           style={{
             height: containerHeight,
           }}

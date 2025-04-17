@@ -5,9 +5,11 @@ import React, { useState, memo, useRef, useEffect, useCallback } from "react";
 import { debounce } from "lodash";
 import DesktopView from "./PieceRow/DesktopView";
 import MobileView from "./PieceRow/MobileView";
+import MinifigDesktopView from "./PieceRow/MinifigDesktopView";
+import MinifigMobileView from "./PieceRow/MinifigMobileView";
 
 /**
- * Component that renders a single piece row in both mobile and desktop views
+ * Component that renders a single piece or minifig row in both mobile and desktop views
  */
 const PieceRow = ({
   piece,
@@ -18,46 +20,77 @@ const PieceRow = ({
   columns = [],
   index,
   zIndex = 0,
+  selectedTable,
   isLast = false,
 }) => {
+  // Determine if this is a minifig or a regular piece
+  const isMinifig = selectedTable?.isMinifig;
+
   // Use useState with a function to initialize it correctly on first render
-  const [fields, setFields] = useState(() => ({
-    elementName: piece.elementName || "",
-    elementId: piece.elementId || "",
-    elementColor: piece.elementColor || "",
-    elementColorId: piece.elementColorId || "",
-    elementQuantityOnHand: parseInt(piece.elementQuantityOnHand) || 0,
-    elementQuantityRequired: parseInt(piece.elementQuantityRequired) || 0,
-    availableColors: piece.availableColors || [],
-    // Include other important properties
-    countComplete: piece.countComplete,
-    highlighted: piece.highlighted,
-    invalid: piece.invalid,
-  }));
+  const [fields, setFields] = useState(() => {
+    if (isMinifig) {
+      return {
+        minifigName: piece.minifigName || "",
+        minifigId: piece.minifigId || "",
+        minifigImage: piece.minifigImage || "",
+        minifigQuantityOnHand: parseInt(piece.minifigQuantityOnHand) || 0,
+        minifigQuantityRequired: parseInt(piece.minifigQuantityRequired) || 0,
+        // Include other important properties
+        countComplete: piece.countComplete,
+        highlighted: piece.highlighted,
+        priceData: piece.priceData || { minPrice: "N/A", avgPrice: "N/A" },
+      };
+    } else {
+      return {
+        elementName: piece.elementName || "",
+        elementId: piece.elementId || "",
+        elementColor: piece.elementColor || "",
+        elementColorId: piece.elementColorId || "",
+        elementQuantityOnHand: parseInt(piece.elementQuantityOnHand) || 0,
+        elementQuantityRequired: parseInt(piece.elementQuantityRequired) || 0,
+        availableColors: piece.availableColors || [],
+        // Include other important properties
+        countComplete: piece.countComplete,
+        highlighted: piece.highlighted,
+        invalid: piece.invalid,
+      };
+    }
+  });
 
   // Other state
   const [fieldToUpdate, setFieldToUpdate] = useState(null);
   const pendingFieldsRef = useRef({});
 
-  // Force fields to update completely when piece.invalid changes or elementName changes
-  // This handles the case where API returns new data after ID change
+  // Force fields to update completely when piece changes
   useEffect(() => {
-    // Critical fields that should trigger a complete refresh of the component
-    setFields({
-      elementName: piece.elementName || "",
-      elementId: piece.elementId || "",
-      elementColor: piece.elementColor || "",
-      elementColorId: piece.elementColorId || "",
-      elementQuantityOnHand: parseInt(piece.elementQuantityOnHand) || 0,
-      elementQuantityRequired: parseInt(piece.elementQuantityRequired) || 0,
-      availableColors: piece.availableColors || [],
-      countComplete: piece.countComplete,
-      highlighted: piece.highlighted,
-      invalid: piece.invalid,
-    });
+    if (isMinifig) {
+      setFields({
+        minifigName: piece.minifigName || "",
+        minifigId: piece.minifigId || "",
+        minifigImage: piece.minifigImage || "",
+        minifigQuantityOnHand: parseInt(piece.minifigQuantityOnHand) || 0,
+        minifigQuantityRequired: parseInt(piece.minifigQuantityRequired) || 0,
+        countComplete: piece.countComplete,
+        highlighted: piece.highlighted,
+        priceData: piece.priceData || { minPrice: "N/A", avgPrice: "N/A" },
+      });
+    } else {
+      setFields({
+        elementName: piece.elementName || "",
+        elementId: piece.elementId || "",
+        elementColor: piece.elementColor || "",
+        elementColorId: piece.elementColorId || "",
+        elementQuantityOnHand: parseInt(piece.elementQuantityOnHand) || 0,
+        elementQuantityRequired: parseInt(piece.elementQuantityRequired) || 0,
+        availableColors: piece.availableColors || [],
+        countComplete: piece.countComplete,
+        highlighted: piece.highlighted,
+        invalid: piece.invalid,
+      });
+    }
     // Clear any pending updates since we're getting fresh data
     pendingFieldsRef.current = {};
-  }, [piece, piece.invalid, piece.elementName, piece.elementId]);
+  }, [piece, isMinifig]);
 
   // Normal controlled updates from user input
   const sendUpdate = useCallback(
@@ -68,7 +101,9 @@ const PieceRow = ({
       // For quantity fields, ensure numeric values
       if (
         field === "elementQuantityOnHand" ||
-        field === "elementQuantityRequired"
+        field === "elementQuantityRequired" ||
+        field === "minifigQuantityOnHand" ||
+        field === "minifigQuantityRequired"
       ) {
         const numValue = parseInt(value) || 0;
         return onChange(originalId, field, numValue);
@@ -105,7 +140,9 @@ const PieceRow = ({
     // For quantity fields, ensure we have valid numbers in the UI
     if (
       updates.field === "elementQuantityOnHand" ||
-      updates.field === "elementQuantityRequired"
+      updates.field === "elementQuantityRequired" ||
+      updates.field === "minifigQuantityOnHand" ||
+      updates.field === "minifigQuantityRequired"
     ) {
       // Allow empty fields during typing, but convert NaN to 0
       value = value === "" ? "" : parseInt(value) || 0;
@@ -140,8 +177,6 @@ const PieceRow = ({
     }));
   };
 
-  piece.elementId === "54200" ? console.log(piece) : "";
-
   // Loading overlay
   const LoadingOverlay = isUpdating ? (
     <div className="absolute inset-0 bg-blue-500/10 backdrop-blur-[1px] pointer-events-none z-10 flex items-center justify-center">
@@ -149,46 +184,99 @@ const PieceRow = ({
     </div>
   ) : null;
 
+  // Render different components based on whether we're dealing with a minifig or a regular piece
   return (
     <>
-      {/* Desktop View */}
-
-      <DesktopView
-        originalProps={{
-          piece,
-          onChange,
-          onDelete,
-          originalId,
-          isUpdating,
-          columns,
-          index,
-          zIndex,
-          isLast,
-        }}
-        handleChange={handleChange}
-        handleDeleteClick={handleDeleteClick}
-        fields={fields}
-        LoadingOverlay={LoadingOverlay}
-        setHighlighted={setHighlighted}
-        highlighted={highlighted}
-        isUpdating={isUpdating}
-        setFields={setFields}
-        countComplete={fields.countComplete}
-      />
-      {/* Mobile View */}
-      <MobileView
-        originalProps={{
-          piece,
-        }}
-        handleChange={handleChange}
-        handleDeleteClick={handleDeleteClick}
-        fields={fields}
-        LoadingOverlay={LoadingOverlay}
-        setHighlighted={setHighlighted}
-        highlighted={highlighted}
-        isUpdating={isUpdating}
-        countComplete={fields.countComplete}
-      />
+      {isMinifig ? (
+        <>
+          {/* Minifig Desktop View */}
+          <MinifigDesktopView
+            originalProps={{
+              piece,
+              onChange,
+              onDelete,
+              originalId,
+              isUpdating,
+              columns,
+              index,
+              zIndex,
+              isLast,
+              selectedTable,
+            }}
+            handleChange={handleChange}
+            handleDeleteClick={handleDeleteClick}
+            fields={fields}
+            LoadingOverlay={LoadingOverlay}
+            setHighlighted={setHighlighted}
+            highlighted={highlighted}
+            isUpdating={isUpdating}
+            setFields={setFields}
+            countComplete={fields.countComplete}
+            key={piece.uuid + "desktop"}
+          />
+          
+          {/* Minifig Mobile View */}
+          <MinifigMobileView
+            originalProps={{
+              piece,
+              selectedTable,
+            }}
+            handleChange={handleChange}
+            handleDeleteClick={handleDeleteClick}
+            fields={fields}
+            LoadingOverlay={LoadingOverlay}
+            setHighlighted={setHighlighted}
+            highlighted={highlighted}
+            isUpdating={isUpdating}
+            countComplete={fields.countComplete}
+            key={piece.uuid + "mobile"}
+          />
+        </>
+      ) : (
+        <>
+          {/* Regular Piece Desktop View */}
+          <DesktopView
+            originalProps={{
+              piece,
+              onChange,
+              onDelete,
+              originalId,
+              isUpdating,
+              columns,
+              index,
+              zIndex,
+              isLast,
+              selectedTable,
+            }}
+            handleChange={handleChange}
+            handleDeleteClick={handleDeleteClick}
+            fields={fields}
+            LoadingOverlay={LoadingOverlay}
+            setHighlighted={setHighlighted}
+            highlighted={highlighted}
+            isUpdating={isUpdating}
+            setFields={setFields}
+            countComplete={fields.countComplete}
+            key={piece.uuid + "desktop"}
+          />
+          {/* Regular Piece Mobile View */}
+          <MobileView
+            originalProps={{
+              piece,
+              selectedTable,
+            }}
+            handleChange={handleChange}
+            handleDeleteClick={handleDeleteClick}
+            fields={fields}
+            LoadingOverlay={LoadingOverlay}
+            setHighlighted={setHighlighted}
+            highlighted={highlighted}
+            isUpdating={isUpdating}
+            countComplete={fields.countComplete}
+            key={piece.uuid + "mobile"}
+          />
+        </>
+      )}
     </>
   );
 };
@@ -211,18 +299,33 @@ function areEqual(prevProps, nextProps) {
   // If references are the same, they're equal
   if (prevPiece === nextPiece) return true;
 
-  // Check each important property
-  return (
-    prevPiece.elementId === nextPiece.elementId &&
-    prevPiece.elementName === nextPiece.elementName &&
-    prevPiece.elementColor === nextPiece.elementColor &&
-    prevPiece.elementColorId === nextPiece.elementColorId &&
-    prevPiece.elementQuantityOnHand === nextPiece.elementQuantityOnHand &&
-    prevPiece.elementQuantityRequired === nextPiece.elementQuantityRequired &&
-    prevPiece.countComplete === nextPiece.countComplete &&
-    prevPiece.highlighted === nextPiece.highlighted &&
-    prevPiece.invalid === nextPiece.invalid
-  );
+  // Check if it's a minifig or regular piece
+  const isMinifig = prevProps.selectedTable?.isMinifig;
+
+  if (isMinifig) {
+    // Check each important property for minifigs
+    return (
+      prevPiece.minifigId === nextPiece.minifigId &&
+      prevPiece.minifigName === nextPiece.minifigName &&
+      prevPiece.minifigQuantityOnHand === nextPiece.minifigQuantityOnHand &&
+      prevPiece.minifigQuantityRequired === nextPiece.minifigQuantityRequired &&
+      prevPiece.countComplete === nextPiece.countComplete &&
+      prevPiece.highlighted === nextPiece.highlighted
+    );
+  } else {
+    // Check each important property for regular pieces
+    return (
+      prevPiece.elementId === nextPiece.elementId &&
+      prevPiece.elementName === nextPiece.elementName &&
+      prevPiece.elementColor === nextPiece.elementColor &&
+      prevPiece.elementColorId === nextPiece.elementColorId &&
+      prevPiece.elementQuantityOnHand === nextPiece.elementQuantityOnHand &&
+      prevPiece.elementQuantityRequired === nextPiece.elementQuantityRequired &&
+      prevPiece.countComplete === nextPiece.countComplete &&
+      prevPiece.highlighted === nextPiece.highlighted &&
+      prevPiece.invalid === nextPiece.invalid
+    );
+  }
 }
 
 export default memo(PieceRow, areEqual);

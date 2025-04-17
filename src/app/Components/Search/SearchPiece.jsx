@@ -25,7 +25,7 @@ export default function SearchPiece({ searchTerm, setSearchTerm }) {
       >
         {/* Search icon */}
         <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
-          <SearchRounded fontSize="small" />
+          <SearchRounded fontSize="medium" />
         </div>
 
         {/* Input field */}

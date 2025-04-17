@@ -148,6 +148,9 @@ export default function SearchSet({ setSetSearchResult }) {
             ref={inputRef}
             id="search-set"
             type="text"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck="false"
             placeholder="Search by name or set number (e.g., 'Star Wars' or '75192')"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

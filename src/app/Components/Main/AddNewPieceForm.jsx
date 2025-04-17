@@ -6,68 +6,118 @@ import { v4 as uuidv4 } from "uuid";
 // Icons
 import CheckIcon from "@mui/icons-material/Check";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { Add, InsertPhotoRounded } from "@mui/icons-material";
 
 // Components
 import SearchNewPiece from "@/Components/Search/SearchNewPiece";
+import SearchNewMinifig from "@/Components/Search/SearchNewMinifig";
 
 // Functions and Helpers
 import colors from "@/Colors/colors.js";
 import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import getColorStyle from "@/lib/Misc/getColorStyle";
-import {
-  Add,
-  BrokenImage,
-  ExpandMoreRounded,
-  InsertPhotoRounded,
-} from "@mui/icons-material";
 import { useStatus } from "@/Context/StatusContext";
 import TableSelectDropdown from "../Misc/TableSelectDropdown";
 
+/**
+ * Form component for adding new pieces or minifigs to a table
+ */
 export default function AddNewPieceForm() {
   // Context
-  const {
-    setPiecesByTable,
-    selectedTable,
-    availableTables,
-    setSelectedTable,
-    setActiveTab,
-  } = useLego();
+  const { setPiecesByTable, selectedTable, setActiveTab } = useLego();
   const { showSuccess, showError, showWarning } = useStatus();
+
+  // Determine if we're working with a minifig or regular piece
+  const isMinifig = selectedTable?.isMinifig || false;
+
   // Component state
   const [searchNewPieceResult, setSearchNewPieceResult] = useState(null);
-  const [newPiece, setNewPiece] = useState({
-    uuid: uuidv4(),
-    elementName: "",
-    elementId: "",
-    elementColor: "",
-    elementColorId: "",
-    availableColors: [],
-    elementQuantityOnHand: 0,
-    elementQuantityRequired: 0,
-    countComplete: false,
-  });
-  const [image, setImage] = useState(null);
+  const [searchNewMinifigResult, setSearchNewMinifigResult] = useState(null);
+
+  // New piece/minifig state - initialized based on type
+  const [newItem, setNewItem] = useState(() => initializeNewItem(isMinifig));
+
+  // UI state
+  const [image, setImage] = useState("");
   const [imageLoading, setImageLoading] = useState(false);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const [formValid, setFormValid] = useState(false);
   const [fade, setFade] = useState(false);
 
+  /**
+   * Initialize a new empty item based on type
+   *
+   * @param {boolean} isMinifig - Whether the item is a minifig
+   * @returns {Object} Initialized item object
+   */
+  function initializeNewItem(isMinifig) {
+    if (isMinifig) {
+      return {
+        uuid: uuidv4(),
+        minifigName: "",
+        minifigIdRebrickable: "",
+        minifigIdBricklink: "",
+        minifigImage: "",
+        minifigQuantity: 0,
+        priceData: {
+          currency: "N/A",
+          minPriceNew: "N/A",
+          maxPriceNew: "N/A",
+          avgPriceNew: "N/A",
+          minPriceUsed: "N/A",
+          maxPriceUsed: "N/A",
+          avgPriceUsed: "N/A",
+        },
+      };
+    } else {
+      return {
+        uuid: uuidv4(),
+        elementName: "",
+        elementId: "",
+        elementColor: "",
+        elementColorId: "",
+        availableColors: [],
+        elementQuantityOnHand: 0,
+        elementQuantityRequired: 0,
+        countComplete: false,
+      };
+    }
+  }
+
+  // Reset form when switching table types
+  useEffect(() => {
+    setNewItem(initializeNewItem(isMinifig));
+    setImage(null);
+    setImageLoading(false);
+    setSearchNewPieceResult(null);
+    setSearchNewMinifigResult(null);
+    setShowColorDropdown(false);
+    setFormValid(false);
+  }, [isMinifig, selectedTable?.id]);
+
   // Validate form
   useEffect(() => {
-    const isValid = Boolean(
-      newPiece.elementName && newPiece.elementId && newPiece.elementColor
-    );
-    setFormValid(isValid);
-  }, [newPiece.elementName, newPiece.elementId, newPiece.elementColor]);
+    if (isMinifig) {
+      const isValid = Boolean(
+        newItem.minifigName && newItem.minifigIdRebrickable
+      );
+      setFormValid(isValid);
+    } else {
+      const isValid = Boolean(
+        newItem.elementName && newItem.elementId && newItem.elementColor
+      );
+      setFormValid(isValid);
+    }
+  }, [newItem, isMinifig]);
 
-  // Update newPiece when search result arrives
+  // Update newItem when regular piece search result arrives
   useEffect(() => {
-    if (searchNewPieceResult) {
+    if (!isMinifig && searchNewPieceResult) {
       const { part_num, name, part_img_url } = searchNewPieceResult;
 
       // First update the basic information
-      setNewPiece((prev) => ({
+      setNewItem((prev) => ({
         ...prev,
         uuid: uuidv4(),
         elementId: part_num,
@@ -84,14 +134,14 @@ export default function AddNewPieceForm() {
           const colorData = await response.json();
 
           // Update with colors without overriding other properties
-          setNewPiece((current) => ({
+          setNewItem((current) => ({
             ...current,
             availableColors: colorData,
           }));
 
           // If there are colors available, set the first one as default
           if (colorData?.length > 0) {
-            setNewPiece((current) => ({
+            setNewItem((current) => ({
               ...current,
               elementColor: colorData[0].color,
               elementColorId: colorData[0].colorId,
@@ -109,63 +159,141 @@ export default function AddNewPieceForm() {
 
       fetchColors();
     }
-  }, [searchNewPieceResult]);
+  }, [searchNewPieceResult, isMinifig, showError]);
 
-  // Update image when color changes
+  // Update newItem when minifig search result arrives
   useEffect(() => {
-    if (
-      newPiece.elementColorId &&
-      newPiece.elementId &&
-      newPiece.availableColors.length === 0
-    ) {
-      console.log("Fetching image from API");
-      setFade(false); // Reset fade flag
-      const fetchImage = async () => {
-        try {
-          const response = await fetch(
-            `/api/image/${newPiece.elementId}/${newPiece.elementColorId}`
-          );
-          const data = await response.json();
+    if (isMinifig && searchNewMinifigResult) {
+      setNewItem(initializeNewItem(true)); // Reset to initial state
+      const { minifigIdRebrickable, minifigName, minifigImage } =
+        searchNewMinifigResult;
 
-          if (data.part_img_url) {
-            setImage(data.part_img_url);
-            setFade(false); // Ensure it's reset
-          }
-        } catch (error) {
-          setImage(null);
-          showError("Error fetching piece image.", {
+      setNewItem((prev) => {
+        return {
+          ...prev,
+          uuid: uuidv4(),
+          minifigIdRebrickable,
+          minifigName,
+          minifigImage,
+          minifigQuantity: 1,
+        };
+      });
+
+      setImage(searchNewMinifigResult.minifigImage);
+
+      async function fetchBricklinkData() {
+        const res = await fetch(
+          `/api/bricklink?rebrickableId=${searchNewMinifigResult.minifigIdRebrickable}&minifigName=${searchNewMinifigResult.minifigName}`
+        );
+
+        if (!res.ok) {
+          showError(
+            `Error fetching BrickLink data: ${res.statusText} ${res.status}`,
+            {
+              autoCloseDelay: 5000,
+            }
+          );
+          return;
+        }
+
+        const bricklinkData = await res.json();
+        if (bricklinkData.error) {
+          showError(`Error fetching BrickLink data: ${bricklinkData.error}`, {
             autoCloseDelay: 5000,
           });
-          console.error("Error fetching image:", error);
+          return;
         }
-      };
-      fetchImage();
-    } else {
-      console.log("Using available colors");
-      setFade(false); // Reset fade flag
-      const colorData = newPiece.availableColors.find(
-        (color) => color.colorId == newPiece.elementColorId
-      );
-      if (colorData) {
-        setImage(colorData.elementImage);
-        setFade(false); // Ensure it's reset
+        // Update price data if available
+        if (bricklinkData?.priceData) {
+          const priceData = bricklinkData.priceData;
+          setNewItem((prev) => ({
+            ...prev,
+            minifigIdBricklink: bricklinkData.minifigIdBricklink,
+            priceData: {
+              minPriceNew: priceData.minPriceNew,
+              maxPriceNew: priceData.maxPriceNew,
+              avgPriceNew: priceData.avgPriceNew,
+              minPriceUsed: priceData.minPriceUsed,
+              maxPriceUsed: priceData.maxPriceUsed,
+              avgPriceUsed: priceData.avgPriceUsed,
+              currency: priceData.currency,
+            },
+          }));
+        }
+      }
+      fetchBricklinkData();
+    }
+  }, [searchNewMinifigResult, isMinifig]);
+
+  // Update image when color changes for regular pieces
+  useEffect(() => {
+    if (!isMinifig) {
+      if (
+        newItem.elementColorId &&
+        newItem.elementId &&
+        newItem.availableColors.length === 0
+      ) {
+        // Don't reset the image until we get a new one
+        const fetchImage = async () => {
+          try {
+            const response = await fetch(
+              `/api/image/${newItem.elementId}/${newItem.elementColorId}`
+            );
+            const data = await response.json();
+
+            if (data && data.part_img_url) {
+              setImage(data.part_img_url);
+              setFade(false); // Reset fade flag, then it will become true when image loads
+            }
+          } catch (error) {
+            // Don't set image to null here - keep the existing image
+            showError("Error fetching piece image.", {
+              autoCloseDelay: 5000,
+            });
+            console.error("Error fetching image:", error);
+          }
+        };
+        fetchImage();
+      } else {
+        const colorData = newItem?.availableColors?.find(
+          (color) => color.colorId == newItem.elementColorId
+        );
+        if (colorData && colorData.elementImage) {
+          setImage(colorData.elementImage);
+          setFade(false); // Reset fade flag, then it will become true when image loads
+        }
       }
     }
-  }, [newPiece.elementColorId, newPiece.elementId, newPiece.availableColors]);
+  }, [
+    newItem.elementColorId,
+    newItem.elementId,
+    newItem.availableColors,
+    isMinifig,
+    showError,
+  ]);
 
-  // Handle input change
+  /**
+   * Handle input change for form fields
+   *
+   * @param {string} field - Field name to update
+   * @param {any} value - New value for the field
+   */
   const handleInputChange = (field, value) => {
-    setNewPiece((prev) => ({
+    setNewItem((prev) => ({
       ...prev,
       [field]: value,
     }));
   };
 
-  // Handle color selection
+  /**
+   * Handle color selection for regular pieces
+   *
+   * @param {string} colorName - Selected color name
+   */
   const handleColorSelect = (colorName) => {
     const colorObj = colors.find((c) => c.colorName === colorName);
     if (colorObj) {
-      setNewPiece((prev) => ({
+      setNewItem((prev) => ({
         ...prev,
         elementColor: colorName,
         elementColorId: colorObj.colorId,
@@ -174,8 +302,10 @@ export default function AddNewPieceForm() {
     setShowColorDropdown(false);
   };
 
-  // Handle add piece
-  const handleAddPiece = async () => {
+  /**
+   * Handle adding new piece or minifig
+   */
+  const handleAddItem = async () => {
     if (!formValid) {
       showWarning("Please fill in all required fields.", {
         autoCloseDelay: 3000,
@@ -183,21 +313,89 @@ export default function AddNewPieceForm() {
       return;
     }
 
+    const tableId = selectedTable.id;
+
+    if (isMinifig) {
+      await addMinifig(tableId);
+    } else {
+      await addPiece(tableId);
+    }
+
+    setActiveTab("all");
+
+    // Reset form state
+    setSearchNewPieceResult(null);
+    setSearchNewMinifigResult(null);
+    setImage(null);
+    setImageLoading(false);
+    setNewItem(initializeNewItem(isMinifig));
+  };
+
+  /**
+   * Add a new minifig
+   *
+   * @param {string} tableId - Table ID
+   */
+  const addMinifig = async (tableId) => {
+    // Add new minifig
+    const updatedNewMinifig = {
+      ...newItem,
+      uuid: uuidv4(),
+    };
+
+    // Update local state
+    setPiecesByTable((prev) => {
+      const tablePieces = prev[tableId] || [];
+      return { ...prev, [tableId]: [...tablePieces, updatedNewMinifig] };
+    });
+
+    // Save new minifig via API call
+    try {
+      const response = await fetch(`/api/table/${tableId}/minifig`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedNewMinifig),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add minifig");
+      }
+
+      // Show success message
+      showSuccess("Minifig added successfully!", {
+        position: "top",
+        autoCloseDelay: 3000,
+      });
+    } catch (error) {
+      showError("Error adding minifig. Please try again later.", {
+        autoCloseDelay: 5000,
+      });
+      console.error("Error adding minifig:", error);
+    }
+  };
+
+  /**
+   * Add a new regular piece
+   *
+   * @param {string} tableId - Table ID
+   */
+  const addPiece = async (tableId) => {
+    // Add new regular piece
     const elementColorId = colors.find(
-      (c) => c.colorName === newPiece.elementColor
+      (c) => c.colorName === newItem.elementColor
     )?.colorId;
 
     const updatedNewPiece = {
-      ...newPiece,
+      ...newItem,
       uuid: uuidv4(),
       elementColorId,
       countComplete:
-        newPiece.elementQuantityRequired === 0
+        newItem.elementQuantityRequired === 0
           ? null
-          : newPiece.elementQuantityOnHand >= newPiece.elementQuantityRequired,
+          : newItem.elementQuantityOnHand >= newItem.elementQuantityRequired,
     };
-
-    const tableId = selectedTable.id;
 
     // Update local state
     setPiecesByTable((prev) => {
@@ -219,30 +417,14 @@ export default function AddNewPieceForm() {
       position: "top",
       autoCloseDelay: 3000,
     });
-
-    setActiveTab("all");
-
-    // Reset form state
-    setSearchNewPieceResult(null);
-    setImage(null);
-    setImageLoading(false);
-    setNewPiece({
-      uuid: uuidv4(),
-      elementName: "",
-      elementId: "",
-      elementColor: "",
-      elementColorId: "",
-      availableColors: [],
-      elementQuantityOnHand: 0,
-      elementQuantityRequired: 0,
-      countComplete: false,
-    });
   };
 
-  // Color selection dropdown
+  /**
+   * Color dropdown component for regular pieces
+   */
   const ColorDropdown = () => {
     // Filter colors to show available ones first, if we have availability data
-    const availableColorIds = newPiece.availableColors.map((c) => c.colorId);
+    const availableColorIds = newItem.availableColors.map((c) => c.colorId);
     const sortedColors = [...colors].sort((a, b) => {
       const aAvailable = availableColorIds.includes(a.colorId.toString());
       const bAvailable = availableColorIds.includes(b.colorId.toString());
@@ -257,7 +439,7 @@ export default function AddNewPieceForm() {
 
     return (
       <div className="absolute z-40 top-full left-0 mt-1 w-full max-h-60 overflow-y-auto bg-slate-800 border border-slate-600 rounded-md shadow-xl scrollbar-thin scrollbar-thumb-slate-600">
-        {newPiece.availableColors.length > 0 && (
+        {newItem.availableColors.length > 0 && (
           <div className="p-2 text-xs text-slate-400 font-medium">
             Available Colors:
           </div>
@@ -273,9 +455,7 @@ export default function AddNewPieceForm() {
               <div
                 key={color.colorName}
                 className={`flex items-center px-3 py-2 rounded hover:bg-slate-700 cursor-pointer ${
-                  color.colorName === newPiece.elementColor
-                    ? "bg-slate-700"
-                    : ""
+                  color.colorName === newItem.elementColor ? "bg-slate-700" : ""
                 } ${isAvailable ? "" : "opacity-60"}`}
                 onClick={() => handleColorSelect(color.colorName)}
               >
@@ -298,25 +478,63 @@ export default function AddNewPieceForm() {
     );
   };
 
+  // Calculate the completion status text and class
+  const getCompletionStatus = () => {
+    if (!isMinifig) {
+      const required = newItem.elementQuantityRequired;
+      const onHand = newItem.elementQuantityOnHand;
+
+      if (required === 0) {
+        return {
+          text: "General",
+          className: "bg-slate-600 text-slate-200",
+        };
+      } else if (onHand >= required) {
+        return {
+          text: "Complete",
+          className: "bg-emerald-200 text-emerald-900",
+        };
+      } else {
+        return {
+          text: "Incomplete",
+          className: "bg-rose-200 text-rose-900",
+        };
+      }
+    }
+  };
+
+  // Get current completion status
+  const completionStatus = getCompletionStatus();
+
   return (
     <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-      <h2 className="text-2xl font-semibold text-white mb-6">Add New Piece</h2>
+      <h2 className="text-2xl font-semibold text-white mb-6">
+        Add New {isMinifig ? "Minifig" : "Piece"}
+      </h2>
 
       {/* Search (Left) and Image (Right) */}
       <div className="flex flex-col sm:flex-row gap-6 mb-6">
         {/* Left: Search */}
         <div className="flex flex-col w-full sm:w-2/3">
           <div className="w-full sm:w-2/3">
-            <SearchNewPiece
-              searchNewPieceResult={searchNewPieceResult}
-              setSearchNewPieceResult={setSearchNewPieceResult}
-            />
+            {isMinifig ? (
+              <SearchNewMinifig
+                searchNewMinifigResult={searchNewMinifigResult}
+                setSearchNewMinifigResult={setSearchNewMinifigResult}
+              />
+            ) : (
+              <SearchNewPiece
+                searchNewPieceResult={searchNewPieceResult}
+                setSearchNewPieceResult={setSearchNewPieceResult}
+              />
+            )}
           </div>
           <div className="w-full sm:w-2/3 mt-4 relative">
             <TableSelectDropdown />
             <p className="mt-2 text-xs text-slate-400">
-              Select the table where you want to add this piece. If you don't
-              see your table, you can create one in the "Browse All Pieces" tab.
+              Select the table where you want to add this{" "}
+              {isMinifig ? "minifig" : "piece"}. If you don't see your table,
+              you can create one in the "Browse All Pieces" tab.
             </p>
           </div>
         </div>
@@ -330,7 +548,7 @@ export default function AddNewPieceForm() {
               <img
                 key={image}
                 src={`${image}?t=${new Date().getTime()}`} // optional cache-buster
-                alt={newPiece.elementName}
+                alt={isMinifig ? newItem.minifigName : newItem.elementName}
                 onLoad={() => {
                   setFade(true);
                   setImageLoading(false);
@@ -346,9 +564,9 @@ export default function AddNewPieceForm() {
         </div>
       </div>
 
-      {/* Form Fields in a Two-Column Layout (Name/ID/Color on left, Quantities on right) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Column 1: Piece Information */}
+      {/* Form Fields in a Two-Column Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+        {/* Column 1: Basic Information */}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5 text-slate-300">
@@ -356,147 +574,324 @@ export default function AddNewPieceForm() {
             </label>
             <input
               type="text"
-              value={newPiece.elementName}
-              onChange={(e) => handleInputChange("elementName", e.target.value)}
-              className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="Brick 2x4"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5 text-slate-300">
-              ID <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={newPiece.elementId}
-              onChange={(e) => handleInputChange("elementId", e.target.value)}
-              className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="e.g. 3001"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5 text-slate-300">
-              Quantity On Hand
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={newPiece.elementQuantityOnHand}
+              value={
+                (isMinifig ? newItem?.minifigName : newItem?.elementName) || ""
+              }
               onChange={(e) =>
                 handleInputChange(
-                  "elementQuantityOnHand",
-                  parseInt(e.target.value) || 0
+                  isMinifig ? "minifigName" : "elementName",
+                  e.target.value
                 )
               }
               className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+  focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder={isMinifig ? "'Darth Vader'" : "Brick 2x4"}
             />
           </div>
+
+          {!isMinifig ? (
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                ID <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                disabled={isMinifig}
+                value={
+                  (!isMinifig
+                    ? newItem?.elementId
+                    : newItem?.minifigIdBricklink) || ""
+                }
+                onChange={(e) => handleInputChange("elementId", e.target.value)}
+                className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
+                            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder={isMinifig ? "e.g. sw0001" : "e.g. 3001"}
+              />
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                  Bricklink ID
+                </label>
+                <input
+                  type="text"
+                  value={
+                    (isMinifig
+                      ? newItem?.minifigIdBricklink
+                      : newItem?.elementId) || ""
+                  }
+                  disabled={!isMinifig}
+                  onChange={(e) =>
+                    handleInputChange("minifigIdBricklink", e.target.value)
+                  }
+                  className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
+                            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder={
+                    isMinifig ? "e.g. 'sw1234', 'pir1234'" : "e.g. '3001'"
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                  Rebrickable ID <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={
+                    (isMinifig
+                      ? newItem?.minifigIdRebrickable
+                      : newItem?.elementId) || ""
+                  }
+                  disabled={!isMinifig}
+                  onChange={(e) =>
+                    handleInputChange("minifigIdRebrickable", e.target.value)
+                  }
+                  className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
+                          focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder={isMinifig ? "e.g. 'fig-123456'" : "e.g. '3001'"}
+                />
+              </div>
+            </>
+          )}
+          {isMinifig ? (
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                Quantity Owned
+              </label>
+              <input
+                type="number"
+                min="1"
+                defaultValue="1"
+                disabled={!isMinifig}
+                value={
+                  (isMinifig ? newItem?.minifigQuantity : newItem?.elementId) ||
+                  1
+                }
+                onChange={(e) =>
+                  handleInputChange(
+                    "minifigQuantity",
+                    parseInt(e.target.value) || 1
+                  )
+                }
+                className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
+              focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                Quantity On Hand
+              </label>
+              <input
+                type="number"
+                min="0"
+                disabled={isMinifig}
+                value={
+                  (!isMinifig
+                    ? newItem?.elementQuantityOnHand
+                    : newItem?.minifigQuantity) || "1"
+                }
+                onChange={(e) => {
+                  handleInputChange(
+                    "elementQuantityOnHand",
+                    parseInt(e.target.value) || 0
+                  );
+                }}
+                className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
+              focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          )}
         </div>
 
-        {/* Column 2: Quantities */}
+        {/* Column 2: Color/Price & Quantity */}
         <div className="flex flex-col space-y-4 justify-between">
-          <div>
-            <label className="block text-sm font-medium mb-1.5 text-slate-300">
-              Color <span className="text-red-400">*</span>
-            </label>
-            <div className="relative">
-              <div
-                className="flex items-center w-full p-3 border border-slate-600 rounded-lg 
-              bg-slate-700 text-slate-200 cursor-pointer"
-                onClick={() => setShowColorDropdown(!showColorDropdown)}
-              >
-                {newPiece.elementColor ? (
-                  <>
-                    <div
-                      style={getColorStyle(newPiece.elementColor)}
-                      className="w-6 h-6 rounded-full mr-2"
-                    />
-                    <span>{newPiece.elementColor}</span>
-                  </>
-                ) : (
-                  <span className="text-slate-400">Select a color</span>
-                )}
+          {/* Color for pieces or Price Info for minifigs */}
+          {!isMinifig ? (
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                Color <span className="text-red-400">*</span>
+              </label>
+              <div className="relative">
                 <div
-                  className={`pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 transition-transform duration-100 ${
-                    showColorDropdown ? "rotate-180" : ""
-                  }`}
+                  className="flex items-center w-full p-3 border border-slate-600 rounded-lg 
+                  bg-slate-700 text-slate-200 cursor-pointer"
+                  onClick={() => setShowColorDropdown(!showColorDropdown)}
                 >
-                  <ExpandMoreIcon className="h-5 w-5 ml-auto text-slate-400" />
+                  {newItem.elementColor ? (
+                    <>
+                      <div
+                        style={getColorStyle(newItem.elementColor)}
+                        className="w-6 h-6 rounded-full mr-2"
+                      />
+                      <span>{newItem.elementColor}</span>
+                    </>
+                  ) : (
+                    <span className="text-slate-400">Select a color</span>
+                  )}
+                  <div
+                    className={`pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 transition-transform duration-100 ${
+                      showColorDropdown ? "rotate-180" : ""
+                    }`}
+                  >
+                    <ExpandMoreIcon className="h-5 w-5 ml-auto text-slate-400" />
+                  </div>
+                </div>
+                {showColorDropdown && <ColorDropdown />}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                Price Information
+              </label>
+              <div className="p-4 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 shadow-inner">
+                {/* New Section */}
+                <div className="mb-3 pb-2 border-b border-slate-600">
+                  <h3 className="text-sm font-medium text-blue-400 mb-2">
+                    New Condition
+                  </h3>
+                  <div className="grid grid-cols-3 gap-x-2 gap-y-1.5">
+                    <span className="text-xs text-slate-400">Min:</span>
+                    <span className="text-sm text-slate-200 font-medium col-span-2">
+                      {newItem.priceData?.minPriceNew !== "N/A" ? (
+                        `$${newItem.priceData?.minPriceNew.toFixed(2)}`
+                      ) : (
+                        <span className="text-slate-500">N/A</span>
+                      )}
+                    </span>
+
+                    <span className="text-xs text-slate-400">Max:</span>
+                    <span className="text-sm text-slate-200 font-medium col-span-2">
+                      {newItem.priceData?.maxPriceNew !== "N/A" ? (
+                        `$${newItem.priceData?.maxPriceNew.toFixed(2)}`
+                      ) : (
+                        <span className="text-slate-500">N/A</span>
+                      )}
+                    </span>
+
+                    <span className="text-xs text-slate-400">Avg:</span>
+                    <span className="text-sm text-slate-200 font-medium col-span-2">
+                      {newItem.priceData?.avgPriceNew !== "N/A" ? (
+                        `$${newItem.priceData?.avgPriceNew.toFixed(2)}`
+                      ) : (
+                        <span className="text-slate-500">N/A</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Used Section */}
+                <div>
+                  <h3 className="text-sm font-medium text-blue-400 mb-2">
+                    Used Condition
+                  </h3>
+                  <div className="grid grid-cols-3 gap-x-2 gap-y-1.5">
+                    <span className="text-xs text-slate-400">Min:</span>
+                    <span className="text-sm text-slate-200 font-medium col-span-2">
+                      {newItem.priceData?.minPriceUsed !== "N/A" ? (
+                        `$${newItem.priceData?.minPriceUsed.toFixed(2)}`
+                      ) : (
+                        <span className="text-slate-500">N/A</span>
+                      )}
+                    </span>
+
+                    <span className="text-xs text-slate-400">Max:</span>
+                    <span className="text-sm text-slate-200 font-medium col-span-2">
+                      {newItem.priceData?.maxPriceUsed !== "N/A" ? (
+                        `$${newItem.priceData?.maxPriceUsed.toFixed(2)}`
+                      ) : (
+                        <span className="text-slate-500">N/A</span>
+                      )}
+                    </span>
+
+                    <span className="text-xs text-slate-400">Avg:</span>
+                    <span className="text-sm text-slate-200 font-medium col-span-2">
+                      {newItem.priceData?.avgPriceUsed !== "N/A" ? (
+                        `$${newItem.priceData?.avgPriceUsed.toFixed(2)}`
+                      ) : (
+                        <span className="text-slate-500">N/A</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Currency note */}
+                <div className="mt-3 pt-2 border-t border-slate-600 text-right">
+                  <span className="text-xs text-slate-400">
+                    Currency: {newItem.priceData?.currency || "USD"}
+                  </span>
                 </div>
               </div>
-              {showColorDropdown && <ColorDropdown />}
             </div>
-          </div>
+          )}
 
-          <div className="">
-            <label className="block text-sm font-medium mb-1.5 text-slate-300">
-              Quantity Required
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={newPiece.elementQuantityRequired}
-              onChange={(e) =>
-                handleInputChange(
-                  "elementQuantityRequired",
-                  parseInt(e.target.value) || 0
-                )
-              }
-              className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+          {/* Quantity Required */}
+          {!isMinifig && (
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-slate-300">
+                Quantity Required
+              </label>
+              <input
+                type="number"
+                min="0"
+                disabled={isMinifig}
+                value={
+                  (!isMinifig
+                    ? newItem?.elementQuantityRequired
+                    : newItem?.minifigQuantity) || ""
+                }
+                onChange={(e) =>
+                  handleInputChange(
+                    "elementQuantityRequired",
+                    parseInt(e.target.value) || 0
+                  )
+                }
+                className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
+                  focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Add Piece Button */}
-      <div className="flex justify-end">
-        <div>
-          <label className="block text-sm font-medium mb-1.5 text-slate-300">
-            Completion Status
-          </label>
-          <div className="p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200">
+      {/* Add Button */}
+
+      <div className="flex justify-end mt-8 items center">
+        {!isMinifig && (
+          <div className="mr-4 flex items-end flex-col">
+            <label className="block text-sm font-medium text-slate-300">
+              Completion Status
+            </label>
             <div
-              className={`px-3 py-0.5 text-sm rounded-full inline-flex items-center w-fit ${
-                newPiece.elementQuantityRequired === 0
-                  ? "bg-slate-600 text-slate-200"
-                  : newPiece.elementQuantityOnHand >=
-                    newPiece.elementQuantityRequired
-                  ? "bg-emerald-200 text-emerald-900"
-                  : "bg-rose-200 text-rose-900"
-              }`}
+              className={`mt-0.5 px-3 py-0.5 text-sm rounded-full inline-flex items-center w-fit ${completionStatus.className}`}
             >
-              {newPiece.elementQuantityRequired === 0
-                ? "General"
-                : newPiece.elementQuantityOnHand >=
-                  newPiece.elementQuantityRequired
-                ? "Complete"
-                : "Incomplete"}
+              {completionStatus.text}
             </div>
           </div>
-        </div>
-        <button
-          onClick={handleAddPiece}
-          disabled={!formValid}
-          className={`px-6 py-3 rounded-lg text-white font-medium transition-all
+        )}
+        <div>
+          <button
+            onClick={handleAddItem}
+            disabled={!formValid}
+            className={`px-6 py-3 rounded-lg text-white font-medium transition-all
           ${
             formValid
               ? "bg-blue-600 hover:bg-blue-700 transition-opacity duration-200 ease-in-out"
               : "bg-slate-600 opacity-50 cursor-not-allowed pointer-events-none"
           }
         `}
-        >
-          <div className="flex items-center justify-center">
-            <Add className="h-5 w-5 mr-2" />
-            Add Piece
-          </div>
-        </button>
+          >
+            <div className="flex items-center justify-center">
+              <Add className="h-5 w-5 mr-2" />
+              Add {isMinifig ? "Minifig" : "Piece"}
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
+AddNewPieceForm.displayName = "AddNewPieceForm";

@@ -180,7 +180,8 @@ export function useImportSetSubmit() {
           importedPieces,
           newTable,
           showWarning,
-          showSuccess
+          showSuccess,
+          setPiecesByTable
         );
       }, 1000);
       return { success: true };
@@ -197,7 +198,8 @@ async function postProcessColorCache(
   importedPieces,
   newTable,
   showWarning,
-  showSuccess
+  showSuccess,
+  setPiecesByTable
 ) {
   const piecesNeedingColors = importedPieces
     .filter((p) => p.availableColors.length <= 1 || !p.availableColors)
