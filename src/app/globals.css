@@ -20,6 +20,22 @@
 }
 
 @layer components {
+  .shadow-btm {
+    @apply shadow-[0px_8px_8px_rgba(0,0,0,0.3)];
+  }
+
+  .shadow-top {
+    @apply shadow-[0px_-8px_8px_rgba(0,0,0,0.3)];
+  }
+
+  .shadow-left {
+    @apply shadow-[-8px_0px_8px_rgba(0,0,0,0.3)];
+  }
+
+  .shadow-right {
+    @apply shadow-[8px_0px_8px_rgba(0,0,0,0.3)];
+  }
+
   .blue-btn {
     @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition;
   }
@@ -207,5 +223,129 @@
 
   .animate-pulseHighlight {
     animation: pulseHighlight 1.5s infinite;
+  }
+
+  /* Add these animation classes to your globals.css file */
+
+  @layer components {
+    /* Tab animations */
+    @keyframes slideInFromRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideInFromLeft {
+      from {
+        transform: translateX(-100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOutToRight {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+
+    @keyframes slideOutToLeft {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(-100%);
+        opacity: 0;
+      }
+    }
+
+    .animate-slideInFromRight {
+      animation: slideInFromRight 500ms ease-in-out forwards;
+      position: relative;
+      z-index: 10;
+    }
+
+    .animate-slideInFromLeft {
+      animation: slideInFromLeft 500ms ease-in-out forwards;
+      position: relative;
+      z-index: 10;
+    }
+
+    .animate-slideOutToRight {
+      animation: slideOutToRight 500ms ease-in-out forwards;
+      position: absolute;
+      width: 100%;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+
+    .animate-slideOutToLeft {
+      animation: slideOutToLeft 500ms ease-in-out forwards;
+      position: absolute;
+      width: 100%;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+
+    /* Tab content base style */
+    .tab-content {
+      position: relative;
+      width: 100%;
+    }
+    /* Example CSS for slide right (entering from the right, exiting to the left) */
+    .slide-right-enter {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    .slide-right-enter-active {
+      opacity: 1;
+      transform: translateX(0);
+      transition: all 500ms ease;
+    }
+    .slide-right-exit {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .slide-right-exit-active {
+      opacity: 0;
+      transform: translateX(-100%);
+      transition: all 500ms ease;
+    }
+
+    /* Example CSS for slide left (entering from the left, exiting to the right) */
+    .slide-left-enter {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+    .slide-left-enter-active {
+      opacity: 1;
+      transform: translateX(0);
+      transition: all 500ms ease;
+    }
+    .slide-left-exit {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .slide-left-exit-active {
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 500ms ease;
+    }
   }
 }
