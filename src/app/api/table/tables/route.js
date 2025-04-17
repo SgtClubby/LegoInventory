@@ -61,8 +61,9 @@ export async function POST(req) {
 
   try {
     // Find the table with the highest ID for this user
-    const lastTable = await Table.findOne({ ownerId }).sort({ id: -1 });
-    const newId = lastTable ? parseInt(lastTable.id) + 1 : 1;
+    const tables = await Table.find({ ownerId });
+    const newId =
+      tables.length > 0 ? Math.max(...tables.map((t) => Number(t.id))) + 1 : 1;
 
     // Create new table
     const newTable = new Table({
