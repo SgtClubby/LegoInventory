@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Header from "@/Components/Misc/Header";
 import PieceTable from "@/Components/Table/PieceTable";
 import SearchSet from "@/Components/Search/SearchSet";
-import ImportModal from "@/Components/Modals/ImportModal";
+import ImportSetModal from "@/Components/Modals/ImportSetModal";
 import ImportExport from "@/Components/Misc/ImportExport";
 import AddNewPieceForm from "./AddNewPieceForm";
 import TableAddModal from "@/Components/Modals/TableAddModal";
@@ -24,6 +24,7 @@ import {
 } from "@mui/icons-material";
 import Footer from "../Misc/Footer";
 import { useLego } from "@/Context/LegoContext";
+import DeletePieceModal from "../Modals/DeletePieceModal";
 
 /**
  * Main application component for the Lego manager
@@ -53,28 +54,46 @@ const MainApp = () => {
     setAddShowModal,
     showDeleteModal,
     setDeleteShowModal,
+    deleteModalOpen,
+    setDeleteModalOpen,
+    pieceToDelete,
   } = useLego();
 
   const tabOrder = ["all", "add", "import", "export"];
-
   // Initialization: Load Tables
   const { setPiecesByTable, selectedTable, piecesByTable } = useInit();
+  const isMinifig = selectedTable?.isMinifig;
 
-  // Measure and update container height when tab changes
+  // screen width
+  const [screenWidth, setScreenWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 0
+  );
+
   useEffect(() => {
-    // Initially set to a minimum height
-    setContainerHeight(800);
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+    };
 
-    // After animation completes, measure and set the actual height
+    window.addEventListener("resize", handleResize);
+
+    // Initial call just in case
+    handleResize();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  // Measure and update container height when tab changes, this should also fire when screen width changes
+  useEffect(() => {
+    setContainerHeight(800);
 
     const activeContent = contentRefs.current[activeTab]?.current;
     if (activeContent) {
       const height = activeContent.scrollHeight;
-      setContainerHeight(height + 50); // Add some padding
+      setContainerHeight(height + 75);
     }
-
-    return () => {};
-  }, [activeTab, selectedTable, piecesByTable]);
+  }, [activeTab, selectedTable, piecesByTable, screenWidth]);
 
   // Handle tab changes with animation
   useEffect(() => {
@@ -187,6 +206,8 @@ const MainApp = () => {
     }
   };
 
+  // console.log(piecesByTable);
+  // console.log(selectedTable);
   return (
     <div className="min-h-screen w-full flex flex-col bg-gradient-to-b from-slate-900 to-slate-800 text-white">
       <div className="max-w-[100rem] w-full mx-auto p-4 md:p-8 h-full">
@@ -320,8 +341,8 @@ const MainApp = () => {
                   Import/Export Data
                 </h2>
                 <p className="text-slate-300 mb-6">
-                  Export your current piece data to JSON or import previously
-                  exported data.
+                  Export your current {isMinifig ? "minifig" : "piece"} data to
+                  JSON or import previously exported data.
                 </p>
                 <ImportExport />
 
@@ -331,7 +352,10 @@ const MainApp = () => {
                   </h3>
                   <ul className="list-disc list-inside space-y-2 text-slate-300">
                     <li>Exported files are in JSON format</li>
-                    <li>Import will replace all pieces in the current table</li>
+                    <li>
+                      Import will replace all{" "}
+                      {isMinifig ? "minifigs" : "pieces"} in the current table
+                    </li>
                     <li>
                       You can share exported files with other LEGO builders
                     </li>
@@ -343,16 +367,20 @@ const MainApp = () => {
           </div>
         </div>
       </div>
-      {showAddModal && <TableAddModal toggleModal={setAddShowModal} />}
+      {showAddModal.show && <TableAddModal toggleModal={setAddShowModal} />}
       {/* Modal for deleting a table */}
       {showDeleteModal && <TableDeleteModal toggleModal={setDeleteShowModal} />}
       {/* Import Set Modal */}
       {showImportModal && (
-        <ImportModal
+        <ImportSetModal
           toggleModal={setShowImportModal}
           searchResult={searchResult}
           setSearchResult={setSearchResult}
         />
+      )}
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && pieceToDelete && (
+        <DeletePieceModal toggleModal={setDeleteModalOpen} />
       )}
       {/* Footer */}
       <div className="flex-grow mt-16 switch:mt-0" />
