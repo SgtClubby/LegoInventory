@@ -2,10 +2,13 @@
 
 import React, { useState } from "react";
 import { useLego } from "@/Context/LegoContext";
-import { handleExport, handleImport } from "@/lib/Misc/ImportExport";
+import {
+  handleExport,
+  handleImport,
+  detectStructureType,
+} from "@/lib/Misc/ImportExport";
 import {
   ArrowDownwardRounded,
-  AutorenewRounded,
   SaveAltRounded,
   SimCardDownloadRounded,
   VerticalAlignBottomRounded,
@@ -13,6 +16,7 @@ import {
 
 export default function ImportExport() {
   const { piecesByTable, setPiecesByTable, selectedTable } = useLego();
+  const isMinifig = selectedTable?.isMinifig;
   const [importStatus, setImportStatus] = useState({
     success: null,
     message: "",
@@ -27,6 +31,42 @@ export default function ImportExport() {
       setImportStatus({ success: null, message: "Processing import..." });
 
       handleImport(event, (importedData) => {
+        console.log(importedData);
+        const importType = detectStructureType(importedData);
+
+        console.log(importType);
+
+        const isImportMinifig = importedData.some(
+          (piece) => piece.isMinifig === true
+        );
+
+        importedData = importedData.map((piece) => {
+          delete piece.isMinifig; // Remove isMinifig identity property from imported data
+          return {
+            ...piece,
+            tableId: selectedTable.id,
+            ownerId: selectedTable.ownerId,
+            highlighted: false,
+          };
+        });
+
+        if (isImportMinifig !== isMinifig) {
+          setImportStatus({
+            success: false,
+            // it has to be short
+            message: `Fail: This table is for ${
+              isMinifig ? "minifigs" : "pieces"
+            } only!`,
+          });
+
+          // Reset error status after 5 seconds
+          setTimeout(
+            () => setImportStatus({ success: null, message: "" }),
+            5000
+          );
+          return;
+        }
+
         setPiecesByTable((prev) => ({
           ...prev,
           [selectedTable.id]: importedData,
@@ -34,7 +74,9 @@ export default function ImportExport() {
 
         setImportStatus({
           success: true,
-          message: `Successfully imported ${importedData.length} pieces!`,
+          message: `Successfully imported ${importedData.length} ${
+            isMinifig ? "minifigs" : "pieces"
+          }!`,
         });
 
         // Reset status after 3 seconds
@@ -68,11 +110,13 @@ export default function ImportExport() {
 
       setExportStatus({ success: null, message: "Processing export..." });
 
-      handleExport(currentPieces);
+      handleExport(currentPieces, isMinifig);
 
       setExportStatus({
         success: true,
-        message: `Successfully exported ${currentPieces.length} pieces!`,
+        message: `Successfully exported ${currentPieces.length} ${
+          isMinifig ? "minifigs" : "pieces"
+        }!`,
       });
 
       // Reset status after 3 seconds
@@ -101,8 +145,9 @@ export default function ImportExport() {
         </h3>
 
         <p className="text-slate-300 mb-4">
-          Import your LEGO piece data from a previously exported JSON file. This
-          will replace the pieces in the current table.
+          Import your LEGO {isMinifig ? "minifig" : "piece"} data from a
+          previously exported JSON file. This will replace the{" "}
+          {isMinifig ? "minifigs" : "pieces"} in the current table.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -110,6 +155,9 @@ export default function ImportExport() {
             type="file"
             id="importFile"
             accept=".json"
+            onClick={(e) => {
+              e.target.value = null; // Reset the file input value
+            }}
             onChange={handleImportWrapper}
             className="hidden"
           />
@@ -153,8 +201,9 @@ export default function ImportExport() {
         </h3>
 
         <p className="text-slate-300 mb-4">
-          Export your current LEGO pieces to a JSON file. This will export only
-          the pieces from the currently selected table.
+          Export your current LEGO {isMinifig ? "minifigs" : "pieces"} to a JSON
+          file. This will export only the {isMinifig ? "minifigs" : "pieces"}{" "}
+          from the currently selected table.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
