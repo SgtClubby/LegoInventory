@@ -1,6 +1,6 @@
 // src/app/lib/API/FetchUtils.js
 
-import rebrickableRateLimiter from "../API/RateLimiter";
+import rebrickableRateLimiter from "@/lib/API/RateLimiter";
 
 /**
  * Options for fetch with retry functionality

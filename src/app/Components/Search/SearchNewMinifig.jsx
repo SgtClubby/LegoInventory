@@ -12,7 +12,7 @@ import { useState, useRef, useEffect } from "react";
 import { debounce } from "lodash";
 import { Search } from "@mui/icons-material";
 import { ArrowCircleDownRounded, ClearRounded } from "@mui/icons-material";
-import LoaderIcon from "../Misc/LoaderIcon";
+import LoaderIcon from "@/Components/Misc/LoaderIcon";
 
 export default function SearchNewMinifig({
   setSearchNewMinifigResult,

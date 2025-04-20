@@ -8,7 +8,7 @@ import {
   ExpandMoreRounded,
   RefreshRounded,
 } from "@mui/icons-material";
-import ColorDropdown from "../ColorDropdown";
+import ColorDropdown from "@/Components/Table/PieceRow/ColorDropdown";
 
 /**
  * Desktop view for piece items in the table

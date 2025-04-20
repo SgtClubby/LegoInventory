@@ -1,6 +1,6 @@
 // src/app/Components/Table/PieceRow/Piece/PieceMobileView.jsx
 import getColorStyle from "@/lib/Color/getColorStyle";
-import React, { useState, memo, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 import {
   BookmarkRounded,
@@ -8,7 +8,7 @@ import {
   ExpandMoreRounded,
   RefreshRounded,
 } from "@mui/icons-material";
-import ColorDropdown from "../ColorDropdown";
+import ColorDropdown from "@/Components/Table/PieceRow/ColorDropdown";
 
 export default function PieceMobileView({
   originalProps,

@@ -9,16 +9,9 @@ import colors from "@/Colors/colors.js";
 
 // Components
 import VirtualTable from "@/Components/Table/VirtualTable";
-import SearchPiece from "../Search/SearchPiece";
-import FilterTabs from "../Misc/FilterTabs";
-
-// Icons
-import {
-  AddRounded,
-  DeleteForever,
-  ExpandMoreRounded,
-} from "@mui/icons-material";
-import TableSelectDropdown from "../Misc/TableSelectDropdown";
+import SearchPiece from "@/Components/Search/SearchPiece";
+import FilterTabs from "@/Components/Misc/FilterTabs";
+import TableSelectDropdown from "@/Components/Misc/TableSelectDropdown";
 
 export default function PieceTable({ newTableName, setNewTableName }) {
   const {

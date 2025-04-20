@@ -5,14 +5,14 @@ import { useImportSetSubmit } from "@/hooks/useImportSetSubmit";
 import { VerticalAlignBottomRounded } from "@mui/icons-material";
 import { useStatus } from "@/Context/StatusContext";
 import { useLego } from "@/Context/LegoContext";
-import LoaderIcon from "../Misc/LoaderIcon";
+import LoaderIcon from "@/Components/Misc/LoaderIcon";
 
 export default function ImportSetModal({ toggleModal, searchResult }) {
   const [setDetails, setSetDetails] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
-  const handleImportSetSubmit = useImportSetSubmit();
+  const { handleImportSetSubmit } = useImportSetSubmit();
   const { setActiveTab } = useLego();
-  const { showSuccess, showError, showWarning } = useStatus();
+  const { showError } = useStatus();
 
   // Handle set import search result
   useEffect(() => {

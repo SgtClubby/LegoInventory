@@ -22,9 +22,9 @@ import {
   ImportExportRounded,
   VerticalAlignBottomRounded,
 } from "@mui/icons-material";
-import Footer from "../Misc/Footer";
+import Footer from "@/Components/Misc/Footer";
 import { useLego } from "@/Context/LegoContext";
-import DeletePieceModal from "../Modals/DeletePieceModal";
+import DeletePieceModal from "@/Components/Modals/DeletePieceModal";
 
 /**
  * Main application component for the Lego manager

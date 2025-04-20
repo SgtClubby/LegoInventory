@@ -1,7 +1,7 @@
 // src/app/lib/Services/PriceDataHandler.js
 
-import externalApiService from "./ExternalApiService";
 import cacheManager from "@/lib/Cache/CacheManager";
+import externalApiService from "@/lib/API/ExternalApiService";
 
 /**
  * Handler for minifig price data operations

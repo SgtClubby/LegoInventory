@@ -22,8 +22,8 @@ import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import getColorStyle from "@/lib/Color/getColorStyle";
 import { useStatus } from "@/Context/StatusContext";
-import TableSelectDropdown from "../Misc/TableSelectDropdown";
-import LoaderIcon from "../Misc/LoaderIcon";
+import TableSelectDropdown from "@/Components/Misc/TableSelectDropdown";
+import LoaderIcon from "@/Components/Misc/LoaderIcon";
 
 /**
  * Form component for adding new pieces or minifigs to a table

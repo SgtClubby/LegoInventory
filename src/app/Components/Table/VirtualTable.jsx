@@ -9,14 +9,12 @@ import React, {
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import PieceRow from "@/Components/Table/PieceRow";
-import DeletePieceModal from "../Modals/DeletePieceModal";
 
 // Icons
-import BrickIcon from "../Misc/BrickIcon";
+import BrickIcon from "@/Components/Misc/BrickIcon";
 import { HeightRounded, NorthRounded, SouthRounded } from "@mui/icons-material";
-import { useStatus } from "@/Context/StatusContext";
 import { useLego } from "@/Context/LegoContext";
-import MinifigIcon from "../Misc/MinifigIcon";
+import MinifigIcon from "@/Components/Misc/MinifigIcon";
 
 /**
  * VirtualTable component for displaying pieces or minifigs in a virtual list
