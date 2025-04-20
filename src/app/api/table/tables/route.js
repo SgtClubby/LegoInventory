@@ -17,16 +17,39 @@ export async function GET(req) {
   try {
     const tables = await Table.find({ ownerId });
 
+    const hasMinifigTable = tables.some((table) => table.isMinifig);
+    const hasMainTable = tables.some((table) => !table.isMinifig);
+
+    let mainPieceTable;
+    let mainMinifigTable;
+
     // Create a default table if none exist
-    if (tables.length === 0) {
-      await Table.create({
+    if (!hasMainTable) {
+      mainPieceTable = new Table({
         id: "1",
-        name: "Main",
-        description: "",
+        name: "Piece Table",
+        description: "This is the default piece table.",
         isMinifig: false,
         ownerId,
       });
-      return Response.json([{ id: "1", name: "Main" }]);
+      await mainPieceTable.save();
+    }
+    if (!hasMinifigTable) {
+      mainMinifigTable = new Table({
+        id: "2",
+        name: "Minifig Table",
+        description: "This is the default minifig table.",
+        isMinifig: true,
+        ownerId,
+      });
+      await mainMinifigTable.save();
+    }
+
+    if (!hasMainTable || !hasMinifigTable) {
+      return Response.json([
+        ...(hasMainTable ? [] : [mainPieceTable]),
+        ...(hasMinifigTable ? [] : [mainMinifigTable]),
+      ]);
     }
 
     const data = tables.map((table) => ({
@@ -34,6 +57,7 @@ export async function GET(req) {
       name: table.name,
       description: table.description,
       isMinifig: table.isMinifig,
+      ownerId: table.ownerId,
     }));
 
     return Response.json(data);
@@ -56,7 +80,7 @@ export async function POST(req) {
   const { name, description, isMinifig } = await req.json();
 
   if (!name) {
-    return Response.json({ error: "Missing table name" }, { status: 400 });
+    return Response.json({ error: "Missing table name!" }, { status: 400 });
   }
 
   try {
@@ -83,7 +107,10 @@ export async function POST(req) {
     });
   } catch (e) {
     console.error("Error creating table:", e);
-    return Response.json({ error: "Failed to create table" }, { status: 500 });
+    return Response.json(
+      { error: "Server failed to create table." },
+      { status: 500 }
+    );
   }
 }
 

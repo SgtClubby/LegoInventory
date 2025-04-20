@@ -1,7 +1,7 @@
 // src/app/api/set/postProcessColor/route.js
 
 // This whole file could have been avoided if reBrickable had a better API for fetching bulk color data
-// As per 15/04/2025, they do not support (as far as im aware) bulk fetching of color data for parts.
+// As of 15/04/2025, they do not support (as far as im aware) bulk fetching of color data for parts.
 // Soo.. only option is to bruteforce one piece at a time in batched requests... Not what i want to do, it feels illegal...
 // Buut, have yet to have major problems with this approach, but it could be that this one day gets me perma banned.
 // Already been temp banned once during development of this post process step, not fun...
@@ -84,8 +84,9 @@ async function processPiecesInBatches(pieceIds, tableId, ownerId) {
     );
 
     try {
-      // First check cache for pieces in this specific batch only
+      // First we double check if we have recieved any potentially cached results
       const cachedResults = await getColorCache(unprocessedBatch);
+
       console.log(
         `Found ${cachedResults.length} cached pieces in batch ${batchNumber}`
       );
@@ -98,7 +99,7 @@ async function processPiecesInBatches(pieceIds, tableId, ownerId) {
 
       // Update user bricks with cached results
       if (cachedResults.length > 0) {
-        await updateUserBricksWithCachedColors(cachedResults, tableId, ownerId);
+        await updateMetadata(cachedResults);
         console.log(
           `Found ${cachedResults.length} pieces in cache of ${unprocessedBatch.length} in batch`
         );
@@ -157,7 +158,6 @@ async function getColorCache(pieceIds) {
   try {
     const cacheEntries = await BrickMetadata.find({
       elementId: { $in: pieceIds },
-      availableColors: { $ne: [] },
       invalid: false,
       cacheIncomplete: false,
     });
@@ -179,42 +179,25 @@ async function getColorCache(pieceIds) {
  * Update user bricks in database with cached color information
  *
  * @param {Array} cachedResults - Array of cached color entries
- * @param {string} tableId - Table ID for the database query
- * @param {string} ownerId - Owner ID for the database query
  */
-async function updateUserBricksWithCachedColors(
-  cachedResults,
-  tableId,
-  ownerId
-) {
+async function updateMetadata(cachedResults) {
   try {
-    // Also update the brick metadata for these pieces
-    const updateOperations = cachedResults.map((cache) => ({
-      updateOne: {
-        filter: { elementId: cache.elementId, tableId, ownerId },
-        update: { $set: { availableColors: cache.availableColors } },
-      },
-    }));
-
     const metadataOperations = cachedResults.map((cache) => ({
       updateOne: {
         filter: { elementId: cache.elementId },
         update: {
-          $set: { availableColors: cache.availableColors },
           $setOnInsert: { elementId: cache.elementId },
+          $set: { availableColors: cache.availableColors },
         },
         upsert: true,
       },
     }));
 
-    if (updateOperations.length > 0) {
-      await Promise.all([
-        UserBrick.bulkWrite(updateOperations),
-        BrickMetadata.bulkWrite(metadataOperations),
-      ]);
+    if (metadataOperations.length > 0) {
+      await Promise.all([BrickMetadata.bulkWrite(metadataOperations)]);
 
       console.log(
-        `Updated ${updateOperations.length} user bricks and metadata with cached colors`
+        `Updated ${metadataOperations.length} metadata with cached colors`
       );
     }
   } catch (error) {
