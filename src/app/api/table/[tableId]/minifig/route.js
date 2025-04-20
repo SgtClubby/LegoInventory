@@ -120,7 +120,7 @@ export async function POST(req, { params }) {
       minifigsToInsert.push({
         uuid: minifig.uuid,
         minifigIdRebrickable: minifig.minifigIdRebrickable,
-        minifigIdBricklink: minifig.minifigIdBricklink,
+        minifigIdBricklink: minifig?.minifigIdBricklink || "",
         minifigQuantity: minifig.minifigQuantity || 0,
         highlighted: minifig.highlighted || false,
         tableId,
@@ -152,15 +152,18 @@ export async function POST(req, { params }) {
             update: {
               $set: {
                 minifigIdRebrickable: minifig.minifigIdRebrickable,
-                avgPriceNew: minifig.priceData.avgPriceNew || 0,
-                maxPriceNew: minifig.priceData.maxPriceNew || 0,
-                minPriceNew: minifig.priceData.minPriceNew || 0,
+                priceData: {
+                  avgPriceNew: minifig.priceData.avgPriceNew || 0,
+                  maxPriceNew: minifig.priceData.maxPriceNew || 0,
+                  minPriceNew: minifig.priceData.minPriceNew || 0,
 
-                avgPriceUsed: minifig.priceData.avgPriceUsed || 0,
-                maxPriceUsed: minifig.priceData.maxPriceUsed || 0,
-                minPriceUsed: minifig.priceData.minPriceUsed || 0,
+                  avgPriceUsed: minifig.priceData.avgPriceUsed || 0,
+                  maxPriceUsed: minifig.priceData.maxPriceUsed || 0,
+                  minPriceUsed: minifig.priceData.minPriceUsed || 0,
 
-                currency: minifig.priceData.currency || "USD",
+                  currencyCode: minifig.priceData.currencyCode || "USD",
+                  currencySymbol: minifig.priceData.currencySymbol || "$",
+                },
               },
             },
             upsert: true,

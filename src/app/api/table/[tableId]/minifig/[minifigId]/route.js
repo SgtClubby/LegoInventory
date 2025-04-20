@@ -69,51 +69,6 @@ export async function PATCH(req, { params }) {
       return Response.json({ error: "Minifig not found" }, { status: 404 });
     }
 
-    // Is this a minifig ID update?
-    const isMinifigIdUpdate = body.hasOwnProperty("minifigId");
-    const minifigId = isMinifigIdUpdate
-      ? body.minifigId
-      : currentMinifig.minifigId;
-
-    // Check if this is a quantity update that affects completion status
-    if (
-      body.hasOwnProperty("minifigQuantityOnHand") ||
-      body.hasOwnProperty("minifigQuantityRequired")
-    ) {
-      // Get current values if needed
-      let onHand = body.minifigQuantityOnHand;
-      let required = body.minifigQuantityRequired;
-
-      if (onHand === undefined || required === undefined) {
-        const currentValues = await UserMinifig.findOne(
-          { uuid, tableId, ownerId },
-          {
-            minifigQuantityOnHand: 1,
-            minifigQuantityRequired: 1,
-            _id: 0,
-          }
-        );
-
-        onHand =
-          onHand !== undefined ? onHand : currentValues.minifigQuantityOnHand;
-        required =
-          required !== undefined
-            ? required
-            : currentValues.minifigQuantityRequired;
-      }
-
-      // Calculate completion status
-      const isComplete = required === 0 ? null : onHand >= required;
-      body.countComplete = isComplete;
-    }
-
-    // If this is a minifig ID update, we may need to fetch updated metadata
-    if (isMinifigIdUpdate && body.minifigId) {
-      // You could add logic here to fetch updated metadata from an API
-      // For now, we'll just update the minifigId
-      console.log(`Minifig ID changed to: ${body.minifigId}`);
-    }
-
     // Always update the user minifig
     await UserMinifig.updateOne({ uuid, tableId, ownerId }, { $set: body });
 
