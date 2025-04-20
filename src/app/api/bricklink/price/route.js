@@ -1,78 +1,317 @@
-// src/app/api/bricklink/price/route.js
+// src/app/api/bricklink/route.js
 
-export async function GET(req, res) {
+import { MinifigMetadata, MinifigPriceMetadata } from "@/lib/Mongo/Schema";
+import { load } from "cheerio";
+import { findBestMatch } from "string-similarity";
+
+/**
+ * Default User-Agent header to use for external requests
+ */
+const DEFAULT_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3";
+
+/**
+ * Normalizes a string by trimming, lowercasing, and removing special characters
+ *
+ * @param {string} str - The string to normalize
+ * @returns {string} Normalized string
+ */
+function normalize(str) {
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/\s*-\s*/g, "-")
+    .replace(/[^a-z0-9-\s]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Strips currency symbols from a string and converts to a float
+ *
+ * @param {string} str - String with currency formatting
+ * @returns {number} Parsed float value
+ */
+function stripCurrency(str) {
+  const clean = str.replace(/[^0-9.-]+/g, "");
+  return parseFloat(clean);
+}
+
+/**
+ * Calculates the average of min and max price values
+ *
+ * @param {string} min - Minimum price with currency symbol
+ * @param {string} max - Maximum price with currency symbol
+ * @returns {number} Average of the two prices
+ */
+function averageOfMinMax(min, max) {
+  const a = stripCurrency(min);
+  const b = stripCurrency(max);
+  return Number.isFinite(a) && Number.isFinite(b) ? (a + b) / 2 : null;
+}
+
+/**
+ * Creates a JSON response with appropriate status
+ *
+ * @param {Object} data - Response data
+ * @param {number} status - HTTP status code
+ * @returns {Response} JSON response object
+ */
+function jsonResponse(data, status = 200) {
+  return Response.json(data, { status });
+}
+
+/**
+ * Creates an error response with given message and status
+ *
+ * @param {string} message - Error message
+ * @param {number} status - HTTP status code
+ * @returns {Response} JSON error response
+ */
+function errorResponse(message, status = 400) {
+  return jsonResponse({ error: message }, status);
+}
+
+/**
+ * Creates an error response with given message and status
+ *
+ * @param {string} url - URL to fetch
+ * @param {RequestInit} [opts={}] - Fetch options
+ * @param {number} [ms=5000] - Timeout in milliseconds
+ * @returns {Promise<Response>} Fetch response
+ */
+
+async function fetchWithTimeout(url, opts = {}, ms = 5000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const itemName = new URL(req.url).searchParams.get("itemName");
+    return await fetch(url, { ...opts, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-    console.log(itemName);
+/**
+ * Handles GET requests to fetch Bricklink data for a minifig
+ *
+ * @param {Request} request - NextJS request object
+ * @returns {Response} JSON response with minifig data or error
+ */
+export async function POST(request) {
+  try {
+    const body = await request.json();
 
-    if (!itemName) {
-      return Response.json({ error: "Item name is required" }, { status: 400 });
+    if (!body) {
+      return errorResponse("No body provided", 400);
     }
 
-    const url = `https://www.bricklink.com/ajax/clone/search/searchproduct.ajax?q=${encodeURIComponent(
-      itemName
-    )}&st=0&cond=&type=&cat=&yf=0&yt=0&loc=&reg=0&ca=0&ss=&pmt=&nmp=0&color=-1&min=0&max=0&minqty=0&nosuperlot=1&incomplete=0&showempty=1&rpp=25&pi=1&ci=0`;
+    const { minifigIdRebrickable, minifigIdBricklink } = body;
 
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!res.ok) {
-      console.log("Fetch NOT OK!");
-      return Response.json(
-        { error: "Failed to fetch BrickLink Data" },
-        { status: res.status }
-      );
-    }
-    const data = await res.json();
-    const bricklinkData = data.result.typeList[0].items[0];
-
-    if (!bricklinkData) {
-      console.log("No BrickLink data found");
-      return Response.json({ error: "No data found" }, { status: 404 });
+    // Validate required parameters
+    if (!minifigIdRebrickable) {
+      return errorResponse("Missing minifigIdRebrickable", 400);
     }
 
-    function stripCurrency(string) {
-      const clean = string.replace(/[^0-9.-]+/g, "");
-      return parseFloat(clean);
+    if (minifigIdBricklink) {
+      // If minifigIdBricklink is provided, fetch data from BrickLink directly
+      const result = await fetchBricklinkData(minifigIdBricklink);
+
+      const response = {
+        id: minifigIdRebrickable,
+        priceData: result.priceData,
+      };
+
+      await MinifigPriceMetadata.create({
+        minifigIdRebrickable,
+        priceData: result.priceData,
+      });
+
+      return jsonResponse(response);
     }
 
-    function averageOfMinMax(min, max) {
-      const minPrice = stripCurrency(min);
-      const maxPrice = stripCurrency(max);
-      return (minPrice + maxPrice) / 2;
+    const bricklinkMinifigId = await fetchBricklinkId(minifigIdRebrickable);
+
+    if (!bricklinkMinifigId) {
+      return errorResponse("Minifig not found in set inventory", 404);
     }
 
-    const avgPriceNew = averageOfMinMax(
-      bricklinkData.mNewMinPrice,
-      bricklinkData.mNewMaxPrice
-    );
-
-    const avgPriceUsed = averageOfMinMax(
-      bricklinkData.mUsedMinPrice,
-      bricklinkData.mUsedMaxPrice
-    );
-
-    const result = {
-      currency: "USD",
-      minPriceNew: stripCurrency(bricklinkData.mNewMinPrice),
-      maxPriceNew: stripCurrency(bricklinkData.mNewMaxPrice),
-      avgPriceNew,
-      minPriceUsed: stripCurrency(bricklinkData.mUsedMinPrice),
-      maxPriceUsed: stripCurrency(bricklinkData.mUsedMaxPrice),
-      avgPriceUsed,
+    // Fetch data from BrickLink using the found minifig ID
+    const result = await fetchBricklinkData(bricklinkMinifigId);
+    if (result.error) {
+      return errorResponse(result.error, result.status);
+    }
+    // Structure the response
+    const response = {
+      id: minifigIdRebrickable,
+      priceData: result.priceData,
     };
 
-    return Response.json(result, {
-      status: 200,
+    // Save the price data to the database
+    await MinifigPriceMetadata.create({
+      minifigIdRebrickable,
+      priceData: result.priceData,
     });
+
+    return jsonResponse(response);
   } catch (error) {
-    console.error("Error fetching BrickLink minifig ID:", error);
-    return null;
+    console.error("Error fetching BrickLink minifig prices:", error);
+    return errorResponse("Internal server error", 500);
   }
+}
+
+async function fetchBricklinkData(bricklinkMinifigId) {
+  // Fetch minifig data from BrickLink
+  const searchUrl = `https://www.bricklink.com/ajax/clone/search/searchproduct.ajax?q=${encodeURIComponent(
+    bricklinkMinifigId
+  )}&st=0&cond=&type=M&cat=&yf=0&yt=0&loc=&reg=0&ca=0&ss=&pmt=&nmp=0&color=-1&min=0&max=0&minqty=0&nosuperlot=1&incomplete=0&showempty=1&rpp=25&pi=1&ci=0`;
+
+  const res = await fetchWithTimeout(searchUrl, {
+    headers: {
+      "User-Agent": DEFAULT_USER_AGENT,
+    },
+  });
+
+  if (!res.ok) {
+    console.log("Fetch NOT OK!");
+    return errorResponse("Failed to fetch BrickLink Data", res.status);
+  }
+
+  const data = await res.json();
+  const bricklinkData = data.result.typeList[0]?.items[0];
+
+  if (!bricklinkData) {
+    console.log("No BrickLink data found");
+    return errorResponse("No data found", 404);
+  }
+
+  // Parse and format the new price data
+  const rawAvgNew = averageOfMinMax(
+    bricklinkData.mNewMinPrice,
+    bricklinkData.mNewMaxPrice
+  );
+  const avgPriceNew =
+    rawAvgNew === null ? null : parseFloat(rawAvgNew.toFixed(2));
+
+  // Parse and format the used price data
+  const rawAvgUsed = averageOfMinMax(
+    bricklinkData.mUsedMinPrice,
+    bricklinkData.mUsedMaxPrice
+  );
+  const avgPriceUsed =
+    rawAvgUsed === null ? null : parseFloat(rawAvgUsed.toFixed(2));
+
+  // Structure the result
+  const result = {
+    priceData: {
+      currencyCode: "USD",
+      currencySymbol: "$",
+      minPriceNew: stripCurrency(bricklinkData.mNewMinPrice),
+      maxPriceNew: stripCurrency(bricklinkData.mNewMaxPrice),
+      avgPriceNew: parseFloat(avgPriceNew),
+      minPriceUsed: stripCurrency(bricklinkData.mUsedMinPrice),
+      maxPriceUsed: stripCurrency(bricklinkData.mUsedMaxPrice),
+      avgPriceUsed: parseFloat(avgPriceUsed),
+    },
+  };
+
+  return result;
+}
+
+async function fetchBricklinkId(minifigIdRebrickable) {
+  // Fetch sets from Rebrickable API
+  const setsRes = await fetch(
+    `https://rebrickable.com/api/v3/lego/minifigs/${minifigIdRebrickable}/sets/`,
+    {
+      headers: {
+        Authorization: `key ${process.env.REBRICKABLE_APIKEY}`,
+        "User-Agent":
+          "LegoInventoryBot/1.0 (+https://github.com/SgtClubby/LegoInventory)",
+      },
+    }
+  );
+
+  if (!setsRes.ok) {
+    return errorResponse("Failed to fetch Rebrickable data", setsRes.status);
+  }
+
+  const { results } = await setsRes.json();
+
+  // Find the appropriate set containing this minifig
+  function numericPart(s) {
+    const [prefix] = s.split("-");
+    return /^\d+$/.test(prefix) ? Number(prefix) : NaN;
+  }
+
+  const validSets = results.filter(
+    (r) => !Number.isNaN(numericPart(r.set_num))
+  );
+  if (!validSets.length) {
+    // either error out or fall back:
+    // e.g. const lowestValid = results.sort((a,b) => a.set_num.localeCompare(b.set_num))[0];
+    return errorResponse("No numeric set numbers found", 404);
+  }
+
+  const lowestValid = validSets.reduce((p, c) =>
+    numericPart(c.set_num) < numericPart(p.set_num) ? c : p
+  );
+
+  const setNumber = lowestValid.set_num;
+
+  if (!setNumber) {
+    return errorResponse("No valid set found for this minifig", 404);
+  }
+
+  // Fetch set inventory from BrickLink
+  const bricklinkUrl = `https://www.bricklink.com/catalogItemInv.asp?S=${encodeURIComponent(
+    setNumber
+  )}&viewItemType=M`;
+
+  const blRes = await fetchWithTimeout(bricklinkUrl, {
+    headers: {
+      "User-Agent": DEFAULT_USER_AGENT,
+    },
+  });
+
+  if (!blRes.ok) {
+    return errorResponse("Failed to fetch BrickLink data", blRes.status);
+  }
+
+  const html = await blRes.text();
+
+  // Parse HTML to extract minifig IDs
+  const $ = load(html);
+  const rows = [];
+
+  $("table.ta tr.IV_ITEM").each((_, tr) => {
+    const bold = $(tr).find("td").eq(3).find("b").text() || "";
+    if (!bold) {
+      return;
+    }
+    rows.push({
+      toFind: normalize(bold),
+      id: $(tr).find("td").eq(2).find("a").first().text().trim(),
+    });
+  });
+
+  const existingData = await MinifigMetadata.findOne(
+    {
+      minifigIdRebrickable: minifigIdRebrickable,
+    },
+    {
+      _id: 0,
+      minifigName: 1,
+    }
+  ).lean();
+
+  // Find best match for the minifig name
+  const search = normalize(existingData.minifigName.replace(/\+/g, " "));
+  const toFind = rows.map((r) => r.toFind);
+
+  if (toFind.length === 0) {
+    return errorResponse("No minifigs found in this set", 404);
+  }
+
+  const { bestMatchIndex } = findBestMatch(search, toFind);
+  const bricklinkMinifigId = rows[bestMatchIndex].id;
+
+  return bricklinkMinifigId;
 }
