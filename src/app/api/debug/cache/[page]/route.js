@@ -27,6 +27,15 @@ export async function GET(_req, { params }) {
 
     // Initialize results object
     const results = {
+      summary: {
+        pageNumber,
+        pageSize,
+        totalChecked: 0,
+        discrepanciesFound: 0,
+        incompleteFound: 0,
+        processingTimeMs: 0,
+        startTime: new Date().toISOString(),
+      },
       availableColorsCheck: {
         status: null,
         message: null,
@@ -36,15 +45,6 @@ export async function GET(_req, { params }) {
         status: null,
         message: null,
         data: [],
-      },
-      summary: {
-        pageNumber,
-        pageSize,
-        totalChecked: 0,
-        discrepanciesFound: 0,
-        incompleteFound: 0,
-        processingTimeMs: 0,
-        startTime: new Date().toISOString(),
       },
     };
 
@@ -157,8 +157,9 @@ async function fetchPotentiallyCorruptEntries(limit, skip) {
 
     const entries = await BrickMetadata.find(
       {
-        availableColors: { $exists: true, $size: 1 },
         invalid: false,
+        availableColors: { $exists: true, $ne: [] },
+        $expr: { $lt: [{ $size: "$availableColors" }, 5] },
       },
       { _id: 0, __v: 0, "availableColors._id": 0 }
     )
@@ -370,20 +371,6 @@ async function verifyEntry(entry) {
     if (isDiscrepancy) {
       console.log(`Discrepancy found for element ${elementId}`);
       // Find differences between cache and API data
-
-      // Update the cache with the correct data
-      console.log(`Updating cache for element ${elementId}...`);
-      await BrickMetadata.updateOne(
-        { elementId },
-        {
-          $set: {
-            cacheIncomplete: false,
-            availableColors: rebrickableAvailableColors,
-          },
-        },
-        { upsert: true }
-      );
-
       differences = findColorDifferences(
         cacheAvailableColors,
         rebrickableAvailableColors
