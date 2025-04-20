@@ -1,17 +1,11 @@
 // src/app/Components/Misc/TableSelectDropdown.jsx
 
-/**
- * A dropdown component that displays available tables with tabs to switch between minifig and regular tables
- *
- * @param {Object} props - Component props
- * @param {Function} props.setSearchNewPieceResult - Function to set search result (if needed)
- * @returns {JSX.Element} The rendered dropdown component
- */
 import React, { useState, useEffect, useRef } from "react";
 
 // Icons
 import {
-  ClearRounded,
+  AddRounded,
+  DeleteForever,
   ExpandMoreRounded,
   TableRowsRounded,
 } from "@mui/icons-material";
@@ -19,7 +13,14 @@ import { useLego } from "@/Context/LegoContext";
 import MinifigIcon from "./MinifigIcon";
 import BrickIcon from "./BrickIcon";
 
-export default function TableSelectDropdown({ setSearchNewPieceResult }) {
+/**
+ * A dropdown component that displays available tables with tabs to switch between minifig and regular tables
+ *
+ * @param {Object} props - Component props
+ * @param {Function} props.setSearchNewPieceResult - Function to set search result (if needed)
+ * @returns {JSX.Element} The rendered dropdown component
+ */
+export default function TableSelectDropdown() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const tableRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -27,7 +28,13 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
   const [prevActiveTab, setPrevActiveTab] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const { selectedTable, setSelectedTable, availableTables } = useLego();
+  const {
+    selectedTable,
+    setSelectedTable,
+    availableTables,
+    setAddShowModal,
+    setDeleteShowModal,
+  } = useLego();
 
   const dropdownRef = useRef(null);
   const regularTabContentRef = useRef(null);
@@ -162,9 +169,9 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
     const isActive = tabName === activeTab;
     const wasActive = tabName === prevActiveTab && isAnimating;
 
-    // Base classes
+    // Base classes with higher z-index
     const baseClasses =
-      "absolute z-[9999] w-full transition-all duration-300 ease-in-out";
+      "absolute w-full transition-all duration-300 ease-in-out";
 
     if (isActive && isAnimating) {
       // Tab is becoming active
@@ -194,6 +201,15 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
     setSelectedIndex(index);
   };
 
+  const handleAddTable = (isMinifig) => {
+    setAddShowModal({
+      show: true,
+      isMinifig,
+    });
+  };
+
+  const handleDeleteTable = (isMinifig) => setDeleteShowModal(isMinifig);
+
   /**
    * Toggle the dropdown open/closed state
    */
@@ -206,6 +222,12 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
       setActiveTab(selectedTable.isMinifig ? "minifig" : "regular");
     }
   };
+
+  const enableDeleteMinifigTable =
+    availableTables.filter((table) => table.isMinifig).length > 1;
+
+  const enableDeletePieceTable =
+    availableTables.filter((table) => !table.isMinifig).length > 1;
 
   return (
     <div className="w-full select-none">
@@ -250,10 +272,11 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
         {isDropdownOpen && (
           <div
             ref={dropdownRef}
-            className="absolute left-0 z-50 mt-1 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-96 overflow-hidden"
+            className="absolute left-0 z-[9999] mt-1 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl overflow-hidden flex flex-col"
+            style={{ maxHeight: "520px" }} // Increased maximum height
           >
             {/* Tabs */}
-            <div className="flex border-b border-slate-600 shadow-btm">
+            <div className="flex border-b border-slate-600 shadow-btm flex-shrink-0">
               <button
                 onClick={() => handleTabChange("regular")}
                 className={`flex items-center gap-2 py-3 px-4 font-medium flex-1 transition-all duration-200 ${
@@ -267,6 +290,15 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
                 <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-slate-600">
                   {regularTables.length}
                 </span>
+                <div className="ml-auto">
+                  <div
+                    onClick={(e) => handleAddTable(false)}
+                    className="w-7 h-7 flex items-center justify-center bg-blue-600/80 hover:bg-blue-700 text-white rounded transition-colors"
+                    title="Add Piece Table"
+                  >
+                    <AddRounded className="" style={{ fontSize: "16px" }} />
+                  </div>
+                </div>
               </button>
 
               <button
@@ -282,20 +314,29 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
                 <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-slate-600">
                   {minifigTables.length}
                 </span>
+                <div className="ml-auto">
+                  <div
+                    onClick={(e) => handleAddTable(true)}
+                    className="w-7 h-7 flex items-center justify-center bg-blue-600/80 hover:bg-blue-700 text-white rounded transition-colors"
+                    title="Add Minifig Table"
+                  >
+                    <AddRounded className="" style={{ fontSize: "16px" }} />
+                  </div>
+                </div>
               </button>
             </div>
 
-            {/* Tab content container */}
+            {/* Content area with fixed height */}
             <div
-              className="relative overflow-hidden"
-              style={{ minHeight: "120px" }}
+              className="relative overflow-hidden flex-grow"
+              style={{ height: "300px" }}
             >
               {/* Regular Tables Content */}
               <div
                 ref={regularTabContentRef}
-                className={getTabClasses("regular")}
+                className={`${getTabClasses("regular")} h-full`}
               >
-                <div className="max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600">
+                <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 overflow-x-hidden">
                   {regularTables.length > 0 ? (
                     regularTables.map((table, index) => (
                       <div
@@ -308,24 +349,39 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
                         }`}
                         onMouseEnter={() => handleMouseEnter(index)}
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-slate-200 truncate">
-                            {table?.name}{" "}
-                            <span className="text-xs text-slate-400">
-                              {`${
-                                !table?.description
-                                  ? `- (ID: ${table?.id})`
-                                  : ""
-                              }`}
-                            </span>
+                        <div className="flex flex-row flex-1 items-center min-w-0 justify-between">
+                          <div className="flex flex-col">
+                            <div className="font-medium text-slate-200 truncate">
+                              {table?.name}{" "}
+                            </div>
+                            <div className="text-sm text-slate-400">
+                              <div className="text-sm text-slate-400">
+                                {table?.description ? (
+                                  <span className="text-slate-400">
+                                    {`${table?.description}`}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 italic">
+                                    No description available
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-sm text-slate-400">
-                            {`${
-                              table?.description
-                                ? `(ID: ${table?.id}) - ${table?.description}`
-                                : ""
-                            }`}
-                          </div>
+                          {enableDeletePieceTable && (
+                            <div className="ml-auto">
+                              <div
+                                onClick={handleDeleteTable}
+                                className="w-7 h-7 flex items-center justify-center bg-rose-600/80 hover:bg-rose-700 text-white rounded transition-colors"
+                                title="Delete Table"
+                              >
+                                <DeleteForever
+                                  className=""
+                                  style={{ fontSize: "16px" }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))
@@ -340,9 +396,9 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
               {/* Minifig Tables Content */}
               <div
                 ref={minifigTabContentRef}
-                className={`${getTabClasses("minifig")} z-[300]`}
+                className={`${getTabClasses("minifig")} h-full`}
               >
-                <div className="max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600">
+                <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 overflow-x-hidden">
                   {minifigTables.length > 0 ? (
                     minifigTables.map((table, index) => (
                       <div
@@ -355,23 +411,38 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
                         }`}
                         onMouseEnter={() => handleMouseEnter(index)}
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-slate-200 truncate">
-                            {table?.name}{" "}
-                            <span className="text-xs text-slate-400">
-                              {`${
-                                !table?.description
-                                  ? `- (ID: ${table?.id})`
-                                  : ""
-                              }`}
-                            </span>
+                        <div className="flex flex-row flex-1 items-center min-w-0 justify-between">
+                          <div className="flex flex-col">
+                            <div className="font-medium text-slate-200 truncate">
+                              {table?.name}{" "}
+                            </div>
+                            <div className="text-sm text-slate-400">
+                              {table?.description ? (
+                                <span className="text-slate-400">
+                                  {`${table?.description}`}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic">
+                                  No description available
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-sm text-slate-400">
-                            {`${
-                              table?.description
-                                ? `(ID: ${table?.id}) - ${table?.description}`
-                                : ""
-                            }`}
+                          <div className="ml-auto">
+                            {enableDeleteMinifigTable && (
+                              <div className="ml-auto">
+                                <div
+                                  onClick={handleDeleteTable}
+                                  className="w-7 h-7 flex items-center justify-center bg-rose-600/80 hover:bg-rose-700 text-white rounded transition-colors"
+                                  title="Delete Table"
+                                >
+                                  <DeleteForever
+                                    className=""
+                                    style={{ fontSize: "16px" }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -386,7 +457,7 @@ export default function TableSelectDropdown({ setSearchNewPieceResult }) {
             </div>
 
             {/* Tab switching hint */}
-            <div className="py-2 px-4 text-xs text-slate-400 border-t border-slate-700 bg-slate-800/80">
+            <div className="py-2 px-4 text-xs text-slate-400 border-t border-slate-700 bg-slate-800/80 shadow-top flex-shrink-0">
               <kbd className="px-1.5 py-0.5 bg-slate-700 rounded border border-slate-600 mr-1">
                 Tab
               </kbd>

@@ -29,9 +29,16 @@ export async function addTable(name, description, isMinifig) {
       },
       body: JSON.stringify({ name, description, isMinifig }),
     });
+
+    if (!res.ok) {
+      console.error(`Error adding table:`, res.statusText);
+      return null;
+    }
+
     const data = await res.json();
 
     if (data.id) return data;
+
     if (data.error) {
       console.error(`Error adding table:`, data.error);
       return null;

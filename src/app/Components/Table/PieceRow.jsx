@@ -3,13 +3,24 @@ import React, { useState, memo, useRef, useEffect, useCallback } from "react";
 
 // Functions and Helpers
 import { debounce } from "lodash";
-import DesktopView from "./PieceRow/DesktopView";
-import MobileView from "./PieceRow/MobileView";
-import MinifigDesktopView from "./PieceRow/MinifigDesktopView";
-import MinifigMobileView from "./PieceRow/MinifigMobileView";
+import PieceDesktopView from "./PieceRow/Piece/PieceDesktopView";
+import PieceMobileView from "./PieceRow/Piece/PieceMobileView";
+import MinifigDesktopView from "./PieceRow/Minifig/MinifigDesktopView";
+import MinifigMobileView from "./PieceRow/Minifig/MinifigMobileView";
 
 /**
  * Component that renders a single piece or minifig row in both mobile and desktop views
+ *
+ * @param {Object} piece - The piece/minifig data
+ * @param {Function} onChange - Handler for changes to the piece
+ * @param {Function} onDelete - Handler for deleting the piece
+ * @param {string} originalId - UUID of the piece
+ * @param {boolean} isUpdating - Whether the piece is currently updating
+ * @param {Array} columns - Column configuration for the table
+ * @param {number} index - Index of the piece in the list
+ * @param {number} zIndex - Z-index for the row
+ * @param {Object} selectedTable - Selected table information
+ * @returns {React.ReactElement} The PieceRow component
  */
 const PieceRow = ({
   piece,
@@ -21,7 +32,6 @@ const PieceRow = ({
   index,
   zIndex = 0,
   selectedTable,
-  isLast = false,
 }) => {
   // Determine if this is a minifig or a regular piece
   const isMinifig = selectedTable?.isMinifig;
@@ -31,14 +41,14 @@ const PieceRow = ({
     if (isMinifig) {
       return {
         minifigName: piece.minifigName || "",
-        minifigId: piece.minifigId || "",
+        minifigIdRebrickable: piece.minifigIdRebrickable || "",
+        minifigIdBricklink: piece.minifigIdBricklink || "",
         minifigImage: piece.minifigImage || "",
-        minifigQuantityOnHand: parseInt(piece.minifigQuantityOnHand) || 0,
-        minifigQuantityRequired: parseInt(piece.minifigQuantityRequired) || 0,
+        minifigQuantity: parseInt(piece.minifigQuantity) || 0,
         // Include other important properties
-        countComplete: piece.countComplete,
         highlighted: piece.highlighted,
-        priceData: piece.priceData || { minPrice: "N/A", avgPrice: "N/A" },
+        priceData: piece.priceData,
+        countComplete: piece.countComplete,
       };
     } else {
       return {
@@ -66,13 +76,14 @@ const PieceRow = ({
     if (isMinifig) {
       setFields({
         minifigName: piece.minifigName || "",
-        minifigId: piece.minifigId || "",
+        minifigIdRebrickable: piece.minifigIdRebrickable || "",
+        minifigIdBricklink: piece.minifigIdBricklink || "",
         minifigImage: piece.minifigImage || "",
-        minifigQuantityOnHand: parseInt(piece.minifigQuantityOnHand) || 0,
-        minifigQuantityRequired: parseInt(piece.minifigQuantityRequired) || 0,
-        countComplete: piece.countComplete,
+        minifigQuantity: parseInt(piece.minifigQuantity) || 0,
+        // Include other important properties
         highlighted: piece.highlighted,
-        priceData: piece.priceData || { minPrice: "N/A", avgPrice: "N/A" },
+        priceData: piece.priceData,
+        countComplete: piece.countComplete,
       });
     } else {
       setFields({
@@ -102,8 +113,7 @@ const PieceRow = ({
       if (
         field === "elementQuantityOnHand" ||
         field === "elementQuantityRequired" ||
-        field === "minifigQuantityOnHand" ||
-        field === "minifigQuantityRequired"
+        field === "minifigQuantity"
       ) {
         const numValue = parseInt(value) || 0;
         return onChange(originalId, field, numValue);
@@ -111,7 +121,7 @@ const PieceRow = ({
 
       onChange(originalId, field, value);
     }, 500),
-    []
+    [onChange]
   );
 
   useEffect(() => {
@@ -141,8 +151,7 @@ const PieceRow = ({
     if (
       updates.field === "elementQuantityOnHand" ||
       updates.field === "elementQuantityRequired" ||
-      updates.field === "minifigQuantityOnHand" ||
-      updates.field === "minifigQuantityRequired"
+      updates.field === "minifigQuantity"
     ) {
       // Allow empty fields during typing, but convert NaN to 0
       value = value === "" ? "" : parseInt(value) || 0;
@@ -200,7 +209,6 @@ const PieceRow = ({
               columns,
               index,
               zIndex,
-              isLast,
               selectedTable,
             }}
             handleChange={handleChange}
@@ -214,7 +222,7 @@ const PieceRow = ({
             countComplete={fields.countComplete}
             key={piece.uuid + "desktop"}
           />
-          
+
           {/* Minifig Mobile View */}
           <MinifigMobileView
             originalProps={{
@@ -235,7 +243,7 @@ const PieceRow = ({
       ) : (
         <>
           {/* Regular Piece Desktop View */}
-          <DesktopView
+          <PieceDesktopView
             originalProps={{
               piece,
               onChange,
@@ -245,7 +253,7 @@ const PieceRow = ({
               columns,
               index,
               zIndex,
-              isLast,
+
               selectedTable,
             }}
             handleChange={handleChange}
@@ -260,7 +268,7 @@ const PieceRow = ({
             key={piece.uuid + "desktop"}
           />
           {/* Regular Piece Mobile View */}
-          <MobileView
+          <PieceMobileView
             originalProps={{
               piece,
               selectedTable,
@@ -305,10 +313,9 @@ function areEqual(prevProps, nextProps) {
   if (isMinifig) {
     // Check each important property for minifigs
     return (
-      prevPiece.minifigId === nextPiece.minifigId &&
+      prevPiece.minifigIdRebrickable === nextPiece.minifigIdRebrickable &&
       prevPiece.minifigName === nextPiece.minifigName &&
-      prevPiece.minifigQuantityOnHand === nextPiece.minifigQuantityOnHand &&
-      prevPiece.minifigQuantityRequired === nextPiece.minifigQuantityRequired &&
+      prevPiece.minifigQuantity === nextPiece.minifigQuantity &&
       prevPiece.countComplete === nextPiece.countComplete &&
       prevPiece.highlighted === nextPiece.highlighted
     );

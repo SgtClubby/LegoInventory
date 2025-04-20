@@ -13,14 +13,29 @@ export function LegoProvider({ children }) {
   const [statusMessage, setStatusMessage] = useState({ type: "", message: "" });
   const [activeTab, setActiveTab] = useState("all"); // "all", "add", "import", "export"
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showAddModal, setAddShowModal] = useState(false);
+  const [showAddModal, setAddShowModal] = useState({
+    show: false,
+    isMinifig: false,
+  });
   const [showDeleteModal, setDeleteShowModal] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [pieceToDelete, setPieceToDelete] = useState(null);
 
   const { showSuccess, showError, showWarning } = useStatus();
 
   const setSelectedTableWithStatus = (table) => {
     setSelectedTable(table);
-    showSuccess(`Switched to ${table.name}`);
+    {
+      table.name
+        ? showSuccess(`Selected table: ${table.name}`, {
+            position: "top",
+            autoCloseDelay: 3000,
+          })
+        : showWarning("You have no tables...", {
+            position: "top",
+            autoCloseDelay: 3000,
+          });
+    }
   };
 
   return (
@@ -42,6 +57,10 @@ export function LegoProvider({ children }) {
         showAddModal,
         setDeleteShowModal,
         showDeleteModal,
+        deleteModalOpen,
+        setDeleteModalOpen,
+        pieceToDelete,
+        setPieceToDelete,
       }}
     >
       {children}

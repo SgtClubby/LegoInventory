@@ -37,15 +37,16 @@ const minifigMetadataSchema = new Schema(
 const minifigPriceSchema = new Schema(
   {
     minifigIdRebrickable: { type: String, required: true, index: true },
-    avgPriceNew: { type: mongoose.Types.Decimal128, default: 0 },
-    maxPriceNew: { type: mongoose.Types.Decimal128, default: 0 },
-    minPriceNew: { type: mongoose.Types.Decimal128, default: 0 },
-
-    avgPriceUsed: { type: mongoose.Types.Decimal128, default: 0 },
-    maxPriceUsed: { type: mongoose.Types.Decimal128, default: 0 },
-    minPriceUsed: { type: mongoose.Types.Decimal128, default: 0 },
-
-    currency: { type: String, default: "USD" },
+    priceData: {
+      avgPriceNew: { type: mongoose.Types.Decimal128, default: 0 },
+      maxPriceNew: { type: mongoose.Types.Decimal128, default: 0 },
+      minPriceNew: { type: mongoose.Types.Decimal128, default: 0 },
+      avgPriceUsed: { type: mongoose.Types.Decimal128, default: 0 },
+      maxPriceUsed: { type: mongoose.Types.Decimal128, default: 0 },
+      minPriceUsed: { type: mongoose.Types.Decimal128, default: 0 },
+      currencyCode: { type: String, default: "USD" },
+      currencySymbol: { type: String, default: "$" },
+    },
     expireAt: {
       type: Date,
       expires: 172800, // 2 day expiration

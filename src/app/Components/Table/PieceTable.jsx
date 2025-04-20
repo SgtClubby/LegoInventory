@@ -49,6 +49,8 @@ export default function PieceTable({ newTableName, setNewTableName }) {
     return piecesByTable[selectedTable?.id] || [];
   }, [piecesByTable, selectedTable?.id]);
 
+  const isMinifig = selectedTable?.isMinifig;
+
   /**
    * Helper function to clear updating state for a piece
    */
@@ -75,15 +77,28 @@ export default function PieceTable({ newTableName, setNewTableName }) {
    * Updates a piece in the database with debouncing
    */
   const updatePieceInDb = useCallback(
-    debounce(async (uuid, tableId, updates) => {
+    debounce(async (uuid, tableId, updates, isMinifig = true) => {
       try {
-        const response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updates),
-        });
+        let response;
+        if (isMinifig) {
+          console.log("[DBUpdate] Updating Minifig:", uuid, updates);
+          response = await fetch(`/api/table/${tableId}/minifig/${uuid}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updates),
+          });
+        } else {
+          console.log("[DBUpdate] Updating Brick:", uuid, updates);
+          response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updates),
+          });
+        }
 
         if (!response.ok) {
           throw new Error(
@@ -161,10 +176,54 @@ export default function PieceTable({ newTableName, setNewTableName }) {
   /**
    * Handles updating a piece's properties with debouncing and special field handling
    */
+  const handleUpdateMinifig = useCallback(
+    async (uuid, field, value) => {
+      console.log(
+        `[Update MINIFIG] Updating minifig ${uuid}: ${field} = ${value}`
+      );
+      const currentRequestId = ++requestIdentifier.current;
+      const tableId = selectedTable.id;
+      const currentMinifig = pieces.find((p) => p.uuid === uuid);
 
+      if (!currentMinifig) return;
+
+      // Mark piece as updating
+      setUpdatingState(uuid);
+
+      // // Cancel any pending updates for this piece
+      if (updatePieceInDb.cancel) {
+        updatePieceInDb.cancel();
+      }
+      // Create update payload
+      const updates = { [field]: value };
+
+      // Generate a unique key for this update
+      const updateKey = `${tableId}-${uuid}`;
+
+      // Store the full intended state in the pending updates map
+      const previousUpdates = pendingUpdatesRef.current.get(updateKey) || {};
+      const mergedUpdates = { ...previousUpdates, ...updates };
+      pendingUpdatesRef.current.set(updateKey, mergedUpdates);
+
+      // Update local state immediately for responsive UI
+      updateLocalPiece(uuid, tableId, updates);
+
+      // Schedule database update for the combined state
+      updatePieceInDb(uuid, tableId, mergedUpdates, true);
+    },
+    [
+      pieces,
+      selectedTable,
+      updatingPieces,
+      updateLocalPiece,
+      updatePieceInDb,
+      setUpdatingState,
+      clearUpdatingState,
+    ]
+  );
   const handleUpdatePiece = useCallback(
     async (uuid, field, value) => {
-      console.log(`Updating piece ${uuid}: ${field} = ${value}`);
+      console.log(`[Update BRICK] Updating brick ${uuid}: ${field} = ${value}`);
       const currentRequestId = ++requestIdentifier.current;
       const tableId = selectedTable.id;
       const currentPiece = pieces.find((p) => p.uuid === uuid);
@@ -173,11 +232,6 @@ export default function PieceTable({ newTableName, setNewTableName }) {
 
       // Mark piece as updating
       setUpdatingState(uuid);
-
-      // // Cancel any pending updates for this piece
-      // if (updatePieceInDb.cancel) {
-      //   updatePieceInDb.cancel();
-      // }
 
       // Special case for elementId, set to "0" if empty
       if (field === "elementId" && (!value || value.length === 0)) {
@@ -224,8 +278,6 @@ export default function PieceTable({ newTableName, setNewTableName }) {
         // Use consistent logic for countComplete regardless of which field is updated
         const isComplete = required === 0 ? null : onHand >= required;
 
-        console.log(isComplete, onHand, required);
-
         if (field === "elementQuantityOnHand") {
           updates.elementQuantityOnHand = onHand;
         } else {
@@ -252,7 +304,7 @@ export default function PieceTable({ newTableName, setNewTableName }) {
       updateLocalPiece(uuid, tableId, updates);
 
       // Schedule database update for the combined state
-      updatePieceInDb(uuid, tableId, mergedUpdates);
+      updatePieceInDb(uuid, tableId, mergedUpdates, false);
 
       // Handle special cases that need additional API calls
       if (field === "elementId") {
@@ -356,7 +408,7 @@ export default function PieceTable({ newTableName, setNewTableName }) {
             updateLocalPiece(uuid, tableId, additionalUpdates);
 
             // Send update to database with all accumulated changes
-            updatePieceInDb(uuid, tableId, finalUpdates);
+            updatePieceInDb(uuid, tableId, finalUpdates, false);
           } else {
             // Make sure we clear the updating state since we're done
             clearUpdatingState(uuid);
@@ -381,51 +433,6 @@ export default function PieceTable({ newTableName, setNewTableName }) {
       fetchPartColors,
     ]
   );
-
-  /**
-   * Handles deleting a piece
-   */
-  const handleDeletePiece = useCallback(
-    async (uuid) => {
-      const tableId = selectedTable.id;
-
-      // Optimistically remove from UI first
-      setPiecesByTable((prev) => {
-        const updatedPieces =
-          prev[tableId]?.filter((p) => p.uuid !== uuid) || [];
-        return { ...prev, [tableId]: updatedPieces };
-      });
-
-      try {
-        // Then delete from database
-        const response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to delete piece: ${response.statusText}`);
-        }
-      } catch (error) {
-        console.error("Error deleting piece:", error);
-
-        // If deletion fails, restore the piece in UI
-        setPiecesByTable((prev) => {
-          const restoredPiece = pieces.find((p) => p.uuid === uuid);
-          if (!restoredPiece) return prev;
-
-          const updatedPieces = [...(prev[tableId] || []), restoredPiece];
-          return { ...prev, [tableId]: updatedPieces };
-        });
-      }
-    },
-    [pieces, selectedTable, setPiecesByTable]
-  );
-
-  const handleAddTable = () => setAddShowModal(true);
-  const handleDeleteTable = () => setDeleteShowModal(true);
 
   // Sorting function
   const handleSort = (key) => {
@@ -458,7 +465,10 @@ export default function PieceTable({ newTableName, setNewTableName }) {
       (piece) =>
         piece.elementName?.toLowerCase().includes(lower) ||
         piece.elementId?.toString().includes(lower) ||
-        piece.elementColor?.toLowerCase().includes(lower)
+        piece.elementColor?.toLowerCase().includes(lower) ||
+        piece.minifigIdRebrickable?.toString().includes(lower) ||
+        piece.minifigIdBricklink?.toString().includes(lower) ||
+        piece.minifigName?.toString().includes(lower)
     );
   }, [pieces, searchTerm, activeView]);
 
@@ -487,13 +497,63 @@ export default function PieceTable({ newTableName, setNewTableName }) {
   }, [filteredPieces, sortConfig]);
 
   // Stats
-  const stats = useMemo(() => {
-    const total = pieces.length;
+  const pieceStats = useMemo(() => {
+    const totalRequired = pieces.reduce(
+      (acc, piece) => acc + (piece.elementQuantityRequired || 0),
+      0
+    );
+    const totalOnhand = pieces.reduce(
+      (acc, piece) => acc + (piece.elementQuantityOnHand || 0),
+      0
+    );
+    // cap at 100%
+    const percentage = Math.min(
+      Math.round((totalOnhand / totalRequired) * 100),
+      100
+    );
+
     const complete = pieces.filter((p) => p.countComplete === true).length;
     const incomplete = pieces.filter((p) => p.countComplete === false).length;
-    const general = total - complete - incomplete;
+    const general = pieces.filter((p) => p.countComplete === null).length;
 
-    return { total, complete, incomplete, general };
+    const showCompletion = pieces.some(
+      (piece) => piece.elementQuantityRequired > 0
+    );
+
+    return {
+      showCompletion,
+      totalRequired,
+      totalOnhand,
+      complete,
+      incomplete,
+      general,
+      percentage,
+    };
+  }, [pieces]);
+
+  const minifigStats = useMemo(() => {
+    const collection = pieces.length;
+
+    let totalQuantity = 0;
+    let totalUsedValue = 0;
+    let totalNewValue = 0;
+
+    for (const piece of pieces) {
+      const quantity = piece?.minifigQuantity || 1;
+      const avgUsed = piece?.priceData?.avgPriceUsed || 0;
+      const avgNew = piece?.priceData?.avgPriceNew || 0;
+
+      totalQuantity += quantity;
+      totalUsedValue += avgUsed * quantity;
+      totalNewValue += avgNew * quantity;
+    }
+
+    return {
+      collection,
+      totalQuantity,
+      totalUsedValue: Number(totalUsedValue.toFixed(2)),
+      totalNewValue: Number(totalNewValue.toFixed(2)),
+    };
   }, [pieces]);
 
   return (
@@ -504,34 +564,15 @@ export default function PieceTable({ newTableName, setNewTableName }) {
           <div className="flex flex-col xl:flex-row xl:items-end gap-6">
             {/* Table Selection */}
             <div className="flex-1 space-y-4">
-              <div className="flex items-center justify-between -mb-1">
+              <div className="flex items-center justify-between mb-1">
                 <h3 className="text-xl font-semibold text-white transition-all duration-200 ease-in-out">
                   {selectedTable ? selectedTable.name : "Select a Table"}
                 </h3>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleAddTable}
-                    className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-                    title="Add Table"
-                  >
-                    <AddRounded className="" fontSize="medium" />
-                  </button>
-
-                  {selectedTable?.id > 1 && (
-                    <button
-                      onClick={handleDeleteTable}
-                      className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md transition-colors"
-                      title="Delete Table"
-                    >
-                      <DeleteForever className="" fontSize="medium" />
-                    </button>
-                  )}
-                </div>
               </div>
               {/* Table Select Dropdown */}
               <p className="mb-2 text-xs text-slate-400">
                 Select your table. If you don't have any tables, create by
-                clicking the "+" button to the right.
+                clicking the "+" button in the dropdown.
               </p>
               <TableSelectDropdown />
             </div>
@@ -546,12 +587,14 @@ export default function PieceTable({ newTableName, setNewTableName }) {
                 <div className="text-sm font-medium text-slate-300">
                   {filteredPieces.length}
                   <span className="text-slate-400"> of </span>
-                  {pieces.length} pieces
+                  {pieces.length} {isMinifig ? "minifigs" : "pieces"}
                 </div>
               </div>
               <p className="mb-2 text-xs text-slate-400 -mt-3">
-                Search for a piece by name, ID, or color. Use the filter tabs to
-                filter by completion.
+                {isMinifig
+                  ? `Search for a minifig by name or ID.`
+                  : `Search for a piece by name, ID, or color. Use the filter tabs to
+                filter by completion.`}
               </p>
               <div className="flex flex-col md:flex-row gap-3 w-full">
                 <div className="flex-1 w-full md:w-[50%] ">
@@ -575,34 +618,114 @@ export default function PieceTable({ newTableName, setNewTableName }) {
 
           {/* Stats Bar */}
           <div className="flex flex-wrap gap-4 mt-6 pt-5 border-t border-slate-700">
-            <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
-              <div className="h-3 w-3 rounded-full bg-slate-400 mr-2"></div>
-              <span className="text-slate-300 mr-2">Total:</span>
-              <span className="text-white font-semibold">{stats.total}</span>
-            </div>
-
-            <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
-              <div className="h-3 w-3 rounded-full bg-emerald-500 mr-2"></div>
-              <span className="text-slate-300 mr-2">Complete:</span>
-              <span className="text-white font-semibold">{stats.complete}</span>
-            </div>
-
-            <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
-              <div className="h-3 w-3 rounded-full bg-rose-500 mr-2"></div>
-              <span className="text-slate-300 mr-2">Incomplete:</span>
-              <span className="text-white font-semibold">
-                {stats.incomplete}
-              </span>
-            </div>
-
-            {stats.general > 0 && (
+            {/* Piece Stats */}
+            {pieceStats.showCompletion && (
+              <>
+                <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                  <div className="h-3 w-3 rounded-full bg-slate-400 mr-2"></div>
+                  <span className="text-slate-300 mr-2">Total Pieces:</span>
+                  <span className="text-white font-semibold">
+                    {pieceStats.totalRequired}
+                  </span>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                  <div className="h-3 w-3 rounded-full bg-slate-400 mr-2"></div>
+                  <span className="text-slate-300 mr-2">Total On-Hand:</span>
+                  <span className="text-white font-semibold">
+                    {pieceStats.totalOnhand}
+                  </span>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                  <div
+                    className={`h-3 w-3 rounded-full ${
+                      pieceStats.percentage >= 100
+                        ? "bg-emerald-500" // Overachiever zone
+                        : pieceStats.percentage >= 80
+                        ? "bg-green-400" // Solid, very good
+                        : pieceStats.percentage >= 60
+                        ? "bg-yellow-400" // Above average, safe
+                        : pieceStats.percentage >= 40
+                        ? "bg-amber-500" // Warning, below average
+                        : pieceStats.percentage >= 20
+                        ? "bg-orange-500" // Risky, poor
+                        : "bg-rose-600" // Critical zone
+                    } mr-2`}
+                  ></div>
+                  <span className="text-slate-300 mr-2">Completion:</span>
+                  <span className="text-white font-semibold">
+                    {pieceStats.percentage}%
+                  </span>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                  <div className="h-3 w-3 rounded-full bg-emerald-500 mr-2"></div>
+                  <span className="text-slate-300 mr-2">Completed:</span>
+                  <span className="text-white font-semibold">
+                    {pieceStats.complete}
+                  </span>
+                </div>
+                <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                  <div className="h-3 w-3 rounded-full bg-rose-500 mr-2"></div>
+                  <span className="text-slate-300 mr-2">Incomplete:</span>
+                  <span className="text-white font-semibold">
+                    {pieceStats.incomplete}
+                  </span>
+                </div>
+              </>
+            )}
+            {pieceStats.general > 0 && (
               <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
                 <div className="h-3 w-3 rounded-full bg-slate-500 mr-2"></div>
                 <span className="text-slate-300 mr-2">General:</span>
                 <span className="text-white font-semibold">
-                  {stats.general}
+                  {pieceStats.general}
                 </span>
               </div>
+            )}
+            {/* Minifig Stats */}
+            {isMinifig && (
+              <>
+                {minifigStats.collection > 0 && (
+                  <>
+                    <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-slate-500 mr-2"></div>
+                      <span className="text-slate-300 mr-2">Collected:</span>
+                      <span className="text-white font-semibold">
+                        {minifigStats.collection}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-slate-500 mr-2"></div>
+                      <span className="text-slate-300 mr-2">
+                        Total Quantity:
+                      </span>
+                      <span className="text-white font-semibold">
+                        {minifigStats.totalQuantity}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-slate-500 mr-2"></div>
+                      <span className="text-slate-300 mr-2">
+                        Total Value (Used):
+                      </span>
+                      <span className="text-white font-semibold">
+                        ${minifigStats.totalUsedValue.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-700/50 rounded-lg px-4 py-3 flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-slate-500 mr-2"></div>
+                      <span className="text-slate-300 mr-2">
+                        Total Value (New):
+                      </span>
+                      <span className="text-white font-semibold">
+                        ${minifigStats.totalNewValue.toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -611,8 +734,9 @@ export default function PieceTable({ newTableName, setNewTableName }) {
       {/* Table Component */}
       <VirtualTable
         pieces={sortedPieces}
-        onChange={handleUpdatePiece}
-        onDelete={handleDeletePiece}
+        onChange={
+          selectedTable?.isMinifig ? handleUpdateMinifig : handleUpdatePiece
+        }
         isUpdating={checkIsUpdating}
         sort={handleSort}
         sortConfig={sortConfig}

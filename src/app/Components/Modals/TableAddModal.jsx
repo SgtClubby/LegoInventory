@@ -1,4 +1,4 @@
-// \Users\Clomby\Projects\LegoInventory\src\app\Components\Modals\TableAddModal.jsx
+// src/app/Components/Modals/TableAddModal.jsx
 
 import { Add, DehazeRounded } from "@mui/icons-material";
 import { addTable } from "@/lib/Table/TableManager";
@@ -11,8 +11,9 @@ export default function TableAddModal({ toggleModal }) {
   const [isValid, setIsValid] = useState(false);
   const [newTableName, setNewTableName] = useState("");
   const [newTableDescription, setnNewTableDescription] = useState("");
-  const [isMinifig, setIsMinifig] = useState(false);
-  const { availableTables, setAvailableTables, setAddShowModal } = useLego();
+  const { availableTables, setAvailableTables, showAddModal, setAddShowModal } =
+    useLego();
+  const [isMinifig, setIsMinifig] = useState(showAddModal.isMinifig);
   const { showSuccess } = useStatus();
 
   // Validate input
@@ -89,7 +90,7 @@ export default function TableAddModal({ toggleModal }) {
           </div>
 
           <h2 className="text-2xl font-semibold text-white text-center mb-5">
-            Add New Table
+            Add New {isMinifig ? "Minifig" : "Piece/Set"} Table
           </h2>
 
           <div className="mb-6">
@@ -110,8 +111,8 @@ export default function TableAddModal({ toggleModal }) {
               className="w-full py-3 px-4 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-blue-500 focus:ring focus:ring-blue-500/20 transition-colors duration-200"
             />
             <p className="mt-2 text-sm text-slate-400">
-              Give your table a short descriptive name like "Inventory count
-              2025" or "Pieces i need for my next build".
+              Give your table a short descriptive name like Add New{" "}
+              {isMinifig ? "Minifig" : "Piece/Set"} Table .
             </p>
           </div>
           <div className="mb-6">

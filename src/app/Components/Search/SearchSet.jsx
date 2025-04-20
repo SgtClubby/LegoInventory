@@ -1,6 +1,12 @@
 // src/app/Components/Search/SearchSet.jsx
 
-// Functions and Helpers
+/**
+ * A component for searching for LEGO sets with enhanced keyboard navigation
+ *
+ * @param {Object} props - Component props
+ * @param {Function} props.setSetSearchResult - Function to set the selected set
+ * @returns {JSX.Element} The rendered search component
+ */
 import React, { useState, useEffect, useRef } from "react";
 
 // Icons
@@ -25,7 +31,9 @@ export default function SearchSet({ setSetSearchResult }) {
   const inputRef = useRef(null);
   const searchTimeout = useRef(null);
 
-  // Handle click outside to close dropdown
+  /**
+   * Handle click outside to close dropdown
+   */
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -42,7 +50,51 @@ export default function SearchSet({ setSetSearchResult }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle search term changes with debounce
+  /**
+   * Global keyboard navigation handler
+   */
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (!isDropdownOpen) return;
+
+      // Down arrow - move down the list
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          prev < results.length - 1 ? prev + 1 : prev
+        );
+      }
+      // Up arrow - move up the list
+      else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+      }
+      // Enter - select current item
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < results.length) {
+          handleSelectResult(results[selectedIndex]);
+        }
+      }
+      // Escape - close dropdown
+      else if (e.key === "Escape") {
+        e.preventDefault();
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("keydown", handleGlobalKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, [isDropdownOpen, selectedIndex, results]);
+
+  /**
+   * Handle search term changes with debounce
+   */
   useEffect(() => {
     if (!searchTerm || searchTerm.length < 2) {
       setResults([]);
@@ -95,45 +147,38 @@ export default function SearchSet({ setSetSearchResult }) {
         clearTimeout(searchTimeout.current);
       }
     };
-  }, [searchTerm]);
+  }, [searchTerm, showError]);
 
-  // Handle keyboard navigation
-  const handleKeyDown = (e) => {
-    if (!isDropdownOpen) return;
-
-    // Down arrow - move down the list
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev < results.length - 1 ? prev + 1 : prev));
-    }
-    // Up arrow - move up the list
-    else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
-    }
-    // Enter - select current item
-    else if (e.key === "Enter") {
-      e.preventDefault();
-      if (selectedIndex >= 0 && selectedIndex < results.length) {
-        handleSelectResult(results[selectedIndex]);
-      }
-    }
-    // Escape - close dropdown
-    else if (e.key === "Escape") {
-      e.preventDefault();
-      setIsDropdownOpen(false);
-    }
-  };
-
-  // Handle result selection
+  /**
+   * Handle result selection
+   *
+   * @param {Object} result - The selected search result
+   */
   const handleSelectResult = (result) => {
     setSetSearchResult(result);
     setSearchTerm("");
     setIsDropdownOpen(false);
   };
 
+  /**
+   * Handle mouse entering a result item
+   *
+   * @param {number} index - The index of the hovered item
+   */
+  const handleMouseEnter = (index) => {
+    setSelectedIndex(index);
+  };
+
+  /**
+   * Clear search input
+   */
+  const clearSearch = () => {
+    setSearchTerm("");
+    inputRef.current.focus();
+  };
+
   return (
-    <div className="w-full">
+    <div className="w-full select-none">
       <label
         htmlFor="search-set"
         className="block text-sm font-medium mb-1.5 text-slate-300"
@@ -155,14 +200,13 @@ export default function SearchSet({ setSetSearchResult }) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={() => searchTerm.length >= 2 && setIsDropdownOpen(true)}
-            onKeyDown={handleKeyDown}
             className="w-full p-3 pl-10 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-colors duration-200"
           />
 
           {/* Search icon */}
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
             {isLoading ? (
-              <LoaderIcon />
+              <LoaderIcon className="h-5 w-5" />
             ) : (
               <SearchRounded className="h-5 w-5" fontSize="medium" />
             )}
@@ -171,7 +215,7 @@ export default function SearchSet({ setSetSearchResult }) {
           {/* Clear button */}
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm("")}
+              onClick={clearSearch}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
             >
               <ClearRounded className="h-5 w-5" fontSize="medium" />
@@ -183,63 +227,91 @@ export default function SearchSet({ setSetSearchResult }) {
         {isDropdownOpen && (
           <div
             ref={dropdownRef}
-            className="absolute left-0 z-50 mt-1 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-96 overflow-auto scrollbar-thin scrollbar-thumb-slate-600 animate-fadeIn"
+            className="absolute left-0 z-[9999] mt-1 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl overflow-hidden flex flex-col animate-fadeIn"
+            style={{ maxHeight: "520px" }}
           >
-            <div className="py-1 divide-y divide-slate-700">
-              {results.map((item, index) => (
-                <div
-                  key={item.set_num}
-                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-200 ${
-                    index === selectedIndex
-                      ? "bg-amber-600/20 hover:bg-amber-600/30"
-                      : "hover:bg-slate-700/70"
-                  }`}
-                  onClick={() => handleSelectResult(item)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                >
-                  {item.set_img_url ? (
-                    <img
-                      src={item.set_img_url}
-                      alt={item.name}
-                      className="w-14 h-14 object-contain bg-slate-700 rounded"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 bg-slate-700 rounded flex items-center justify-center">
-                      <BrickIcon className="w-8 h-8 text-slate-500" />
-                    </div>
-                  )}
+            {/* Scrollable results area */}
+            <div
+              className="overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 overflow-x-hidden flex-grow"
+              style={{ height: "300px" }}
+            >
+              <div className="py-1 divide-y divide-slate-700">
+                {results.map((item, index) => (
+                  <div
+                    key={item.set_num}
+                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-200 ${
+                      index === selectedIndex
+                        ? "bg-amber-600/20 hover:bg-amber-600/30"
+                        : "hover:bg-slate-700/70"
+                    }`}
+                    onClick={() => handleSelectResult(item)}
+                    onMouseEnter={() => handleMouseEnter(index)}
+                  >
+                    {item.set_img_url ? (
+                      <img
+                        src={item.set_img_url}
+                        alt={item.name}
+                        className="w-14 h-14 object-contain bg-slate-700 rounded"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 bg-slate-700 rounded flex items-center justify-center">
+                        <BrickIcon className="w-8 h-8 text-slate-500" />
+                      </div>
+                    )}
 
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-slate-200 truncate">
-                      {item.name}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-slate-200 truncate">
+                        {item.name}
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-sm">
+                        <span className="text-slate-400">
+                          Set: {item.set_num}
+                        </span>
+                        <span className="text-slate-400">•</span>
+                        <span className="text-slate-400">
+                          Year: {item.year}
+                        </span>
+                        <span className="text-slate-400">•</span>
+                        <span className="text-slate-400">
+                          Pieces: {item.num_parts}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 text-sm">
-                      <span className="text-slate-400">
-                        Set: {item.set_num}
-                      </span>
-                      <span className="text-slate-400">•</span>
-                      <span className="text-slate-400">Year: {item.year}</span>
-                      <span className="text-slate-400">•</span>
-                      <span className="text-slate-400">
-                        Pieces: {item.num_parts}
-                      </span>
+
+                    <div className="flex-shrink-0 text-amber-400">
+                      <ArrowCircleDownRounded className="h-6 w-6" />
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div className="flex-shrink-0 text-amber-400">
-                    <ArrowCircleDownRounded className="h-6 w-6" />
-                  </div>
+              {/* Loader inside scrollable area */}
+              {isLoading && (
+                <div className="px-4 py-3 text-center text-slate-400">
+                  <div className="inline-block animate-spin mr-2 h-4 w-4 border-t-2 border-amber-500 rounded-full"></div>
+                  Loading more results...
                 </div>
-              ))}
+              )}
             </div>
 
-            {/* Loader at the bottom of the list */}
-            {isLoading && (
-              <div className="px-4 py-3 text-center text-slate-400">
-                <div className="inline-block animate-spin mr-2 h-4 w-4 border-t-2 border-amber-500 rounded-full"></div>
-                Loading more results...
-              </div>
-            )}
+            {/* Keyboard navigation hint - fixed at bottom */}
+            <div className="py-2 px-4 text-xs text-slate-400 border-t border-slate-700 bg-slate-800 shadow-top flex-shrink-0">
+              <kbd className="px-1.5 py-0.5 bg-slate-700 rounded border border-slate-600 mr-1">
+                ↑/↓
+              </kbd>
+              to navigate
+              <span className="mx-2">•</span>
+              <kbd className="px-1.5 py-0.5 bg-slate-700 rounded border border-slate-600 mr-1">
+                Enter
+              </kbd>
+              to select
+              <span className="mx-2">•</span>
+              <kbd className="px-1.5 py-0.5 bg-slate-700 rounded border border-slate-600 mr-1">
+                Esc
+              </kbd>
+              to close
+            </div>
           </div>
         )}
       </div>

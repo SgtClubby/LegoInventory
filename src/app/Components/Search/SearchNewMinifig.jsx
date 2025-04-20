@@ -212,7 +212,7 @@ export default function SearchNewMinifig({
           onFocus={() => query.length >= 3 && setIsDropdownOpen(true)}
           placeholder="Search minifigs (e.g. 'sw1234', 'fig-123456', 'Darth Vader')"
           className="w-full p-3 pl-10 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-          focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
         />
         <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
           {loading ? (
@@ -246,7 +246,7 @@ export default function SearchNewMinifig({
                 key={minifig.minifigIdRebrickable}
                 className={`flex items-center p-3 cursor-pointer border-b border-slate-700 last:border-b-0 ${
                   index === selectedIndex
-                    ? "bg-blue-600/20 hover:bg-blue-600/30"
+                    ? "bg-emerald-600/20 hover:bg-emerald-600/30"
                     : "hover:bg-slate-700/70"
                 }`}
                 onClick={() => handleSelectMinifig(minifig)}
@@ -272,7 +272,7 @@ export default function SearchNewMinifig({
                     ID: {minifig.minifigIdRebrickable}
                   </div>
                 </div>
-                <div className="flex-shrink-0 text-blue-400">
+                <div className="flex-shrink-0 text-emerald-500">
                   <ArrowCircleDownRounded className="h-6 w-6" />
                 </div>
               </div>
@@ -281,7 +281,7 @@ export default function SearchNewMinifig({
             {/* Loading state */}
             {loading && (
               <div className="px-4 py-3 text-center text-slate-400">
-                <div className="inline-block animate-spin mr-2 h-4 w-4 border-t-2 border-blue-500 rounded-full"></div>
+                <div className="inline-block animate-spin mr-2 h-4 w-4 border-t-2 border-emerald-500 rounded-full"></div>
                 Searching minifigs...
               </div>
             )}

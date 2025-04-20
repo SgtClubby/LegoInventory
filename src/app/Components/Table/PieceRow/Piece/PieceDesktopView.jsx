@@ -1,6 +1,6 @@
-// src/app/Components/Table/PieceRow/DesktopView.jsx
+// src/app/Components/Table/PieceRow/Piece/PieceDesktopView.jsx
 import getColorStyle from "@/lib/Misc/getColorStyle";
-import React, { useState, memo, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 import {
   BookmarkRounded,
@@ -8,9 +8,23 @@ import {
   ExpandMoreRounded,
   RefreshRounded,
 } from "@mui/icons-material";
-import ColorDropdown from "./ColorDropdown";
+import ColorDropdown from "../ColorDropdown";
 
-export default function DesktopView({
+/**
+ * Desktop view for piece items in the table
+ *
+ * @param {Object} originalProps - Original props passed from parent
+ * @param {Function} handleDeleteClick - Function to handle delete action
+ * @param {Function} handleChange - Function to handle field changes
+ * @param {Object} fields - Current field values
+ * @param {React.ReactNode} LoadingOverlay - Loading overlay component
+ * @param {Function} setHighlighted - Function to toggle highlighted state
+ * @param {boolean} highlighted - Whether the item is highlighted
+ * @param {boolean} isUpdating - Whether the item is currently updating
+ * @param {boolean} countComplete - Whether all required quantities are met
+ * @returns {React.ReactElement} The PieceDesktopView component
+ */
+export default function PieceDesktopView({
   originalProps,
   handleDeleteClick,
   handleChange,
@@ -19,10 +33,9 @@ export default function DesktopView({
   setHighlighted,
   highlighted,
   isUpdating,
-
   countComplete,
 }) {
-  const { piece, columns, isLast = false, selectedTable } = originalProps;
+  const { piece, columns } = originalProps;
 
   // Use fields instead of piece for most display, but keep piece.availableColors and elementColorId
   // since those are used for the color dropdown logic
@@ -32,21 +45,25 @@ export default function DesktopView({
   const [showColorDropdown, setShowColorDropdown] = useState(false);
 
   useEffect(() => {
+    let timeout;
     function handleClickOutside(event) {
       if (
         colorContainerRef.current &&
         !colorContainerRef.current.contains(event.target) &&
         showColorDropdown
       ) {
-        setShowColorDropdown(false);
+        timeout = setTimeout(() => {
+          setShowColorDropdown(false);
+        }, 100); // Delay to allow dropdown to close before setting state
       }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      clearTimeout(timeout);
     };
-  }, [colorContainerRef]);
+  }, [colorContainerRef, showColorDropdown]);
 
   const getRowStyle = () => {
     if (highlighted)
@@ -60,9 +77,7 @@ export default function DesktopView({
     <div className="animate-slideDown">
       <div
         key="desktop"
-        className={`hidden switch:flex items-center w-full px-2 py-1 mx-1 my-1 ${
-          isLast ? "mb-4" : null
-        } rounded-lg border-l-4 ${getRowStyle()}`}
+        className={`hidden switch:flex items-center w-full px-2 py-2 mx-1 my-1 rounded-lg border-l-4 border-b-1 border-t-1 ${getRowStyle()} transition-colors duration-150 shadow-md/20 `}
       >
         {LoadingOverlay}
 
@@ -70,7 +85,7 @@ export default function DesktopView({
         <div
           className={`${columns[0]?.width} flex-shrink-0 flex justify-center px-2`}
         >
-          <div className="h-12 w-12 bg-slate-700 rounded overflow-hidden flex items-center justify-center">
+          <div className="h-16 w-16 bg-slate-700/80 rounded-lg overflow-hidden flex items-center justify-center relative">
             {availableColors?.find(
               (color) => color.colorId == piece.elementColorId
             )?.elementImage ? (
@@ -87,7 +102,7 @@ export default function DesktopView({
               <>
                 {!piece?.invalid && (
                   <RefreshRounded
-                    className={`h-6 w-6 text-slate-300 absolute cursor-pointer pointer-events-auto ${
+                    className={`h-6 w-6 text-slate-300 absolute cursor-pointer ${
                       isUpdating ? "animate-spin" : ""
                     }`}
                     onClick={() => {
@@ -96,7 +111,7 @@ export default function DesktopView({
                         value: fields.elementId,
                       });
                     }}
-                    title="refresh image"
+                    title="Refresh image"
                     fontSize="small"
                   />
                 )}
@@ -116,7 +131,8 @@ export default function DesktopView({
             onChange={(e) =>
               handleChange({ field: "elementName", value: e.target.value })
             }
-            className="w-full bg-transparent border border-transparent focus:border-slate-600 px-2 py-1.5 rounded text-slate-200 hover:bg-slate-700/30 transition-colors duration-150"
+            className="w-full bg-transparent border border-slate-700/50 focus:border-blue-500/50 px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700/30 transition-colors duration-150"
+            placeholder="Piece Name"
           />
         </div>
 
@@ -128,7 +144,8 @@ export default function DesktopView({
             onChange={(e) =>
               handleChange({ field: "elementId", value: e.target.value })
             }
-            className="w-full bg-transparent border border-transparent focus:border-slate-600 px-2 py-1.5 rounded text-slate-200 hover:bg-slate-700/30 transition-colors duration-150"
+            className="w-full bg-transparent border border-slate-700/50 focus:border-blue-500/50 px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700/30 transition-colors duration-150"
+            placeholder="Piece ID"
           />
         </div>
 
@@ -139,7 +156,7 @@ export default function DesktopView({
           key="colorContainer"
         >
           <div
-            className="flex items-center w-full bg-transparent border border-transparent hover:border-slate-600 hover:bg-slate-700/30 px-2 py-1.5 rounded text-slate-200 cursor-pointer transition-colors duration-150"
+            className="flex items-center w-full bg-transparent border border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-700/30 px-3 py-2 rounded-md text-slate-200 cursor-pointer transition-colors duration-150"
             onClick={() => setShowColorDropdown(!showColorDropdown)}
           >
             <div
@@ -181,7 +198,7 @@ export default function DesktopView({
                 value: e.target.value,
               })
             }
-            className="w-full bg-transparent border border-transparent focus:border-slate-600 px-2 py-1.5 rounded text-slate-200 hover:bg-slate-700/30 transition-colors duration-150"
+            className="w-full bg-transparent border border-slate-700/50 focus:border-blue-500/50 px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700/30 transition-colors duration-150 text-center"
           />
         </div>
 
@@ -197,16 +214,16 @@ export default function DesktopView({
                 value: e.target.value,
               })
             }
-            className="w-full bg-transparent border border-transparent focus:border-slate-600 px-2 py-1.5 rounded text-slate-200 hover:bg-slate-700/30 transition-colors duration-150"
+            className="w-full bg-transparent border border-slate-700/50 focus:border-blue-500/50 px-3 py-2 rounded-md text-slate-200 hover:bg-slate-700/30 transition-colors duration-150 text-center"
           />
         </div>
 
         {/* Complete Status */}
         <div
-          className={`${columns[6]?.width} ${columns[6]?.className} flex-shrink-0 px-2 flex`}
+          className={`${columns[6]?.width} ${columns[6]?.className} flex-shrink-0 px-2 flex items-center justify-center`}
         >
           <div
-            className={`px-3 py-1 text-sm rounded-full inline-flex items-center transition-colors duration-150 ${
+            className={`px-4 py-1.5 text-sm rounded-full inline-flex items-center transition-colors duration-150 ${
               countComplete == null
                 ? "bg-slate-600 text-slate-200"
                 : countComplete
@@ -220,7 +237,7 @@ export default function DesktopView({
 
         {/* Actions */}
         <div
-          className={`${columns[7]?.width} flex-shrink-0 px-2 flex 2xl:justify-end gap-2`}
+          className={`${columns[7]?.width} flex-shrink-0 px-2 flex justify-end gap-2`}
         >
           <button
             onClick={() => {
@@ -232,7 +249,7 @@ export default function DesktopView({
             }}
             className={`p-1.5 rounded transition-colors duration-150 ${
               highlighted
-                ? "bg-pink-500/30 text-pink-300"
+                ? "bg-pink-500/30 text-pink-300 hover:bg-pink-500/40"
                 : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
             }`}
             title={highlighted ? "Remove highlight" : "Highlight piece"}

@@ -1,4 +1,4 @@
-// src/app/Components/Modals/ImportModal.jsx
+// src/app/Components/Modals/ImportSetModal.jsx
 
 import { useEffect, useState } from "react";
 import { useImportSetSubmit } from "@/hooks/useImportSetSubmit";
@@ -7,7 +7,7 @@ import { useStatus } from "@/Context/StatusContext";
 import { useLego } from "@/Context/LegoContext";
 import LoaderIcon from "../Misc/LoaderIcon";
 
-export default function ImportModal({ toggleModal, searchResult }) {
+export default function ImportSetModal({ toggleModal, searchResult }) {
   const [setDetails, setSetDetails] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const handleImportSetSubmit = useImportSetSubmit();
@@ -40,12 +40,7 @@ export default function ImportModal({ toggleModal, searchResult }) {
     setIsImporting(true);
 
     try {
-      const response = await handleImportSetSubmit(setDetails);
-
-      showSuccess(`Set ${setDetails.set_num} imported successfully!`, {
-        position: "top",
-        autoCloseDelay: 3000,
-      });
+      await handleImportSetSubmit(setDetails);
       setActiveTab("all");
       toggleModal(false);
     } catch (error) {

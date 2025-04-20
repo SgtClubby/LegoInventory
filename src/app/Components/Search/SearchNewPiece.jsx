@@ -164,7 +164,7 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
   };
 
   return (
-    <div className="w-full select-none">
+    <div className="select-none">
       <label
         htmlFor="search-new-piece"
         className="block text-sm font-medium mb-1.5 text-slate-300"
@@ -186,7 +186,7 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={() => searchTerm.length >= 2 && setIsDropdownOpen(true)}
-            className="w-full p-3 pl-10 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full p-3 pl-10 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           />
 
           {/* Search icon */}
@@ -224,7 +224,7 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
                     key={item.part_num + "-" + index}
                     className={`flex items-center gap-3 px-4 py-3 cursor-pointer ${
                       index === selectedIndex
-                        ? "bg-blue-600/20 hover:bg-blue-600/30"
+                        ? "bg-emerald-600/20 hover:bg-emerald-600/30"
                         : "hover:bg-slate-700/70"
                     }`}
                     onClick={() => handleSelectResult(item)}
@@ -252,7 +252,7 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
                       </div>
                     </div>
 
-                    <div className="flex-shrink-0 text-blue-400">
+                    <div className="flex-shrink-0 text-emerald-400">
                       <ArrowCircleDownRounded className="h-6 w-6" />
                     </div>
                   </div>
@@ -262,7 +262,7 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
               {/* Loader inside scrollable area */}
               {isLoading && (
                 <div className="px-4 py-3 text-center text-slate-400">
-                  <div className="inline-block animate-spin mr-2 h-4 w-4 border-t-2 border-blue-500 rounded-full"></div>
+                  <div className="inline-block animate-spin mr-2 h-4 w-4 border-t-2 border-emerald-500 rounded-full"></div>
                   Loading more results...
                 </div>
               )}

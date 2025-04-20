@@ -5,10 +5,13 @@ import { useState, useRef } from "react";
 
 // Icons
 import { ClearRounded, SearchRounded } from "@mui/icons-material";
+import { useLego } from "@/Context/LegoContext";
 
 export default function SearchPiece({ searchTerm, setSearchTerm }) {
   const inputRef = useRef(null);
   const [isFocused, setIsFocused] = useState(false);
+  const { selectedTable } = useLego();
+  const isMinifig = selectedTable?.isMinifig;
 
   // Clear search handler
   const handleClearSearch = () => {
@@ -54,12 +57,23 @@ export default function SearchPiece({ searchTerm, setSearchTerm }) {
       {/* Search tips */}
       {isFocused && (
         <div className="absolute z-100 mt-2 w-full bg-slate-800 border border-slate-700 p-3 rounded-md shadow-lg text-sm text-slate-300">
-          <p className="font-medium text-slate-200 mb-1.5">Search Tips:</p>
+          <p className="font-medium text-slate-200 mb-1.5">
+            {isMinifig ? "Minifig" : "Piece"} Search Tips:
+          </p>
           <ul className="space-y-1 list-disc pl-5">
-            <li>Search by piece name (e.g., "Brick 2x4")</li>
-            <li>Search by ID (e.g., "3001")</li>
-            <li>Search by color (e.g., "Red")</li>
-            <li>Combine terms with spaces (e.g., "2x4 Red")</li>
+            {!isMinifig ? (
+              <>
+                <li>Search by piece name (e.g., 'Brick 2x4')</li>
+                <li>Search by ID (e.g., '3001')</li>
+                <li>Search by color (e.g., 'Red')</li>
+                <li>Combine terms with spaces (e.g., '2x4 Red')</li>
+              </>
+            ) : (
+              <>
+                <li>Search by minifig name (e.g., 'Obi-Wan')</li>
+                <li>Search by ID (e.g., 'sw1234', 'fig-123456')</li>
+              </>
+            )}
           </ul>
         </div>
       )}

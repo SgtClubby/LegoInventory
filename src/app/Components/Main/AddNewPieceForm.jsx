@@ -6,7 +6,11 @@ import { v4 as uuidv4 } from "uuid";
 // Icons
 import CheckIcon from "@mui/icons-material/Check";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { Add, InsertPhotoRounded } from "@mui/icons-material";
+import {
+  Add,
+  ErrorOutlineRounded,
+  InsertPhotoRounded,
+} from "@mui/icons-material";
 
 // Components
 import SearchNewPiece from "@/Components/Search/SearchNewPiece";
@@ -19,6 +23,8 @@ import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import { useStatus } from "@/Context/StatusContext";
 import TableSelectDropdown from "../Misc/TableSelectDropdown";
+import { set } from "lodash";
+import LoaderIcon from "../Misc/LoaderIcon";
 
 /**
  * Form component for adding new pieces or minifigs to a table
@@ -41,6 +47,8 @@ export default function AddNewPieceForm() {
   // UI state
   const [image, setImage] = useState("");
   const [imageLoading, setImageLoading] = useState(false);
+  const [blDataLoading, setBlDataLoading] = useState(false);
+  const [blDataLoadingFailed, setBlDataLoadingFailed] = useState(false);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const [formValid, setFormValid] = useState(false);
   const [fade, setFade] = useState(false);
@@ -94,6 +102,8 @@ export default function AddNewPieceForm() {
     setSearchNewMinifigResult(null);
     setShowColorDropdown(false);
     setFormValid(false);
+    setBlDataLoadingFailed(false);
+    setBlDataLoading(false);
   }, [isMinifig, selectedTable?.id]);
 
   // Validate form
@@ -114,6 +124,7 @@ export default function AddNewPieceForm() {
   // Update newItem when regular piece search result arrives
   useEffect(() => {
     if (!isMinifig && searchNewPieceResult) {
+      setNewItem(initializeNewItem(false)); // Reset to initial state
       const { part_num, name, part_img_url } = searchNewPieceResult;
 
       // First update the basic information
@@ -164,7 +175,9 @@ export default function AddNewPieceForm() {
   // Update newItem when minifig search result arrives
   useEffect(() => {
     if (isMinifig && searchNewMinifigResult) {
+      setBlDataLoadingFailed(false);
       setNewItem(initializeNewItem(true)); // Reset to initial state
+
       const { minifigIdRebrickable, minifigName, minifigImage } =
         searchNewMinifigResult;
 
@@ -182,11 +195,23 @@ export default function AddNewPieceForm() {
       setImage(searchNewMinifigResult.minifigImage);
 
       async function fetchBricklinkData() {
-        const res = await fetch(
-          `/api/bricklink?rebrickableId=${searchNewMinifigResult.minifigIdRebrickable}&minifigName=${searchNewMinifigResult.minifigName}`
-        );
+        setBlDataLoading(true);
+
+        const res = await fetch(`/api/bricklink`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            minifigIdRebrickable,
+            minifigName,
+            minifigImage,
+          }),
+        });
 
         if (!res.ok) {
+          setBlDataLoading(false);
+          setBlDataLoadingFailed(true);
           showError(
             `Error fetching BrickLink data: ${res.statusText} ${res.status}`,
             {
@@ -198,6 +223,8 @@ export default function AddNewPieceForm() {
 
         const bricklinkData = await res.json();
         if (bricklinkData.error) {
+          setBlDataLoading(false);
+          setBlDataLoadingFailed(true);
           showError(`Error fetching BrickLink data: ${bricklinkData.error}`, {
             autoCloseDelay: 5000,
           });
@@ -216,9 +243,12 @@ export default function AddNewPieceForm() {
               minPriceUsed: priceData.minPriceUsed,
               maxPriceUsed: priceData.maxPriceUsed,
               avgPriceUsed: priceData.avgPriceUsed,
-              currency: priceData.currency,
+              currencyCode: priceData.currencyCode,
+              currencySymbol: priceData.currencySymbol,
             },
           }));
+          setBlDataLoading(false);
+          return;
         }
       }
       fetchBricklinkData();
@@ -468,7 +498,7 @@ export default function AddNewPieceForm() {
                 </span>
 
                 {isAvailable && (
-                  <CheckIcon className="h-4 w-4 ml-auto text-blue-400" />
+                  <CheckIcon className="h-4 w-4 ml-auto text-emerald-400" />
                 )}
               </div>
             );
@@ -515,8 +545,8 @@ export default function AddNewPieceForm() {
       {/* Search (Left) and Image (Right) */}
       <div className="flex flex-col sm:flex-row gap-6 mb-6">
         {/* Left: Search */}
-        <div className="flex flex-col w-full sm:w-2/3">
-          <div className="w-full sm:w-2/3">
+        <div className="flex flex-col w-full">
+          <div className="w-full ">
             {isMinifig ? (
               <SearchNewMinifig
                 searchNewMinifigResult={searchNewMinifigResult}
@@ -529,7 +559,7 @@ export default function AddNewPieceForm() {
               />
             )}
           </div>
-          <div className="w-full sm:w-2/3 mt-4 relative">
+          <div className="w-full mt-4 relative">
             <TableSelectDropdown />
             <p className="mt-2 text-xs text-slate-400">
               Select the table where you want to add this{" "}
@@ -540,8 +570,8 @@ export default function AddNewPieceForm() {
         </div>
 
         {/* Right: Image Preview */}
-        <div className="w-full sm:w-1/3 flex justify-center sm:justify-end">
-          <div className="w-40 h-40 bg-slate-700 rounded-lg overflow-hidden flex items-center justify-center">
+        <div className="w-full sm:w-1/3 mt-6 md:-mt-2 flex justify-center sm:justify-end">
+          <div className="md:min-w-60 md:min-h-60 w-50 h-50 bg-slate-700 rounded-lg overflow-hidden flex items-center justify-center">
             {imageLoading ? (
               <div className="animate-pulse w-full h-full bg-slate-600" />
             ) : image ? (
@@ -565,7 +595,7 @@ export default function AddNewPieceForm() {
       </div>
 
       {/* Form Fields in a Two-Column Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Column 1: Basic Information */}
         <div className="space-y-4">
           <div>
@@ -584,7 +614,7 @@ export default function AddNewPieceForm() {
                 )
               }
               className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-  focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+  focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               placeholder={isMinifig ? "'Darth Vader'" : "Brick 2x4"}
             />
           </div>
@@ -604,7 +634,7 @@ export default function AddNewPieceForm() {
                 }
                 onChange={(e) => handleInputChange("elementId", e.target.value)}
                 className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-                            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 placeholder={isMinifig ? "e.g. sw0001" : "e.g. 3001"}
               />
             </div>
@@ -614,23 +644,43 @@ export default function AddNewPieceForm() {
                 <label className="block text-sm font-medium mb-1.5 text-slate-300">
                   Bricklink ID
                 </label>
-                <input
-                  type="text"
-                  value={
-                    (isMinifig
-                      ? newItem?.minifigIdBricklink
-                      : newItem?.elementId) || ""
-                  }
-                  disabled={!isMinifig}
-                  onChange={(e) =>
-                    handleInputChange("minifigIdBricklink", e.target.value)
-                  }
-                  className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-                            focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder={
-                    isMinifig ? "e.g. 'sw1234', 'pir1234'" : "e.g. '3001'"
-                  }
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={
+                      (isMinifig
+                        ? newItem?.minifigIdBricklink
+                        : newItem?.elementId) || ""
+                    }
+                    disabled={!isMinifig}
+                    onChange={(e) =>
+                      handleInputChange("minifigIdBricklink", e.target.value)
+                    }
+                    className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
+                    focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    placeholder={
+                      isMinifig ? "e.g. 'sw1234', 'pir1234'" : "e.g. '3001'"
+                    }
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                    {blDataLoading ? <LoaderIcon className="h-5 w-5" /> : null}
+                  </div>
+                  <div className="absolute right-10 top-1/2 transform -translate-y-1/2 text-slate-400">
+                    {blDataLoadingFailed && !newItem.minifigIdBricklink ? (
+                      <div className="flex flex-row items-center">
+                        <ErrorOutlineRounded className="h-5 w-5 text-red-500/80 mr-2" />
+                        <div className="flex flex-col items-start">
+                          <span className="text-slate-300 text-xs">
+                            Failed to load BrickLink data!
+                          </span>
+                          <span className="text-slate-300 text-xs">
+                            Enter manually or try again!
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5 text-slate-300">
@@ -648,7 +698,7 @@ export default function AddNewPieceForm() {
                     handleInputChange("minifigIdRebrickable", e.target.value)
                   }
                   className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-                          focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                   placeholder={isMinifig ? "e.g. 'fig-123456'" : "e.g. '3001'"}
                 />
               </div>
@@ -675,7 +725,7 @@ export default function AddNewPieceForm() {
                   )
                 }
                 className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-              focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
           ) : (
@@ -690,7 +740,7 @@ export default function AddNewPieceForm() {
                 value={
                   (!isMinifig
                     ? newItem?.elementQuantityOnHand
-                    : newItem?.minifigQuantity) || "1"
+                    : newItem?.minifigQuantity) || 0
                 }
                 onChange={(e) => {
                   handleInputChange(
@@ -699,7 +749,7 @@ export default function AddNewPieceForm() {
                   );
                 }}
                 className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-              focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
           )}
@@ -742,14 +792,26 @@ export default function AddNewPieceForm() {
               </div>
             </div>
           ) : (
-            <div>
+            <div className="relative">
+              {blDataLoading && (
+                <div className="absolute inset-0 bg-slate-800 opacity-50 rounded-lg flex items-center justify-center">
+                  <LoaderIcon className="h-8 w-8 text-slate-400" />
+                </div>
+              )}
+              {blDataLoadingFailed && (
+                <div className="absolute inset-0 bg-slate-800 opacity-50 rounded-lg flex items-center justify-center">
+                  <ErrorOutlineRounded className="h-8 w-8 text-red-500" />
+                  <span className="text-slate-200 text-sm ml-2">
+                    Failed to load BrickLink data
+                  </span>
+                </div>
+              )}
               <label className="block text-sm font-medium mb-1.5 text-slate-300">
                 Price Information
               </label>
               <div className="p-4 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 shadow-inner">
-                {/* New Section */}
                 <div className="mb-3 pb-2 border-b border-slate-600">
-                  <h3 className="text-sm font-medium text-blue-400 mb-2">
+                  <h3 className="text-sm font-medium text-emerald-400 mb-2">
                     New Condition
                   </h3>
                   <div className="grid grid-cols-3 gap-x-2 gap-y-1.5">
@@ -761,20 +823,18 @@ export default function AddNewPieceForm() {
                         <span className="text-slate-500">N/A</span>
                       )}
                     </span>
-
-                    <span className="text-xs text-slate-400">Max:</span>
-                    <span className="text-sm text-slate-200 font-medium col-span-2">
-                      {newItem.priceData?.maxPriceNew !== "N/A" ? (
-                        `$${newItem.priceData?.maxPriceNew.toFixed(2)}`
-                      ) : (
-                        <span className="text-slate-500">N/A</span>
-                      )}
-                    </span>
-
                     <span className="text-xs text-slate-400">Avg:</span>
                     <span className="text-sm text-slate-200 font-medium col-span-2">
                       {newItem.priceData?.avgPriceNew !== "N/A" ? (
                         `$${newItem.priceData?.avgPriceNew.toFixed(2)}`
+                      ) : (
+                        <span className="text-slate-500">N/A</span>
+                      )}
+                    </span>
+                    <span className="text-xs text-slate-400">Max:</span>
+                    <span className="text-sm text-slate-200 font-medium col-span-2">
+                      {newItem.priceData?.maxPriceNew !== "N/A" ? (
+                        `$${newItem.priceData?.maxPriceNew.toFixed(2)}`
                       ) : (
                         <span className="text-slate-500">N/A</span>
                       )}
@@ -784,7 +844,7 @@ export default function AddNewPieceForm() {
 
                 {/* Used Section */}
                 <div>
-                  <h3 className="text-sm font-medium text-blue-400 mb-2">
+                  <h3 className="text-sm font-medium text-emerald-400 mb-2">
                     Used Condition
                   </h3>
                   <div className="grid grid-cols-3 gap-x-2 gap-y-1.5">
@@ -796,20 +856,18 @@ export default function AddNewPieceForm() {
                         <span className="text-slate-500">N/A</span>
                       )}
                     </span>
-
-                    <span className="text-xs text-slate-400">Max:</span>
-                    <span className="text-sm text-slate-200 font-medium col-span-2">
-                      {newItem.priceData?.maxPriceUsed !== "N/A" ? (
-                        `$${newItem.priceData?.maxPriceUsed.toFixed(2)}`
-                      ) : (
-                        <span className="text-slate-500">N/A</span>
-                      )}
-                    </span>
-
                     <span className="text-xs text-slate-400">Avg:</span>
                     <span className="text-sm text-slate-200 font-medium col-span-2">
                       {newItem.priceData?.avgPriceUsed !== "N/A" ? (
                         `$${newItem.priceData?.avgPriceUsed.toFixed(2)}`
+                      ) : (
+                        <span className="text-slate-500">N/A</span>
+                      )}
+                    </span>
+                    <span className="text-xs text-slate-400">Max:</span>
+                    <span className="text-sm text-slate-200 font-medium col-span-2">
+                      {newItem.priceData?.maxPriceUsed !== "N/A" ? (
+                        `$${newItem.priceData?.maxPriceUsed.toFixed(2)}`
                       ) : (
                         <span className="text-slate-500">N/A</span>
                       )}
@@ -840,16 +898,16 @@ export default function AddNewPieceForm() {
                 value={
                   (!isMinifig
                     ? newItem?.elementQuantityRequired
-                    : newItem?.minifigQuantity) || ""
+                    : newItem?.minifigQuantity) || 0
                 }
                 onChange={(e) =>
                   handleInputChange(
                     "elementQuantityRequired",
-                    parseInt(e.target.value) || 0
+                    parseInt(e.target.value)
                   )
                 }
                 className="w-full p-3 border border-slate-600 rounded-lg bg-slate-700 text-slate-200 placeholder:text-slate-400 
-                  focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
           )}
@@ -874,11 +932,11 @@ export default function AddNewPieceForm() {
         <div>
           <button
             onClick={handleAddItem}
-            disabled={!formValid}
+            disabled={!formValid || blDataLoading}
             className={`px-6 py-3 rounded-lg text-white font-medium transition-all
           ${
             formValid
-              ? "bg-blue-600 hover:bg-blue-700 transition-opacity duration-200 ease-in-out"
+              ? "bg-emerald-600 hover:bg-emerald-700 transition-opacity duration-200 ease-in-out"
               : "bg-slate-600 opacity-50 cursor-not-allowed pointer-events-none"
           }
         `}
@@ -893,5 +951,3 @@ export default function AddNewPieceForm() {
     </div>
   );
 }
-
-AddNewPieceForm.displayName = "AddNewPieceForm";

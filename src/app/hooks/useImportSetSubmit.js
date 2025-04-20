@@ -5,7 +5,6 @@ import { useLego } from "@/Context/LegoContext";
 import { addTable } from "@/lib/Table/TableManager";
 import { v4 as uuidv4 } from "uuid";
 import { useStatus } from "@/Context/StatusContext";
-import { set } from "lodash";
 
 export function useImportSetSubmit() {
   const {
@@ -34,22 +33,20 @@ export function useImportSetSubmit() {
         showError(`Failed to fetch set data: ${res.statusText}`, {
           position: "top",
         });
-        throw new Error(`Failed to fetch set data: ${res.statusText}`);
+        return;
       }
 
       const data = await res.json();
 
-      console.log(data);
-
-      if (!data.results || data.results.length === 0) {
-        showWarning(`No parts found for set "${details.name}", try again`, {
-          position: "top",
-          autoCloseDelay: 3000,
-        });
-        return {
-          success: false,
-          error: `Set "${details.name}" already imported.`,
-        };
+      if (!data || !data.results || data.results.length === 0) {
+        showWarning(
+          `No parts found for set "${details.name}", might be an error, try again later...`,
+          {
+            position: "top",
+            autoCloseDelay: 3000,
+          }
+        );
+        return;
       }
 
       // Save original table for rollback if needed
@@ -60,35 +57,30 @@ export function useImportSetSubmit() {
       }
 
       const { results, stats } = data;
+
       console.log(
         `Set contains ${results.length} parts. ${
           stats?.partsWithCachedColors || 0
         } parts have cached colors.`
       );
 
-      // Check if table already exists
-      const alreadyExists = availableTables.some(
-        (table) => table.name === details.name
-      );
-      if (alreadyExists) {
-        showWarning(`Set "${details.name}" already imported.`, {
-          position: "top",
-          autoCloseDelay: 3000,
-        });
-        return {
-          success: false,
-          error: `Set "${details.name}" already imported.`,
-        };
-      }
+      // Create the table in the database
+      const tableName = `${details.name}`;
+      const tableDescription = `Set ${details.set_num}`;
+      console.log(`Creating new table: ${tableName}`);
 
-      // Create new table
-      const newTableId =
-        Math.max(...availableTables.map((t) => Number(t.id))) + 1;
-      const tableName = `${details.name} (${details.set_num})`;
-      const newTable = {
-        name: tableName,
-        id: newTableId.toString(),
-      };
+      const newTable = await addTable(tableName, tableDescription, false);
+
+      if (!newTable || newTable.error) {
+        resetTableState();
+        showError(
+          `Failed to create table: ${newTable?.error} try again later... `,
+          {
+            position: "top",
+            autoCloseDelay: 3000,
+          }
+        );
+      }
 
       // Map API results to our piece format
       const importedPieces = results.map((item) => {
@@ -111,19 +103,6 @@ export function useImportSetSubmit() {
         return piece;
       });
 
-      // Create the table in the database
-      console.log(`Creating new table: ${tableName}`);
-      const tableReady = await addTable(tableName);
-
-      if (!tableReady) {
-        resetTableState();
-        showError("Failed to create table, try again later...", {
-          position: "top",
-          autoCloseDelay: 3000,
-        });
-        return { success: false, error: "Failed to create table" };
-      }
-
       // Update local state for tables
       setAvailableTables([...availableTables, newTable]);
       setSelectedTable(newTable);
@@ -132,6 +111,7 @@ export function useImportSetSubmit() {
       console.log(
         `Saving ${importedPieces.length} pieces to table ${newTable.id}`
       );
+
       const ready = await fetch(`/api/table/${newTable.id}`, {
         method: "POST",
         headers: {
@@ -146,10 +126,6 @@ export function useImportSetSubmit() {
           autoCloseDelay: 3000,
         });
         resetTableState();
-        return {
-          success: false,
-          error: `[DATABASE ERROR] Failed to save set pieces, try again later...`,
-        };
       }
 
       const readyData = await ready.json();
@@ -160,30 +136,30 @@ export function useImportSetSubmit() {
           position: "top",
           autoCloseDelay: 3000,
         });
-        return {
-          success: false,
-          error: `[DATABASE ERROR] Failed to save set pieces, try again later...`,
-        };
+        return;
       }
 
       // Update client-side state with the new pieces
-      setTimeout(() => {
-        setPiecesByTable((prev) => ({
-          ...prev,
-          [newTable.id]: importedPieces,
-        }));
-        showSuccess(`Set ${details.set_num} imported successfully!`, {
-          position: "top",
-          autoCloseDelay: 5000,
-        });
-        postProcessColorCache(
-          importedPieces,
-          newTable,
-          showWarning,
-          showSuccess,
-          setPiecesByTable
-        );
-      }, 1000);
+      setPiecesByTable((prev) => ({
+        ...prev,
+        [newTable.id]: importedPieces,
+      }));
+
+      console.log("???");
+
+      showSuccess(`Set ${details.set_num} imported successfully!`, {
+        position: "top",
+        autoCloseDelay: 5000,
+      });
+
+      postProcessColorCache(
+        importedPieces,
+        newTable,
+        showWarning,
+        showSuccess,
+        setPiecesByTable
+      );
+
       return { success: true };
     } catch (err) {
       console.error("Error during set import:", err);
@@ -198,11 +174,10 @@ async function postProcessColorCache(
   importedPieces,
   newTable,
   showWarning,
-  showSuccess,
-  setPiecesByTable
+  showSuccess
 ) {
   const piecesNeedingColors = importedPieces
-    .filter((p) => p.availableColors.length <= 1 || !p.availableColors)
+    .filter((p) => p.cacheIncomplete === true)
     .map((p) => p.elementId);
 
   console.log(`${piecesNeedingColors.length} pieces still need color data`);
@@ -219,39 +194,45 @@ async function postProcessColorCache(
         }
       );
     }, 6000);
-    await fetch("/api/set/postProcessColor/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        pieceIds: piecesNeedingColors,
-        ownerId: "default",
-        tableId: newTable.id,
-      }),
-    })
-      .catch((error) => {
-        console.error("Error processing colors:", error);
-        // Non-blocking error - user will still have basic functionality
+
+    //==============================
+    // DEBUG FLAG, Set to true to disable the post-processing
+    const disable = false;
+    //==============================
+
+    if (!disable) {
+      await fetch("/api/set/postProcessColor/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pieceIds: piecesNeedingColors,
+          ownerId: "default",
+          tableId: newTable.id,
+        }),
       })
-      .finally(() => {
-        setTimeout(() => {
-          showSuccess(
-            `
+        .catch((err) => {
+          console.error("Error during post-processing:", err);
+          showError(`Failed to post-process set pieces: ${err.message}`, {
+            position: "top",
+            autoCloseDelay: 3000,
+          });
+        })
+        .finally(() => {
+          setTimeout(() => {
+            showSuccess(
+              `
                   Saved piece color and image data!
                   If you have missing images, refresh!`,
-            {
-              position: "top",
-              autoCloseDelay: 3000,
-            }
-          );
-          // soft reset the table state
-          // to force a re-render
-          setPiecesByTable((prev) => ({
-            ...prev,
-            [newTable.id]: importedPieces,
-          }));
-        }, 2000);
-      });
+              {
+                position: "top",
+                autoCloseDelay: 3000,
+              }
+            );
+            // Update the pieces in the table with new color data
+          }, 2000);
+        });
+    }
   }
 }

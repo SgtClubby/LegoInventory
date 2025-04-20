@@ -1,4 +1,4 @@
-// src/app/Components/Table/PieceRow/MobileView.jsx
+// src/app/Components/Table/PieceRow/Piece/PieceMobileView.jsx
 import getColorStyle from "@/lib/Misc/getColorStyle";
 import React, { useState, memo, useRef, useEffect, useCallback } from "react";
 
@@ -8,9 +8,9 @@ import {
   ExpandMoreRounded,
   RefreshRounded,
 } from "@mui/icons-material";
-import ColorDropdown from "./ColorDropdown";
+import ColorDropdown from "../ColorDropdown";
 
-export default function MobileView({
+export default function PieceMobileView({
   originalProps,
   handleDeleteClick,
   handleChange,
@@ -49,21 +49,25 @@ export default function MobileView({
 
   // Handle outside click for color dropdown on mobile
   useEffect(() => {
+    let timeout;
     function handleClickOutside(event) {
       if (
         colorContainerRef.current &&
         !colorContainerRef.current.contains(event.target) &&
         showColorDropdown
       ) {
-        setShowColorDropdown(false);
+        timeout = setTimeout(() => {
+          setShowColorDropdown(false);
+        }, 100); // Delay to allow dropdown to close before setting state
       }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      clearTimeout(timeout);
     };
-  }, [colorContainerRef]);
+  }, [colorContainerRef, showColorDropdown]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -88,14 +92,16 @@ export default function MobileView({
 
   return (
     <div
-      key="MobileView"
+      key="PieceMobileView"
       className="switch:hidden relative"
       style={{ zIndex: 1 }}
     >
       {/* Mobile Card Header - Always visible */}
       <div
         className={`relative z-10 flex items-center justify-between ${getRowStyle()} rounded-t-lg border-l-4 ${
-          isExpanded ? "shadow-[0px_8px_16px_rgba(0,0,0,0.3)]" : "rounded-b-lg"
+          isExpanded
+            ? "shadow-[0px_8px_16px_rgba(0,0,0,0.3)]"
+            : "rounded-b-lg drop-shadow-xl/45"
         } transition-colors duration-200 cursor-pointer px-4 py-3 mx-1 my-1`}
         onClick={toggleExpanded}
         onMouseEnter={() => {

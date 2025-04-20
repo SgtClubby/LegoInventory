@@ -1,10 +1,59 @@
 // src/app/Components/Modals/DeletePieceModal.jsx
 
+import { useLego } from "@/Context/LegoContext";
+import { useStatus } from "@/Context/StatusContext";
 import { DeleteForeverRounded, DeleteRounded } from "@mui/icons-material";
 import { useEffect } from "react";
 
-export default function DeletePieceModal({ toggleModal, handleDelete, piece }) {
-  // Handle escape key press
+export default function DeletePieceModal() {
+  const {
+    setPiecesByTable,
+    piecesByTable,
+    pieceToDelete,
+    setPieceToDelete,
+    setDeleteModalOpen,
+    selectedTable,
+  } = useLego();
+  const { showSuccess } = useStatus();
+
+  const isMinifig = selectedTable?.isMinifig;
+  const piece = pieceToDelete?.piece;
+
+  const handleDeletePiece = async (uuid) => {
+    const tableId = selectedTable.id;
+
+    // Optimistically remove from UI first
+    setPiecesByTable((prev) => {
+      const updatedPieces = prev[tableId]?.filter((p) => p.uuid !== uuid) || [];
+      return { ...prev, [tableId]: updatedPieces };
+    });
+
+    try {
+      // Then delete from database
+      const response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete piece: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Error deleting piece:", error);
+
+      // If deletion fails, restore the piece in UI
+      setPiecesByTable((prev) => {
+        const restoredPiece = pieces.find((p) => p.uuid === uuid);
+        if (!restoredPiece) return prev;
+
+        const updatedPieces = [...(prev[tableId] || []), restoredPiece];
+        return { ...prev, [tableId]: updatedPieces };
+      });
+    }
+  };
+
   useEffect(() => {
     const handleEscapeKey = (e) => {
       if (e.key === "Escape") {
@@ -16,14 +65,33 @@ export default function DeletePieceModal({ toggleModal, handleDelete, piece }) {
     return () => window.removeEventListener("keydown", handleEscapeKey);
   }, []);
 
+  function handleDelete() {
+    if (pieceToDelete) {
+      handleDeletePiece(pieceToDelete.id);
+      showSuccess(
+        `${isMinifig ? "Minifig" : "Piece"} ${
+          pieceToDelete.piece.elementName || pieceToDelete.piece.minifigName
+        } deleted`,
+        {
+          position: "top",
+          autoCloseDelay: 3000,
+        }
+      );
+      setDeleteModalOpen(false);
+      setPieceToDelete(null);
+    }
+  }
+
   const handleClose = () => {
-    toggleModal(false);
+    setDeleteModalOpen(false);
   };
 
   const handleConfirmDelete = () => {
     handleDelete();
-    toggleModal(false);
+    setDeleteModalOpen(false);
   };
+
+  console.log(pieceToDelete);
 
   return (
     <div className="z-[10000] fixed inset-0 flex items-center justify-center">
@@ -41,39 +109,62 @@ export default function DeletePieceModal({ toggleModal, handleDelete, piece }) {
           </div>
 
           <h2 className="text-2xl font-semibold text-white text-center mb-3">
-            Delete LEGO Piece?
+            Delete LEGO {isMinifig ? "Minifig" : "Piece"}?
           </h2>
 
           {piece && (
             <div className="bg-slate-700/50 rounded-lg border border-slate-600/50 p-4 mb-5 flex items-center gap-4">
-              {piece.availableColors?.find(
-                (color) => color.colorId == piece.elementColorId
-              )?.elementImage && (
+              {!isMinifig ? (
+                piece.availableColors?.find(
+                  (color) => color.colorId == piece.elementColorId
+                )?.elementImage && (
+                  <img
+                    src={
+                      piece.availableColors.find(
+                        (color) => color.colorId == piece.elementColorId
+                      ).elementImage
+                    }
+                    alt={piece.elementName}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                )
+              ) : (
                 <img
-                  src={
-                    piece.availableColors.find(
-                      (color) => color.colorId == piece.elementColorId
-                    ).elementImage
-                  }
-                  alt={piece.elementName}
+                  src={piece.minifigImage}
+                  alt={piece.minifigName}
                   className="w-12 h-12 object-cover rounded"
                 />
               )}
+              {isMinifig ? (
+                <div>
+                  <p className="font-semibold text-white">
+                    {piece.minifigName}
+                  </p>
 
-              <div>
-                <p className="font-semibold text-white">{piece.elementName}</p>
-                <p className="text-sm text-slate-300">
-                  <span className="text-slate-400">ID:</span> {piece.elementId}{" "}
-                  | <span className="text-slate-400">Color:</span>{" "}
-                  {piece.elementColor}
-                </p>
-              </div>
+                  <p className="text-sm text-slate-300">
+                    <span className="text-slate-400">ID:</span>{" "}
+                    {piece.minifigIdRebrickable} {piece.minifigIdBricklink}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="font-semibold text-white">
+                    {piece.elementName}
+                  </p>
+                  <p className="text-sm text-slate-300">
+                    <span className="text-slate-400">ID:</span>{" "}
+                    {piece.elementId} |{" "}
+                    <span className="text-slate-400">Color:</span>{" "}
+                    {piece.elementColor}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
           <p className="mb-6 text-slate-300 text-center">
-            This action cannot be undone. The piece will be permanently removed
-            from your inventory.
+            This action cannot be undone. The {isMinifig ? "minifig" : "piece"}{" "}
+            will be permanently removed from your inventory.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-4">
@@ -89,7 +180,7 @@ export default function DeletePieceModal({ toggleModal, handleDelete, piece }) {
               className="inline-flex justify-center items-center px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 transition-colors duration-200"
             >
               <DeleteForeverRounded className="h-5 w-5 mr-2" />
-              Delete Piece
+              Delete {isMinifig ? "Minifig" : "Piece"}
             </button>
           </div>
         </div>
