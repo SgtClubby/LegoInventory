@@ -20,10 +20,9 @@ import SearchNewMinifig from "@/Components/Search/SearchNewMinifig";
 import colors from "@/Colors/colors.js";
 import { useLego } from "@/Context/LegoContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
-import getColorStyle from "@/lib/Misc/getColorStyle";
+import getColorStyle from "@/lib/Color/getColorStyle";
 import { useStatus } from "@/Context/StatusContext";
 import TableSelectDropdown from "../Misc/TableSelectDropdown";
-import { set } from "lodash";
 import LoaderIcon from "../Misc/LoaderIcon";
 
 /**
@@ -60,27 +59,32 @@ export default function AddNewPieceForm() {
    * @returns {Object} Initialized item object
    */
   function initializeNewItem(isMinifig) {
+    // Generate a new UUID for the item
+    const newUuid = uuidv4();
+
     if (isMinifig) {
       return {
-        uuid: uuidv4(),
+        uuid: newUuid,
         minifigName: "",
         minifigIdRebrickable: "",
         minifigIdBricklink: "",
         minifigImage: "",
-        minifigQuantity: 0,
+        minifigQuantity: 1, // Default to 1 instead of 0 for better UX
         priceData: {
-          currency: "N/A",
-          minPriceNew: "N/A",
-          maxPriceNew: "N/A",
-          avgPriceNew: "N/A",
-          minPriceUsed: "N/A",
-          maxPriceUsed: "N/A",
-          avgPriceUsed: "N/A",
+          currencyCode: "USD",
+          currencySymbol: "$",
+          minPriceNew: null,
+          maxPriceNew: null,
+          avgPriceNew: null,
+          minPriceUsed: null,
+          maxPriceUsed: null,
+          avgPriceUsed: null,
         },
+        highlighted: false,
       };
     } else {
       return {
-        uuid: uuidv4(),
+        uuid: newUuid,
         elementName: "",
         elementId: "",
         elementColor: "",
@@ -89,6 +93,8 @@ export default function AddNewPieceForm() {
         elementQuantityOnHand: 0,
         elementQuantityRequired: 0,
         countComplete: false,
+        highlighted: false,
+        invalid: false,
       };
     }
   }
@@ -222,6 +228,9 @@ export default function AddNewPieceForm() {
         }
 
         const bricklinkData = await res.json();
+
+        console.log("BrickLink data:", bricklinkData);
+
         if (bricklinkData.error) {
           setBlDataLoading(false);
           setBlDataLoadingFailed(true);
@@ -817,15 +826,15 @@ export default function AddNewPieceForm() {
                   <div className="grid grid-cols-3 gap-x-2 gap-y-1.5">
                     <span className="text-xs text-slate-400">Min:</span>
                     <span className="text-sm text-slate-200 font-medium col-span-2">
-                      {newItem.priceData?.minPriceNew !== "N/A" ? (
-                        `$${newItem.priceData?.minPriceNew.toFixed(2)}`
+                      {newItem.priceData?.minPriceNew ? (
+                        `$${newItem.priceData?.minPriceNew?.toFixed(2)}`
                       ) : (
                         <span className="text-slate-500">N/A</span>
                       )}
                     </span>
                     <span className="text-xs text-slate-400">Avg:</span>
                     <span className="text-sm text-slate-200 font-medium col-span-2">
-                      {newItem.priceData?.avgPriceNew !== "N/A" ? (
+                      {newItem.priceData?.avgPriceNew ? (
                         `$${newItem.priceData?.avgPriceNew.toFixed(2)}`
                       ) : (
                         <span className="text-slate-500">N/A</span>
@@ -833,7 +842,7 @@ export default function AddNewPieceForm() {
                     </span>
                     <span className="text-xs text-slate-400">Max:</span>
                     <span className="text-sm text-slate-200 font-medium col-span-2">
-                      {newItem.priceData?.maxPriceNew !== "N/A" ? (
+                      {newItem.priceData?.maxPriceNew ? (
                         `$${newItem.priceData?.maxPriceNew.toFixed(2)}`
                       ) : (
                         <span className="text-slate-500">N/A</span>
@@ -850,7 +859,7 @@ export default function AddNewPieceForm() {
                   <div className="grid grid-cols-3 gap-x-2 gap-y-1.5">
                     <span className="text-xs text-slate-400">Min:</span>
                     <span className="text-sm text-slate-200 font-medium col-span-2">
-                      {newItem.priceData?.minPriceUsed !== "N/A" ? (
+                      {newItem.priceData?.minPriceUsed ? (
                         `$${newItem.priceData?.minPriceUsed.toFixed(2)}`
                       ) : (
                         <span className="text-slate-500">N/A</span>
@@ -858,7 +867,7 @@ export default function AddNewPieceForm() {
                     </span>
                     <span className="text-xs text-slate-400">Avg:</span>
                     <span className="text-sm text-slate-200 font-medium col-span-2">
-                      {newItem.priceData?.avgPriceUsed !== "N/A" ? (
+                      {newItem.priceData?.avgPriceUsed ? (
                         `$${newItem.priceData?.avgPriceUsed.toFixed(2)}`
                       ) : (
                         <span className="text-slate-500">N/A</span>
@@ -866,7 +875,7 @@ export default function AddNewPieceForm() {
                     </span>
                     <span className="text-xs text-slate-400">Max:</span>
                     <span className="text-sm text-slate-200 font-medium col-span-2">
-                      {newItem.priceData?.maxPriceUsed !== "N/A" ? (
+                      {newItem.priceData?.maxPriceUsed ? (
                         `$${newItem.priceData?.maxPriceUsed.toFixed(2)}`
                       ) : (
                         <span className="text-slate-500">N/A</span>

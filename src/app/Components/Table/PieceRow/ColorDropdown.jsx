@@ -1,7 +1,7 @@
 // src/app/Components/Table/PieceRow/ColorDropdown.jsx
 
 import colors from "@/Colors/colors.js";
-import getColorStyle from "@/lib/Misc/getColorStyle";
+import getColorStyle from "@/lib/Color/getColorStyle";
 
 export default function ColorDropdown({
   availableColors,

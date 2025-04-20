@@ -1,5 +1,5 @@
 // src/app/Components/Table/PieceRow/Piece/PieceDesktopView.jsx
-import getColorStyle from "@/lib/Misc/getColorStyle";
+import getColorStyle from "@/lib/Color/getColorStyle";
 import React, { useState, useRef, useEffect } from "react";
 
 import {

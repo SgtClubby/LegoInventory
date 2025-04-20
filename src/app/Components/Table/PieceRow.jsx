@@ -296,7 +296,8 @@ function areEqual(prevProps, nextProps) {
   // Check if any props have changed
   const basicPropsEqual =
     prevProps.originalId === nextProps.originalId &&
-    prevProps.isUpdating === nextProps.isUpdating;
+    prevProps.isUpdating === nextProps.isUpdating &&
+    prevProps.index === nextProps.index;
 
   if (!basicPropsEqual) return false;
 
@@ -317,7 +318,9 @@ function areEqual(prevProps, nextProps) {
       prevPiece.minifigName === nextPiece.minifigName &&
       prevPiece.minifigQuantity === nextPiece.minifigQuantity &&
       prevPiece.countComplete === nextPiece.countComplete &&
-      prevPiece.highlighted === nextPiece.highlighted
+      prevPiece.highlighted === nextPiece.highlighted &&
+      JSON.stringify(prevPiece.priceData) ===
+        JSON.stringify(nextPiece.priceData)
     );
   } else {
     // Check each important property for regular pieces
@@ -335,4 +338,5 @@ function areEqual(prevProps, nextProps) {
   }
 }
 
+// Then use this improved areEqual function in memo call
 export default memo(PieceRow, areEqual);

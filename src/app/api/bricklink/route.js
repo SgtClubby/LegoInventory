@@ -135,6 +135,8 @@ export async function POST(request) {
         return decimal;
       };
 
+      console.log(existingPriceDataCache);
+
       const { priceData } = existingPriceDataCache;
 
       const parsedPriceData = Object.fromEntries(
@@ -149,6 +151,8 @@ export async function POST(request) {
           return [key, value];
         })
       );
+
+      console.log(parsedPriceData);
 
       const cacheResult = {
         minifigIdBricklink: existingMinifigCache.minifigIdBricklink,

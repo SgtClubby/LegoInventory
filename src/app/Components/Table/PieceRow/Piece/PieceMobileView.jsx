@@ -1,5 +1,5 @@
 // src/app/Components/Table/PieceRow/Piece/PieceMobileView.jsx
-import getColorStyle from "@/lib/Misc/getColorStyle";
+import getColorStyle from "@/lib/Color/getColorStyle";
 import React, { useState, memo, useRef, useEffect, useCallback } from "react";
 
 import {

@@ -1,3 +1,5 @@
+// src/app/lib/Color/getColorStyle.js
+
 // src/app/lib/Misc/getColorStyle.js
 
 import colors from "@/Colors/colors.js";
