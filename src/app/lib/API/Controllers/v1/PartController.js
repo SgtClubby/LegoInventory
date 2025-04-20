@@ -33,10 +33,7 @@ class PartController extends BaseController {
       await dbConnect();
 
       // First check if we already have this part in our metadata
-      const existingMetadata = await BrickMetadata.findOne(
-        { elementId: pieceId },
-        { _id: 0, invalid: 1, elementName: 1, availableColors: 1 }
-      ).lean();
+      const existingMetadata = cacheManager.getBrickMetadata(pieceId);
 
       // If we have an invalid entry already, return that
       if (existingMetadata?.invalid === true) {
@@ -66,19 +63,15 @@ class PartController extends BaseController {
       const partDetails = await externalApiService.fetchPartDetails(pieceId);
 
       if (!partDetails) {
-        // Mark as invalid in the database for future lookups
-        await this.updateBrickMetadata(pieceId, null, true);
         return this.errorResponse("Part not found", 404);
       }
 
-      // Update the metadata with valid data
-      await this.updateBrickMetadata(pieceId, partDetails, false);
-
       return this.successResponse({
-        partNum: partDetails.part_num,
+        partNum: partDetails.elementId,
         name: partDetails.name,
-        partUrl: partDetails.part_url,
         partImgUrl: partDetails.part_img_url,
+        availableColors: partDetails.availableColors,
+        fromCache: false,
       });
     } catch (error) {
       console.error(`Error fetching details for piece ${pieceId}:`, error);
@@ -102,10 +95,6 @@ class PartController extends BaseController {
     }
 
     let cacheIncomplete = false;
-    if (pieceId.endsWith("-ic")) {
-      pieceId = pieceId.slice(0, -3); // Remove the "-ic" suffix
-      cacheIncomplete = true;
-    }
 
     try {
       await dbConnect();
@@ -191,40 +180,20 @@ class PartController extends BaseController {
    * @param {Object} data - Brick data from API
    * @param {boolean} isInvalid - Whether this part is invalid
    */
-  async updateBrickMetadata(partId, data, isInvalid) {
+  async updateBrickMetadata(data, isInvalid) {
     // If part is invalid, store it with the invalid flag
     if (isInvalid) {
-      return BrickMetadata.updateOne(
-        { elementId: partId },
-        {
-          $set: {
-            elementName: "Invalid/Missing ID",
-            invalid: true,
-            availableColors: [{ empty: true }],
-          },
-        },
-        { upsert: true }
-      ).catch((err) => {
-        console.error(
-          `Error updating invalid metadata for part ${partId}:`,
-          err
-        );
+      return cacheManager.setBrickMetadata({
+        elementName: "Invalid/Missing ID",
+        invalid: true,
+        availableColors: [{ empty: true }],
       });
     }
 
     // Otherwise store the valid data
-    return BrickMetadata.updateOne(
-      { elementId: partId },
-      {
-        $set: {
-          elementName: data.name,
-          invalid: false,
-        },
-        $setOnInsert: { elementId: partId },
-      },
-      { upsert: true }
-    ).catch((err) => {
-      console.error(`Error updating metadata for part ${partId}:`, err);
+    return cacheManager.setBrickMetadata({
+      elementName: data.name,
+      invalid: false,
     });
   }
 }

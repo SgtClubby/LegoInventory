@@ -33,7 +33,7 @@ export default function TableSelectDropdown() {
     setSelectedTable,
     availableTables,
     setAddShowModal,
-    setDeleteShowModal,
+    setShowDeleteTableModal,
   } = useLego();
 
   const dropdownRef = useRef(null);
@@ -208,7 +208,7 @@ export default function TableSelectDropdown() {
     });
   };
 
-  const handleDeleteTable = (isMinifig) => setDeleteShowModal(isMinifig);
+  const handleDeleteTable = () => setShowDeleteTableModal(true);
 
   /**
    * Toggle the dropdown open/closed state

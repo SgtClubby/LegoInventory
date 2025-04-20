@@ -122,8 +122,10 @@ export default function SearchSet({ setSetSearchResult }) {
 
         const data = await response.json();
 
-        if (data.results && data.results.length > 0) {
-          setResults(data.results);
+        console.log("Search results:", data);
+
+        if (data && data.length > 0) {
+          setResults(data);
           setIsDropdownOpen(true);
           setSelectedIndex(-1); // Reset selected index on new results
         } else {
@@ -238,7 +240,7 @@ export default function SearchSet({ setSetSearchResult }) {
               <div className="py-1 divide-y divide-slate-700">
                 {results.map((item, index) => (
                   <div
-                    key={item.set_num}
+                    key={item.setId}
                     className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-200 ${
                       index === selectedIndex
                         ? "bg-amber-600/20 hover:bg-amber-600/30"
@@ -247,10 +249,10 @@ export default function SearchSet({ setSetSearchResult }) {
                     onClick={() => handleSelectResult(item)}
                     onMouseEnter={() => handleMouseEnter(index)}
                   >
-                    {item.set_img_url ? (
+                    {item.setImage ? (
                       <img
-                        src={item.set_img_url}
-                        alt={item.name}
+                        src={item.setImage}
+                        alt={item.setName}
                         className="w-14 h-14 object-contain bg-slate-700 rounded"
                         loading="lazy"
                       />
@@ -262,19 +264,19 @@ export default function SearchSet({ setSetSearchResult }) {
 
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-slate-200 truncate">
-                        {item.name}
+                        {item.setName}
                       </div>
                       <div className="flex flex-wrap gap-2 text-sm">
                         <span className="text-slate-400">
-                          Set: {item.set_num}
+                          Set: {item.setId}
                         </span>
                         <span className="text-slate-400">•</span>
                         <span className="text-slate-400">
-                          Year: {item.year}
+                          Year: {item.setYear}
                         </span>
                         <span className="text-slate-400">•</span>
                         <span className="text-slate-400">
-                          Pieces: {item.num_parts}
+                          Pieces: {item.setNumParts}
                         </span>
                       </div>
                     </div>

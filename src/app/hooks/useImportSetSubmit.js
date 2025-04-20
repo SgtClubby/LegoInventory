@@ -42,11 +42,11 @@ export function useImportSetSubmit() {
 
     try {
       // Show loading state to the user
-      console.log(`Importing set ${details.set_num}: ${details.name}...`);
+      console.log(`Importing set ${details.setId}: ${details.setName}...`);
 
       // Fetch set parts with cached color data
       setImportProgress(20);
-      const res = await fetch(`/api/set/${details.set_num}/parts`, {
+      const res = await fetch(`/api/set/${details.setId}/parts`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -63,7 +63,7 @@ export function useImportSetSubmit() {
 
       if (!data || !data.results || data.results.length === 0) {
         showWarning(
-          `No parts found for set "${details.name}", might be an error, try again later...`,
+          `No parts found for set "${details.setName}", might be an error, try again later...`,
           {
             position: "top",
             autoCloseDelay: 3000,
@@ -91,8 +91,8 @@ export function useImportSetSubmit() {
       );
 
       // Create the table in the database
-      const tableName = `${details.name}`;
-      const tableDescription = `Set ${details.set_num}`;
+      const tableName = `${details.setName}`;
+      const tableDescription = `Set ${details.setId}`;
       console.log(`Creating new table: ${tableName}`);
 
       setImportProgress(60);
@@ -165,7 +165,7 @@ export function useImportSetSubmit() {
       }));
 
       setImportProgress(100);
-      showSuccess(`Set ${details.set_num} imported successfully!`, {
+      showSuccess(`Set ${details.setId} imported successfully!`, {
         position: "top",
         autoCloseDelay: 5000,
       });

@@ -156,11 +156,12 @@ export async function fetchRebrickable(url, options = {}, retryOptions = {}) {
   };
 
   // Handle relative or absolute URLs
-  const fullUrl = url.startsWith("http")
-    ? url
-    : `https://rebrickable.com/api/v3/lego/${
-        url.startsWith("/") ? url.substring(1) : url
-      }`;
+  const fullUrl =
+    url.startsWith("http") || url.startsWith("https")
+      ? url
+      : `https://rebrickable.com/api/v3/lego/${
+          url.startsWith("/") ? url.substring(1) : url
+        }`;
 
   // Use rate limiter by default for Rebrickable API
   const finalRetryOptions = {

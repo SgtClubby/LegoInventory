@@ -18,5 +18,17 @@ export async function GET(req, { params }) {
   }
 
   const data = await res.json();
-  return Response.json(data);
+  if (!data) {
+    return Response.json({ error: "Failed to fetch set content!" });
+  }
+
+  const setDetails = {
+    setId: data.set_num,
+    setName: data.name,
+    setYear: data.year,
+    setNumParts: data.num_parts,
+    setImage: data.set_img_url,
+  };
+
+  return Response.json(setDetails);
 }

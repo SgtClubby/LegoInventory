@@ -2,11 +2,8 @@
 
 import BaseController from "../BaseController";
 import dbConnect from "@/lib/Mongo/Mongo";
-import { MinifigMetadata, MinifigPriceMetadata } from "@/lib/Mongo/Schema";
 import externalApiService from "@/lib/API/ExternalApiService";
 import cacheManager from "@/lib/Cache/CacheManager";
-import { load } from "cheerio";
-import { findBestMatch } from "string-similarity";
 
 /**
  * Controller for BrickLink API interactions
@@ -93,23 +90,17 @@ class BricklinkController extends BaseController {
       }
 
       // Check if we already have this data cached
-      const existingMinifigCache = await MinifigMetadata.findOne({
-        minifigIdRebrickable: minifigIdRebrickable,
-      });
-
+      const existingMinifigCache = await cacheManager.getMinifigMetadata(
+        minifigIdRebrickable
+      );
       if (existingMinifigCache) {
         console.log(
           "Cache hit for minifigIdRebrickable:",
           minifigIdRebrickable
         );
 
-        const existingPriceDataCache = await MinifigPriceMetadata.findOne(
-          { minifigIdRebrickable: minifigIdRebrickable },
-          { minifigIdRebrickable: 0 }
-        );
-
         // Format the price data for response
-        const formattedPriceData = existingPriceDataCache?.priceData
+        const formattedPriceData = existingMinifigCache?.priceData
           ? this.formatPriceData(existingPriceDataCache.priceData)
           : this.getDefaultPriceData();
 
@@ -234,10 +225,9 @@ class BricklinkController extends BaseController {
             const { minifigIdRebrickable, minifigIdBricklink } = item;
 
             // Check if we already have price data in the database
-            const existingData = await MinifigPriceMetadata.findOne(
-              { minifigIdRebrickable },
-              { _id: 0, priceData: 1 }
-            ).lean();
+            const existingData = await cacheManager.getMinifigMetadata(
+              minifigIdRebrickable
+            )?.priceData;
 
             if (
               existingData &&
@@ -284,10 +274,14 @@ class BricklinkController extends BaseController {
             }
 
             // Store result in database
-            await MinifigPriceMetadata.updateOne(
-              { minifigIdRebrickable },
-              { $set: { priceData: result.priceData } },
-              { upsert: true }
+            await cacheManager.setMinifigMetadata(
+              {
+                minifigIdRebrickable,
+                minifigIdBricklink: result.minifigIdBricklink,
+                minifigName: result.minifigName,
+                minifigImage: item.minifigImage,
+              },
+              result.priceData
             );
 
             processedCount++;
@@ -336,13 +330,9 @@ class BricklinkController extends BaseController {
   async findBricklinkId(minifigIdRebrickable, minifigName = null) {
     try {
       // First check if we already have cached the BrickLink ID in the metadata
-      const existingMetadata = await MinifigMetadata.findOne(
-        {
-          minifigIdRebrickable,
-          minifigIdBricklink: { $exists: true, $ne: null },
-        },
-        { minifigIdBricklink: 1, _id: 0 }
-      ).lean();
+      const existingMetadata = await cacheManager.getMinifigMetadata(
+        minifigIdRebrickable
+      );
 
       if (existingMetadata?.minifigIdBricklink) {
         console.log(

@@ -1,0 +1,1272 @@
+openapi: 3.0.3
+info:
+  title: LEGO Inventory API
+  description: API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: API v1 Dev
+components:
+  schemas:
+    Table:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Table ID
+        name:
+          type: string
+          description: Table name
+        isMinifig:
+          type: boolean
+          description: Whether this is a minifig table
+      required:
+        - id
+        - name
+    TableInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Table name
+        isMinifig:
+          type: boolean
+          description: Whether this is a minifig table
+      required:
+        - name
+    Brick:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Brick ID
+        name:
+          type: string
+          description: Brick name
+        color:
+          type: string
+          description: Brick color
+      required:
+        - id
+        - name
+        - color
+    BrickInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Brick name
+        color:
+          type: string
+          description: Brick color
+      required:
+        - name
+        - color
+    BrickUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Updated brick name
+        color:
+          type: string
+          description: Updated brick color
+    Minifig:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Minifig ID
+        name:
+          type: string
+          description: Minifig name
+      required:
+        - id
+        - name
+    MinifigInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Minifig name
+      required:
+        - name
+    MinifigUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Updated minifig name
+    PartSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Part ID
+        name:
+          type: string
+          description: Part name
+      required:
+        - id
+        - name
+    SetSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Set ID
+        name:
+          type: string
+          description: Set name
+      required:
+        - id
+        - name
+    MinifigSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Minifig ID
+        name:
+          type: string
+          description: Minifig name
+      required:
+        - id
+        - name
+    PartDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Part ID
+        name:
+          type: string
+          description: Part name
+        category:
+          type: string
+          description: Part category
+      required:
+        - id
+        - name
+        - category
+    PartColor:
+      type: object
+      properties:
+        colorId:
+          type: string
+          description: Color ID
+        colorName:
+          type: string
+          description: Color name
+      required:
+        - colorId
+        - colorName
+    SetDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Set ID
+        name:
+          type: string
+          description: Set name
+        year:
+          type: integer
+          description: Year of release
+      required:
+        - id
+        - name
+        - year
+    SetPart:
+      type: object
+      properties:
+        partId:
+          type: string
+          description: Part ID
+        quantity:
+          type: integer
+          description: Quantity in set
+      required:
+        - partId
+        - quantity
+    PriceData:
+      type: object
+      properties:
+        minPriceNew:
+          type: number
+          description: Minimum price for new condition
+        maxPriceNew:
+          type: number
+          description: Maximum price for new condition
+        avgPriceNew:
+          type: number
+          description: Average price for new condition
+        minPriceUsed:
+          type: number
+          description: Minimum price for used condition
+        maxPriceUsed:
+          type: number
+          description: Maximum price for used condition
+        avgPriceUsed:
+          type: number
+          description: Average price for used condition
+        currencyCode:
+          type: string
+          description: Currency code (e.g., USD)
+        currencySymbol:
+          type: string
+          description: Currency symbol (e.g., $)
+    MinifigWithPrice:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: Minifig UUID
+        minifigIdRebrickable:
+          type: string
+          description: Rebrickable minifig ID
+        minifigIdBricklink:
+          type: string
+          description: BrickLink minifig ID
+        minifigName:
+          type: string
+          description: Minifig name
+        minifigImage:
+          type: string
+          description: URL to minifig image
+        minifigQuantity:
+          type: integer
+          description: Quantity of this minifig
+        highlighted:
+          type: boolean
+          description: Whether this minifig is highlighted
+        priceData:
+          $ref: "#/components/schemas/PriceData"
+    MinifigPriceInput:
+      type: object
+      properties:
+        minifigIdRebrickable:
+          type: string
+          description: Rebrickable minifig ID
+        minifigName:
+          type: string
+          description: Minifig name
+        minifigImage:
+          type: string
+          description: Minifig image URL (optional)
+      required:
+        - minifigIdRebrickable
+        - minifigName
+    BatchPriceInput:
+      type: array
+      items:
+        type: object
+        properties:
+          minifigIdRebrickable:
+            type: string
+            description: Rebrickable minifig ID
+          minifigIdBricklink:
+            type: string
+            description: BrickLink minifig ID (optional)
+        required:
+          - minifigIdRebrickable
+    BatchPriceResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Processing status message
+        batchId:
+          type: string
+          description: Unique batch identifier
+        count:
+          type: integer
+          description: Number of items in batch
+    ColorProcessingInput:
+      type: object
+      properties:
+        pieceIds:
+          type: array
+          items:
+            type: string
+          description: Array of piece IDs to process
+        tableId:
+          type: string
+          description: Table ID
+        ownerId:
+          type: string
+          description: Owner ID
+      required:
+        - pieceIds
+        - tableId
+        - ownerId
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Success message
+      required:
+        - message
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: Error code
+        message:
+          type: string
+          description: Error message
+      required:
+        - code
+        - message
+paths:
+  /bricklink:
+    post:
+      tags:
+        - BrickLink
+      summary: Fetch minifig price data from BrickLink
+      description: Fetches price data for a minifig from BrickLink
+      operationId: fetchMinifigPrice
+      requestBody:
+        description: Minifig data to look up
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MinifigPriceInput"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  minifigIdBricklink:
+                    type: string
+                  minifigName:
+                    type: string
+                  priceData:
+                    $ref: "#/components/schemas/PriceData"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Minifig not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /bricklink/price:
+    post:
+      tags:
+        - BrickLink
+      summary: Batch process minifig price data
+      description: Fetch price data from BrickLink for multiple minifigs
+      operationId: batchProcessPrices
+      requestBody:
+        description: Array of minifigs to process
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchPriceInput"
+      responses:
+        "200":
+          description: Successful operation - processing started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchPriceResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /set/postProcessColor:
+    post:
+      tags:
+        - Sets
+      summary: Post-process colors for parts in a set
+      description: Process color data for parts after set import
+      operationId: postProcessColor
+      requestBody:
+        description: Data for color processing
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ColorProcessingInput"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /set/{setId}/details:
+    get:
+      tags:
+        - Sets
+      summary: Get set details
+      description: Gets details for a specific LEGO set
+      operationId: getSetDetails
+      parameters:
+        - name: setId
+          in: path
+          description: Set ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetDetails"
+        "404":
+          description: Set not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /set/{setId}/parts:
+    get:
+      tags:
+        - Sets
+      summary: Get set parts
+      description: Gets all parts in a specific LEGO set
+      operationId: getSetParts
+      parameters:
+        - name: setId
+          in: path
+          description: Set ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SetPart"
+                  stats:
+                    type: object
+                    properties:
+                      totalParts:
+                        type: integer
+                      uniqueParts:
+                        type: integer
+                      partsWithCachedColors:
+                        type: integer
+                      processingTimeMs:
+                        type: integer
+        "404":
+          description: Set not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /part/{pieceId}/colors:
+    get:
+      tags:
+        - Parts
+      summary: Get part colors
+      description: Gets available colors for a specific LEGO part
+      operationId: getPartColors
+      parameters:
+        - name: pieceId
+          in: path
+          description: Part ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PartColor"
+        "404":
+          description: Part not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /image/{pieceId}/{colorId}:
+    get:
+      tags:
+        - Images
+      summary: Get part image
+      description: Gets an image for a specific LEGO part in a specific color
+      operationId: getPartImage
+      parameters:
+        - name: pieceId
+          in: path
+          description: Part ID
+          required: true
+          schema:
+            type: string
+        - name: colorId
+          in: path
+          description: Color ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  part_img_url:
+                    type: string
+                    format: uri
+        "404":
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /part/{pieceId}/details:
+    get:
+      tags:
+        - Parts
+      summary: Get part details
+      description: Gets details for a specific LEGO part
+      operationId: getPartDetails
+      parameters:
+        - name: pieceId
+          in: path
+          description: Part ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartDetails"
+        "404":
+          description: Part not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /search/part/{searchTerm}:
+    get:
+      tags:
+        - Search
+      summary: Search for LEGO parts
+      description: Searches for LEGO parts by name or ID
+      operationId: searchParts
+      parameters:
+        - name: searchTerm
+          in: path
+          description: Search term
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PartSearchResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /search/set/{searchTerm}:
+    get:
+      tags:
+        - Search
+      summary: Search for LEGO sets
+      description: Searches for LEGO sets by name or set number
+      operationId: searchSets
+      parameters:
+        - name: searchTerm
+          in: path
+          description: Search term
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SetSearchResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /search/minifig/{searchTerm}:
+    get:
+      tags:
+        - Search
+      summary: Search for LEGO minifigs
+      description: Searches for LEGO minifigs by name or ID
+      operationId: searchMinifigs
+      parameters:
+        - name: searchTerm
+          in: path
+          description: Search term
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MinifigSearchResult"
+                  note:
+                    type: string
+                  aborted:
+                    type: boolean
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /table/{tableId}/brick:
+    get:
+      tags:
+        - Bricks
+      summary: Get all bricks in a table
+      description: Returns all bricks in a specific table
+      operationId: getBricks
+      parameters:
+        - name: tableId
+          in: path
+          description: Table ID
+          required: true
+          schema:
+            type: string
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Brick"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - Bricks
+      summary: Add bricks to a table
+      description: Adds one or more bricks to a specific table
+      operationId: addBricks
+      parameters:
+        - name: tableId
+          in: path
+          description: Table ID
+          required: true
+          schema:
+            type: string
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      requestBody:
+        description: Bricks to add
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: array
+                  items:
+                    $ref: "#/components/schemas/BrickInput"
+                - $ref: "#/components/schemas/BrickInput"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /table/{tableId}/minifig:
+    get:
+      tags:
+        - Minifigs
+      summary: Get all minifigs in a table
+      description: Returns all minifigs in a specific table
+      operationId: getMinifigs
+      parameters:
+        - name: tableId
+          in: path
+          description: Table ID
+          required: true
+          schema:
+            type: string
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MinifigWithPrice"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - Minifigs
+      summary: Add minifigs to a table
+      description: Adds one or more minifigs to a specific table
+      operationId: addMinifigs
+      parameters:
+        - name: tableId
+          in: path
+          description: Table ID
+          required: true
+          schema:
+            type: string
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      requestBody:
+        description: Minifigs to add
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: array
+                  items:
+                    $ref: "#/components/schemas/MinifigInput"
+                - $ref: "#/components/schemas/MinifigInput"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /table/{tableId}/brick/{brickId}:
+    patch:
+      tags:
+        - Bricks
+      summary: Update a brick
+      description: Updates a specific brick in a table
+      operationId: updateBrick
+      parameters:
+        - name: tableId
+          in: path
+          description: Table ID
+          required: true
+          schema:
+            type: string
+        - name: brickId
+          in: path
+          description: Brick UUID
+          required: true
+          schema:
+            type: string
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      requestBody:
+        description: Updated brick properties
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrickUpdate"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Brick or table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags:
+        - Bricks
+      summary: Delete a brick
+      description: Deletes a specific brick from a table
+      operationId: deleteBrick
+      parameters:
+        - name: tableId
+          in: path
+          description: Table ID
+          required: true
+          schema:
+            type: string
+        - name: brickId
+          in: path
+          description: Brick UUID
+          required: true
+          schema:
+            type: string
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+  /table/{tableId}/minifig/{minifigId}:
+    patch:
+      tags:
+        - Minifigs
+      summary: Update a minifig
+      description: Updates a specific minifig in a table
+      operationId: updateMinifig
+      parameters:
+        - name: tableId
+          in: path
+          description: Table ID
+          required: true
+          schema:
+            type: string
+        - name: minifigId
+          in: path
+          description: Minifig UUID
+          required: true
+          schema:
+            type: string
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      requestBody:
+        description: Updated minifig properties
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MinifigUpdate"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Minifig or table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags:
+        - Minifigs
+      summary: Delete a minifig
+      description: Deletes a specific minifig from a table
+      operationId: deleteMinifig
+      parameters:
+        - name: tableId
+          in: path
+          description: Table ID
+          required: true
+          schema:
+            type: string
+        - name: minifigId
+          in: path
+          description: Minifig UUID
+          required: true
+          schema:
+            type: string
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Minifig or table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /tables:
+    get:
+      tags:
+        - Tables
+      summary: Get all tables
+      description: Returns all tables for the current user
+      operationId: getTables
+      parameters:
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Table"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - Tables
+      summary: Create a new table
+      description: Creates a new table for storing LEGO pieces or minifigs
+      operationId: createTable
+      parameters:
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+      requestBody:
+        description: Table to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TableInput"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Brick or table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags:
+        - Tables
+      summary: Delete a table
+      description: Deletes a table and all its contents
+      operationId: deleteTable
+      parameters:
+        - name: ownerId
+          in: header
+          description: Owner ID
+          required: false
+          schema:
+            type: string
+            default: default
+        - name: id
+          in: query
+          description: Table ID
+          required: true
+          schema:
+            type: string
+            default: default
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

@@ -17,15 +17,84 @@ class ExternalApiService {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3";
 
   /**
+   * Fetch set details from Rebrickable
+   *
+   * @param {string} searchTerm - Piece ID
+   * @returns {Promise<Array|null>} Array of set details or null
+   */
+  async searchSets(searchTerm) {
+    const data = await fetchRebrickable(
+      `sets/?search=${searchTerm}`,
+      {},
+      {
+        retries: 2,
+        onRetry: (attempt) =>
+          console.log(
+            `Retrying set search for ${searchTerm}, attempt ${attempt}`
+          ),
+      }
+    );
+
+    if (!data || !data.results) {
+      return null;
+    }
+
+    const formattedResults = data.results.map((item) => ({
+      setId: item.set_num,
+      setName: item.name,
+      setImage: item.set_img_url,
+      setYear: item.year,
+      setParts: item.num_parts,
+    }));
+
+    return formattedResults;
+  }
+
+  async searchParts(searchTerm) {
+    const data = await fetchRebrickable(
+      `parts/?search=${searchTerm}`,
+      {},
+      {
+        retries: 2,
+        onRetry: (attempt) =>
+          console.log(
+            `Retrying part search for ${searchTerm}, attempt ${attempt}`
+          ),
+      }
+    );
+
+    if (!data || !data.results) {
+      return null;
+    }
+
+    const formattedResults = data.results.map((item) => {
+      const fliteredNames = ["Duplo", "Modulex"];
+
+      // Filter out items with names that contain any of the filtered names
+      if (fliteredNames.some((name) => item.name.includes(name))) {
+        return null;
+      }
+
+      return {
+        elementId: item.part_num,
+        elementName: item.name,
+        elementImage: item.part_img_url,
+      };
+    });
+
+    return formattedResults.filter((item) => item != null);
+  }
+
+  /**
    * Fetch part details from Rebrickable
    *
-   * @param {string} partId - Part ID
-   * @returns {Promise<Object|null>} Part details or null
+   * @param {string} pieceId - Piece ID
+   * @returns {Promise<Object|null>} Piece details or null
    */
-  async fetchPartDetails(partId) {
+  async fetchPartDetails(pieceId) {
     try {
       // Check cache first
-      const cachedData = await cacheManager.getBrickMetadata(partId);
+      const cachedData = await cacheManager.getBrickMetadata(pieceId);
       if (cachedData && !cachedData.cacheIncomplete) {
         return {
           part_num: cachedData.elementId,
@@ -36,30 +105,67 @@ class ExternalApiService {
 
       // Fetch from API if not in cache
       const data = await fetchRebrickable(
-        `parts/${partId}`,
+        `parts/${pieceId}`,
         {},
         {
           retries: 2,
           onRetry: (attempt) =>
             console.log(
-              `Retrying part details fetch for ${partId}, attempt ${attempt}`
+              `Retrying part details fetch for ${pieceId}, attempt ${attempt}`
             ),
         }
       );
 
+      const colorData = await this.fetchPartColors(pieceId);
+
       // Cache the result for future use
       if (data && data.part_num) {
         await cacheManager.setBrickMetadata({
-          elementId: data.part_num,
-          elementName: data.name,
+          elementId: pieceId,
+          elementName: data.name || `Part ${pieceId}`, // Placeholder name if not available
+          availableColors: colorData || [],
           invalid: false,
-          cacheIncomplete: false,
+          cacheIncomplete: false, // Mark as complete since we have full metadata
         });
       }
 
       return data;
     } catch (error) {
-      console.error(`Error fetching part details for ${partId}:`, error);
+      console.error(`Error fetching part details for ${pieceId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Improved fetchImageForPiece function with better error handling
+   *
+   * @param {string} pieceId - The part element ID
+   * @param {string} colorId - The color ID
+   * @returns {Promise<string|null>} The image URL or null if fetch fails
+   */
+  async fetchImageForPiece(pieceId, colorId) {
+    if (!pieceId || colorId === undefined || colorId === null) {
+      console.warn("fetchImageForPiece called without valid IDs", {
+        pieceId,
+        colorId,
+      });
+      return null;
+    }
+
+    try {
+      console.log(`Fetching image for part ${pieceId} with color ${colorId}`);
+      const data = await fetchRebrickable(
+        `parts/${pieceId}/colors/${colorId}/`
+      );
+
+      // Make sure we're returning the correct property
+      if (data && data.part_img_url) {
+        return data.part_img_url;
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error("Error fetching image:", error);
       return null;
     }
   }
@@ -67,30 +173,26 @@ class ExternalApiService {
   /**
    * Fetch part colors from Rebrickable
    *
-   * @param {string} partId - Part ID
+   * @param {string} pieceId - Part ID
    * @returns {Promise<Array|null>} Array of colors or null
    */
-  async fetchPartColors(partId) {
+  async fetchPartColors(pieceId) {
     try {
       // Check cache first
-      const cachedData = await cacheManager.getBrickMetadata(partId);
-      if (
-        cachedData &&
-        !cachedData.cacheIncomplete &&
-        cachedData.availableColors
-      ) {
+      const cachedData = await cacheManager.getBrickMetadata(pieceId);
+      if (cachedData && !cachedData.cacheIncomplete) {
         return cachedData.availableColors;
       }
 
       // Fetch from API if not in cache
       const data = await fetchRebrickable(
-        `parts/${partId}/colors/`,
+        `parts/${pieceId}/colors/`,
         {},
         {
           retries: 2,
           onRetry: (attempt) =>
             console.log(
-              `Retrying colors fetch for ${partId}, attempt ${attempt}`
+              `Retrying colors fetch for ${pieceId}, attempt ${attempt}`
             ),
         }
       );
@@ -106,7 +208,7 @@ class ExternalApiService {
         elementImage: item.part_img_url,
       }));
 
-      // Cache the result
+      // Cache the result if we found a cache entry, but cacheIncomplete is true
       if (cachedData) {
         await cacheManager.setBrickMetadata({
           ...cachedData,
@@ -115,8 +217,8 @@ class ExternalApiService {
         });
       } else {
         await cacheManager.setBrickMetadata({
-          elementId: partId,
-          elementName: `Part ${partId}`, // Placeholder name
+          elementId: pieceId,
+          elementName: `Part ${pieceId}`, // Placeholder name
           availableColors: formattedColors,
           invalid: false,
           cacheIncomplete: true, // Mark as incomplete since we don't have full metadata
@@ -125,7 +227,7 @@ class ExternalApiService {
 
       return formattedColors;
     } catch (error) {
-      console.error(`Error fetching part colors for ${partId}:`, error);
+      console.error(`Error fetching part colors for ${pieceId}:`, error);
       return null;
     }
   }

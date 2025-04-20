@@ -7,16 +7,16 @@ import { useStatus } from "@/Context/StatusContext";
 import { useLego } from "@/Context/LegoContext";
 import LoaderIcon from "@/Components/Misc/LoaderIcon";
 
-export default function ImportSetModal({ toggleModal, searchResult }) {
+export default function ImportSetModal({ searchResult }) {
   const [setDetails, setSetDetails] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const { handleImportSetSubmit } = useImportSetSubmit();
-  const { setActiveTab } = useLego();
+  const { setActiveTab, setShowImportModal } = useLego();
   const { showError } = useStatus();
 
   // Handle set import search result
   useEffect(() => {
-    if (searchResult?.set_num) {
+    if (searchResult?.setId) {
       setSetDetails(searchResult);
     }
   }, [searchResult]);
@@ -42,7 +42,7 @@ export default function ImportSetModal({ toggleModal, searchResult }) {
     try {
       await handleImportSetSubmit(setDetails);
       setActiveTab("all");
-      toggleModal(false);
+      setShowImportModal(false);
     } catch (error) {
       showError(`Failed to import set: ${error.message}`, {
         position: "top",
@@ -57,7 +57,7 @@ export default function ImportSetModal({ toggleModal, searchResult }) {
 
   const handleClose = () => {
     if (isImporting) return; // Prevent closing during import
-    toggleModal(false);
+    setShowImportModal(false);
   };
 
   return (
@@ -79,19 +79,19 @@ export default function ImportSetModal({ toggleModal, searchResult }) {
             <div className="my-6">
               <div className="bg-slate-700/50 rounded-lg border border-slate-600/50 p-5">
                 <h3 className="text-xl font-semibold text-white text-center mb-4">
-                  {setDetails.name}
+                  {setDetails.setName}
                 </h3>
 
                 <div className="flex flex-col md:flex-row gap-6 items-center">
                   <div className="relative">
                     <img
                       loading="lazy"
-                      src={setDetails.set_img_url}
-                      alt={setDetails.name}
+                      src={setDetails.setImage}
+                      alt={setDetails.setName}
                       className="w-52 h-auto rounded-md shadow-md border border-slate-600 transition-transform duration-200 hover:scale-105"
                     />
                     <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-md">
-                      {setDetails.set_num}
+                      {setDetails.setId}
                     </div>
                   </div>
 
@@ -99,21 +99,21 @@ export default function ImportSetModal({ toggleModal, searchResult }) {
                     <div className="flex justify-between items-center pb-2 border-b border-slate-600/50">
                       <span className="text-slate-300">Set Number:</span>
                       <span className="text-white font-medium">
-                        {setDetails.set_num}
+                        {setDetails.setId}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center pb-2 border-b border-slate-600/50">
                       <span className="text-slate-300">Released:</span>
                       <span className="text-white font-medium">
-                        {setDetails.year}
+                        {setDetails.setYear}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center pb-2 border-b border-slate-600/50">
                       <span className="text-slate-300">Piece Count:</span>
                       <span className="text-white font-medium">
-                        {setDetails.num_parts}
+                        {setDetails.setNumParts}
                       </span>
                     </div>
 

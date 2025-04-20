@@ -92,7 +92,7 @@ export async function deleteTable(table) {
       throw new Error("Invalid table");
     }
 
-    const url = apiUrlBuilder.local("table/tables");
+    const url = apiUrlBuilder.local("table/tables?id=" + table.id);
     const response = await fetchJSON(
       url,
       {
@@ -100,7 +100,6 @@ export async function deleteTable(table) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(table),
       },
       {
         retries: 1,

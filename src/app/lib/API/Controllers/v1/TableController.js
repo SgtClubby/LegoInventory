@@ -2,7 +2,7 @@
 
 import BaseController from "../BaseController";
 import dbConnect from "@/lib/Mongo/Mongo";
-import { Table } from "@/lib/Mongo/Schema";
+import { Table, UserBrick, UserMinifig } from "@/lib/Mongo/Schema";
 
 /**
  * Controller for managing tables
@@ -138,26 +138,34 @@ class TableController extends BaseController {
   async delete(req) {
     await dbConnect();
     const ownerId = this.getOwnerId(req);
-    const table = await req.json();
+
+    const id = new URL(req.url).searchParams.get("id");
+    const table = await Table.findOne({ id, ownerId });
 
     if (!table || !table.id) {
-      return this.errorResponse("Missing table data", 400);
+      return this.errorResponse("Table does not exist.", 404);
     }
 
-    try {
-      const { id, isMinifig } = table;
+    const isMinifig = table.isMinifig || false;
 
-      // Delete the table
+    try {
       await Table.deleteOne({ id, ownerId });
 
-      // Records will be deleted by a separate controller
-      return this.successResponse(
-        { id, isMinifig },
-        "Table deleted successfully"
-      );
+      if (isMinifig) {
+        // If it's a minifig table, delete associated UserMinifig documents
+        await UserMinifig.deleteMany({ tableId: id, ownerId });
+      } else {
+        // If it's a piece table, delete associated UserBrick documents
+        await UserBrick.deleteMany({ tableId: id, ownerId });
+      }
+
+      return Response.json({ success: true });
     } catch (e) {
       console.error("Error deleting table:", e);
-      return this.errorResponse("Failed to delete table", 500);
+      return Response.json(
+        { error: "Failed to delete table" },
+        { status: 500 }
+      );
     }
   }
 }

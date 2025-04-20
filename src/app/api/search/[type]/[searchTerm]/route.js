@@ -1,7 +1,5 @@
 // src/app/api/search/[type]/[searchTerm]/route.js
 
-import { abort } from "process";
-
 export async function GET(req, { params }) {
   const { type, searchTerm } = await params;
   if (!searchTerm) {
@@ -14,7 +12,7 @@ export async function GET(req, { params }) {
 
   if (type === "part") {
     const data = await searchPart(searchTerm);
-    data.results = data.results.map((item) => {
+    const formattedResults = data.results.map((item) => {
       const fliteredNames = ["Duplo", "Modulex"];
 
       // Filter out items with names that contain any of the filtered names
@@ -23,14 +21,15 @@ export async function GET(req, { params }) {
       }
 
       return {
-        part_num: item.part_num,
-        name: item.name,
-        part_img_url: item.part_img_url,
+        elementId: item.part_num,
+        elementName: item.name,
+        elementImage: item.part_img_url,
       };
     });
-    data.results = data.results.filter((item) => item != null);
 
-    return Response.json(data);
+    const filteredData = formattedResults.filter((item) => item != null);
+
+    return Response.json(filteredData);
   }
 
   if (type === "minifig") {
@@ -58,7 +57,25 @@ async function searchSet(searchTerm) {
   }
 
   const data = await res.json();
-  return Response.json(data);
+
+  if (!data.results || data.results.length === 0) {
+    return Response.json({
+      results: [],
+      note: "No sets found in search.",
+    });
+  }
+
+  const filteredResults = data.results.map((item) => {
+    return {
+      setId: item.set_num,
+      setName: item.name,
+      setImage: item.set_img_url,
+      setYear: item.year,
+      setNumParts: item.num_parts,
+    };
+  });
+
+  return Response.json(filteredResults);
 }
 
 // Endpoint /api/search/[type]/[searchTerm]

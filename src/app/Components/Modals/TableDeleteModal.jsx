@@ -9,7 +9,7 @@ export default function TableDeleteModal({ toggleModal }) {
   const {
     availableTables,
     setAvailableTables,
-    setDeleteShowModal,
+    setShowDeleteTableModal,
     selectedTable,
     setSelectedTable,
     setPiecesByTable,
@@ -39,7 +39,7 @@ export default function TableDeleteModal({ toggleModal }) {
 
     setAvailableTables(updatedTables);
     deleteTable(selectedTable);
-    setDeleteShowModal(false);
+    setShowDeleteTableModal(false);
     setSelectedTable(
       updatedTables.find((t) => t.id === "1") || updatedTables[0] || null
     );

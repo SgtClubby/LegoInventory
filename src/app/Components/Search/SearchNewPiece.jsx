@@ -120,8 +120,8 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
 
         const data = await response.json();
 
-        if (data.results && data.results.length > 0) {
-          setResults(data.results);
+        if (data && data.length > 0) {
+          setResults(data);
           setIsDropdownOpen(true);
           setSelectedIndex(-1); // Reset selected index on new results
         } else {
@@ -219,21 +219,21 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
             {/* Scrollable results area */}
             <div className="overflow-auto scrollbar-thin scrollbar-thumb-slate-600 flex-grow">
               <div className="py-1 divide-y divide-slate-700">
-                {results.map((item, index) => (
+                {results.map((element, index) => (
                   <div
-                    key={item.part_num + "-" + index}
+                    key={element.elementId + "-" + index}
                     className={`flex items-center gap-3 px-4 py-3 cursor-pointer ${
                       index === selectedIndex
                         ? "bg-emerald-600/20 hover:bg-emerald-600/30"
                         : "hover:bg-slate-700/70"
                     }`}
-                    onClick={() => handleSelectResult(item)}
+                    onClick={() => handleSelectResult(element)}
                     onMouseEnter={() => setSelectedIndex(index)}
                   >
-                    {item.part_img_url ? (
+                    {element.elementImage ? (
                       <img
-                        src={item.part_img_url}
-                        alt={item.name}
+                        src={element.elementImage}
+                        alt={element.elementName}
                         className="w-12 h-12 object-cover bg-slate-700 rounded"
                         loading="lazy"
                       />
@@ -245,10 +245,10 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
 
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-slate-200 truncate">
-                        {item.name}
+                        {element.elementName}
                       </div>
                       <div className="text-sm text-slate-400">
-                        ID: {item.part_num}
+                        ID: {element.elementId}
                       </div>
                     </div>
 

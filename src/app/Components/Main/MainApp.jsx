@@ -9,7 +9,7 @@ import PieceTable from "@/Components/Table/PieceTable";
 import SearchSet from "@/Components/Search/SearchSet";
 import ImportSetModal from "@/Components/Modals/ImportSetModal";
 import ImportExport from "@/Components/Misc/ImportExport";
-import AddNewPieceForm from "./AddNewPieceForm";
+import AddNewForm from "@/Components/AddNewElement/AddNewForm";
 import TableAddModal from "@/Components/Modals/TableAddModal";
 import TableDeleteModal from "@/Components/Modals/TableDeleteModal";
 
@@ -33,7 +33,7 @@ import DeletePieceModal from "@/Components/Modals/DeletePieceModal";
  */
 const MainApp = () => {
   // Modal state for set import
-  const [searchResult, setSearchResult] = useState(null);
+  const [searchResult, setSearchResult] = useState([]);
   const [prevActiveTab, setPrevActiveTab] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [containerHeight, setContainerHeight] = useState("auto");
@@ -52,8 +52,8 @@ const MainApp = () => {
     showImportModal,
     showAddModal,
     setAddShowModal,
-    showDeleteModal,
-    setDeleteShowModal,
+    showDeleteTableModal,
+    setShowDeleteTableModal,
     deleteModalOpen,
     setDeleteModalOpen,
     pieceToDelete,
@@ -110,7 +110,7 @@ const MainApp = () => {
 
   // Handle import modal
   useEffect(() => {
-    if (searchResult && searchResult.set_num) {
+    if (searchResult && searchResult.setId) {
       setShowImportModal(true);
     }
   }, [searchResult]);
@@ -294,7 +294,7 @@ const MainApp = () => {
 
           {/* Add New Piece Tab */}
           <div ref={contentRefs.current.add} className={getTabClasses("add")}>
-            <AddNewPieceForm />
+            <AddNewForm />
           </div>
 
           {/* Import Set Tab */}
@@ -369,11 +369,12 @@ const MainApp = () => {
       </div>
       {showAddModal.show && <TableAddModal toggleModal={setAddShowModal} />}
       {/* Modal for deleting a table */}
-      {showDeleteModal && <TableDeleteModal toggleModal={setDeleteShowModal} />}
+      {showDeleteTableModal && (
+        <TableDeleteModal toggleModal={setShowDeleteTableModal} />
+      )}
       {/* Import Set Modal */}
       {showImportModal && (
         <ImportSetModal
-          toggleModal={setShowImportModal}
           searchResult={searchResult}
           setSearchResult={setSearchResult}
         />

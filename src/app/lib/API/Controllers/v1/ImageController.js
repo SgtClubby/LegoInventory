@@ -1,10 +1,9 @@
 // src/app/lib/API/Controllers/v1/ImageController.js
 
 import BaseController from "../BaseController";
-import { BrickMetadata } from "@/lib/Mongo/Schema";
+import cacheManager from "@/lib/Cache/CacheManager";
 import dbConnect from "@/lib/Mongo/Mongo";
 import externalApiService from "@/lib/API/ExternalApiService";
-
 /**
  * Controller for handling LEGO part images
  */
@@ -35,7 +34,7 @@ class ImageController extends BaseController {
       // Check if we already have this image cached in our metadata
       const existingImage = await this.checkExistingImage(pieceId, colorId);
       if (existingImage) {
-        return this.successResponse({ part_img_url: existingImage });
+        return this.successResponse({ elementImage: existingImage });
       }
 
       // If not found in our database, fetch from external API service
@@ -48,10 +47,7 @@ class ImageController extends BaseController {
         return this.errorResponse("Image not found", 404);
       }
 
-      // Cache this image URL in our database (don't await to keep response fast)
-      this.cacheImageUrl(pieceId, colorId, imageUrl);
-
-      return this.successResponse({ part_img_url: imageUrl });
+      return this.successResponse({ elementImage: imageUrl });
     } catch (error) {
       console.error(
         `Error fetching image for pieceId ${pieceId} and colorId ${colorId}:`,
@@ -66,15 +62,12 @@ class ImageController extends BaseController {
    *
    * @param {string} pieceId - The piece ID
    * @param {string} colorId - The color ID
-   * @returns {string|null} Image URL if found, null otherwise
+   * @returns {Promise<string|null>} Image URL if found, null otherwise
    */
   async checkExistingImage(pieceId, colorId) {
     try {
       // Find the brick metadata
-      const metadata = await BrickMetadata.findOne(
-        { elementId: pieceId },
-        { availableColors: 1 }
-      ).lean();
+      const metadata = cacheManager.getBrickMetadata(pieceId);
 
       // If we have metadata with available colors
       if (
@@ -98,31 +91,6 @@ class ImageController extends BaseController {
       console.error("Error checking existing image:", error);
       return null;
     }
-  }
-
-  /**
-   * Cache image URL for future use
-   *
-   * @param {string} pieceId - The piece ID
-   * @param {string} colorId - The color ID
-   * @param {string} imageUrl - The image URL to cache
-   */
-  cacheImageUrl(pieceId, colorId, imageUrl) {
-    // Update metadata with new image URL
-    BrickMetadata.updateOne(
-      {
-        elementId: pieceId,
-        "availableColors.colorId": colorId.toString(),
-      },
-      {
-        $set: { "availableColors.$.elementImage": imageUrl },
-      }
-    ).catch((err) => {
-      console.error(
-        `Error caching image URL for part ${pieceId}, color ${colorId}:`,
-        err
-      );
-    });
   }
 }
 

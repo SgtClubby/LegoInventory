@@ -17,12 +17,6 @@ export async function GET(req, { params }) {
     return Response.json({ error: "Missing piece ID" }, { status: 400 });
   }
 
-  let cacheIncomplete = false;
-  if (pieceId.endsWith("-ic")) {
-    pieceId = pieceId.slice(0, -3); // Remove the "-ic" suffix
-    cacheIncomplete = true;
-  }
-
   try {
     await dbConnect();
 
@@ -38,7 +32,7 @@ export async function GET(req, { params }) {
     }
 
     // Try to find colors in cache first
-    const ColorCache = await BrickMetadata.findOne(
+    const existingCache = await BrickMetadata.findOne(
       {
         elementId: { $eq: pieceId },
       },
@@ -51,12 +45,11 @@ export async function GET(req, { params }) {
 
     // Validate cache data
     if (
-      ColorCache?.availableColors?.length > 0 &&
-      !cacheIncomplete &&
-      !ColorCache.cacheIncomplete
+      existingCache?.availableColors?.length > 0 &&
+      !existingCache.cacheIncomplete
     ) {
       console.log("HIT! Cache found for pieceId:", pieceId);
-      return Response.json(ColorCache.availableColors);
+      return Response.json(existingCache.availableColors);
     }
 
     // If not in cache or invalid, fetch from Rebrickable API
@@ -72,23 +65,25 @@ export async function GET(req, { params }) {
     );
 
     if (!res.ok) {
-      // Mark as invalid in database
+      return Response.json(
+        { error: "Failed to fetch!" },
+        { status: res.status }
+      );
+    }
+
+    if (res.status === 404) {
+      // If the part is not found, mark it as invalid in the database
       await BrickMetadata.updateOne(
         { elementId: pieceId },
         {
           $set: {
             invalid: true,
-            elementName: "Invalid/Missing ID",
-            availableColors: [{ empty: true }],
+            cacheIncomplete: false, // Mark as complete even if invalid
           },
         },
         { upsert: true }
       );
-
-      return Response.json(
-        { error: "Failed to fetch!" },
-        { status: res.status }
-      );
+      return Response.json({ error: "Part not found" }, { status: 404 });
     }
 
     const data = await res.json();
@@ -99,7 +94,6 @@ export async function GET(req, { params }) {
         { elementId: pieceId },
         {
           $set: {
-            availableColors: [],
             invalid: false, // Not invalid, just no colors
             cacheIncomplete: true, // Mark as cache incomplete
           },

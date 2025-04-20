@@ -17,7 +17,7 @@ export function LegoProvider({ children }) {
     show: false,
     isMinifig: false,
   });
-  const [showDeleteModal, setDeleteShowModal] = useState(false);
+  const [showDeleteTableModal, setShowDeleteTableModal] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [pieceToDelete, setPieceToDelete] = useState(null);
 
@@ -55,8 +55,8 @@ export function LegoProvider({ children }) {
         showImportModal,
         setAddShowModal,
         showAddModal,
-        setDeleteShowModal,
-        showDeleteModal,
+        setShowDeleteTableModal,
+        showDeleteTableModal,
         deleteModalOpen,
         setDeleteModalOpen,
         pieceToDelete,

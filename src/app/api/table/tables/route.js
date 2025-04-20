@@ -124,24 +124,26 @@ export async function DELETE(req) {
   await dbConnect();
 
   const ownerId = req.headers.get("ownerId") || "default";
-  const table = await req.json();
+  // ID is in query params
+  const id = new URL(req.url).searchParams.get("id");
+  const table = await Table.findOne({ id, ownerId });
+  const isMinifig = table?.isMinifig || false;
 
-  if (!table) {
-    return Response.json({ error: "Missing table entry!" }, { status: 400 });
+  if (!id) {
+    return Response.json({ error: "Missing table ID!" }, { status: 400 });
   }
 
-  // Destructuring table properties
-  const { id, isMinifig } = table;
-
   try {
-    Table.deleteOne({ id, ownerId });
+    await Table.deleteOne({ id, ownerId });
+
     if (isMinifig) {
       // If it's a minifig table, delete associated UserMinifig documents
-      UserMinifig.deleteMany({ tableId: id, ownerId });
+      await UserMinifig.deleteMany({ tableId: id, ownerId });
     } else {
       // If it's a piece table, delete associated UserBrick documents
-      UserBrick.deleteMany({ tableId: id, ownerId });
+      await UserBrick.deleteMany({ tableId: id, ownerId });
     }
+
     return Response.json({ success: true });
   } catch (e) {
     console.error("Error deleting table:", e);

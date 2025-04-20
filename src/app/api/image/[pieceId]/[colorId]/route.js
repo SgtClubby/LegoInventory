@@ -23,7 +23,7 @@ export async function GET(_req, { params }) {
       console.log(
         `Image found in database for pieceId ${pieceId} and colorId ${colorId}`
       );
-      return Response.json({ part_img_url: existingImage }, { status: 200 });
+      return Response.json({ elementImage: existingImage }, { status: 200 });
     }
 
     // If not found in our database, fetch from Rebrickable API
@@ -33,14 +33,11 @@ export async function GET(_req, { params }) {
       console.log(
         `Image not found for pieceId ${pieceId} and colorId ${colorId}`
       );
-      return Response.json({ part_img_url: null }, { status: 404 });
+      return Response.json({ elementImage: null }, { status: 404 });
     }
 
-    // Cache this image URL in our database (don't await to keep response fast)
-    cacheImageUrl(pieceId, colorId, result.part_img_url);
-
     return Response.json(
-      { part_img_url: result.part_img_url },
+      { elementImage: result.part_img_url },
       { status: 200 }
     );
   } catch (error) {
@@ -92,39 +89,11 @@ async function checkExistingImage(pieceId, colorId) {
 }
 
 /**
- * Cache image URL for future use
- *
- * @param {string} pieceId - The piece ID
- * @param {string} colorId - The color ID
- * @param {string} imageUrl - The image URL to cache
- */
-function cacheImageUrl(pieceId, colorId, imageUrl) {
-  // Update both the metadata and color cache
-  Promise.all([
-    // Update brick metadata
-    BrickMetadata.updateOne(
-      {
-        elementId: pieceId,
-        "availableColors.colorId": colorId,
-      },
-      {
-        $set: { "availableColors.$.elementImage": imageUrl },
-      }
-    ),
-  ]).catch((err) => {
-    console.error(
-      `Error caching image URL for part ${pieceId}, color ${colorId}:`,
-      err
-    );
-  });
-}
-
-/**
  * Fetch image from Rebrickable API
  *
  * @param {string} pieceId - The piece ID
  * @param {string} colorId - The color ID
- * @returns {Object} Object with status and part_img_url
+ * @returns {Object} Object with status and elementImage
  */
 export async function fetchImageFromRebrickable(pieceId, colorId) {
   const url = `https://rebrickable.com/api/v3/lego/parts/${pieceId}/colors/${colorId}/`;
@@ -142,7 +111,7 @@ export async function fetchImageFromRebrickable(pieceId, colorId) {
     }
 
     const data = await res.json();
-    
+
     return { part_img_url: data?.part_img_url || null, status: res.status };
   } catch (err) {
     console.error(

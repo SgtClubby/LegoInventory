@@ -51,8 +51,10 @@ export function errorResponse(message, status = 400) {
  */
 export function successResponse(data = {}, message = "Operation successful") {
   return jsonResponse({
-    success: true,
-    message,
+    request: {
+      success: true,
+      message,
+    },
     ...data,
   });
 }

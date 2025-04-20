@@ -1,4 +1,4 @@
-// src/app/colors/colors.js
+// src/app/Colors/colors.js
 
 const colors = [
   {

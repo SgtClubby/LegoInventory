@@ -28,9 +28,25 @@ class SearchController extends BaseController {
     }
 
     try {
-      const data = await externalApiService.searchSets(searchTerm);
+      // Cancel any previous ongoing search
+      if (this.searchAbortController) {
+        this.searchAbortController.abort();
+      }
+      // Create a new abort controller for this search
+      this.searchAbortController = new AbortController();
+
+      const data = await externalApiService.searchSets(searchTerm, {
+        signal: this.searchAbortController.signal,
+      });
       return this.successResponse(data);
     } catch (error) {
+      if (error.name === "AbortError") {
+        console.log(`Search for set ${searchTerm} was aborted`);
+        return this.successResponse({
+          aborted: true,
+          results: [],
+        });
+      }
       console.error("Error searching sets:", error);
       return this.errorResponse(`Failed to search sets: ${error.message}`, 500);
     }
@@ -52,24 +68,26 @@ class SearchController extends BaseController {
     }
 
     try {
-      const data = await externalApiService.searchParts(searchTerm);
+      // Cancel any previous ongoing search
+      if (this.searchAbortController) {
+        this.searchAbortController.abort();
+      }
+      // Create a new abort controller for this search
+      this.searchAbortController = new AbortController();
 
-      // Filter out unwanted items
-      const filteredResults = data.results
-        .filter((item) => {
-          const filteredNames = ["Duplo", "Modulex"];
-          return !filteredNames.some((name) => item.name.includes(name));
-        })
-        .map((item) => ({
-          part_num: item.part_num,
-          name: item.name,
-          part_img_url: item.part_img_url,
-        }));
-
-      data.results = filteredResults;
+      const data = await externalApiService.searchParts(searchTerm, {
+        signal: this.searchAbortController.signal,
+      });
 
       return this.successResponse(data);
     } catch (error) {
+      if (error.name === "AbortError") {
+        console.log(`Search for part ${searchTerm} was aborted`);
+        return this.successResponse({
+          aborted: true,
+          results: [],
+        });
+      }
       console.error("Error searching parts:", error);
       return this.errorResponse(
         `Failed to search parts: ${error.message}`,
