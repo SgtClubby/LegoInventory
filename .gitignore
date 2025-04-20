@@ -48,3 +48,8 @@ next-env.d.ts
 cache.json
 real_fake_data.json
 package-lock.json
+
+launch.json
+.vscode
+minifigs.json
+pieces.json
