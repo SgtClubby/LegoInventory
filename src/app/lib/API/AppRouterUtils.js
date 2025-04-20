@@ -1,4 +1,4 @@
-// src/app/lib/Misc/AppRouterUtils.js
+// src/app/lib/API/AppRouterUtils.js
 
 /**
  * Helper function to properly extract and await params from Next.js App Router

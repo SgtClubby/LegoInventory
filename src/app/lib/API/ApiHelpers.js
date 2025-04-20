@@ -1,7 +1,5 @@
 // src/app/lib/API/ApiHelpers.js
 
-// src/app/lib/Misc/ApiHelpers.js
-
 /**
  * Safely extracts parameters from route params
  * Handles NextJS App Router parameter format correctly

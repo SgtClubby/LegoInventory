@@ -1,7 +1,5 @@
 // src/app/lib/API/RateLimiter.js
 
-// src/app/lib/Misc/RateLimiter.js
-
 /**
  * A utility to manage API rate limiting for external services
  * particularly useful for the Rebrickable API which has strict rate limits

@@ -1,7 +1,5 @@
 // src/app/lib/Cache/CacheManager.js
 
-// src/app/lib/Misc/CacheManager.js
-
 import dbConnect from "@/lib/Mongo/Mongo";
 import {
   BrickMetadata,

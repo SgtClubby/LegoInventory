@@ -1,7 +1,5 @@
 // src/app/lib/Color/ColorMapper.js
 
-// src/app/lib/Misc/ColorMapper.js
-
 import bricklinkMap from "@/Colors/bricklinkMap";
 import colors from "@/Colors/colors";
 

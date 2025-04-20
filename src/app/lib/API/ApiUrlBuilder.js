@@ -1,7 +1,5 @@
 // src/app/lib/API/ApiUrlBuilder.js
 
-// src/app/lib/Misc/ApiUrlBuilder.js
-
 /**
  * Builds URLs for external APIs consistently
  */

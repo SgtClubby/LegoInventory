@@ -1,7 +1,5 @@
 // src/app/lib/API/FetchUtils.js
 
-// src/app/lib/Misc/FetchUtils.js./RateLimiter
-
 import rebrickableRateLimiter from "../API/RateLimiter";
 
 /**

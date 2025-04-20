@@ -1,9 +1,5 @@
 // src/app/lib/API/ExternalApiService.js
 
-// src/app/lib/Misc/ExternalApiService.js
-
-// src/app/lib/Services/ExternalApiService.js
-
 import { fetchRebrickable, fetchWithRetry } from "@/lib/API/FetchUtils";
 import apiUrlBuilder from "@/lib/API/ApiUrlBuilder";
 import cacheManager from "@/lib/Cache/CacheManager";
