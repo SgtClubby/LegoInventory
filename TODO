@@ -3,11 +3,7 @@ Incorporate data from https://brickset.com/api/v3.asmx?op=getInstructions2 for s
 
 Add support for set images
 
-Minifig support list support
-
-Piece price support (perhaps only lego figs)
-
-Minor rebrickable/brickset api wrapper?
+Minor rebrickable/brickset api wrapper? (iguess finished, still need testing)
 
 Element cache wrapper
 
