@@ -51,13 +51,27 @@ export async function POST(req, { params }) {
   const { tableId } = await params;
   const body = await req.json();
 
+  const data = Array.isArray(body) ? body : [body];
+
   if (!tableId) {
     return Response.json({ error: "Missing table ID" }, { status: 400 });
   }
 
-  // Assume body contains a single brick or array of bricks
-  const bricks = Array.isArray(body) ? body : [body];
+  const currentTable = await Table.findOne({
+    id: tableId,
+    ownerId,
+  }).lean();
 
+  const isMinifig = currentTable?.isMinifig || false;
+
+  if (!isMinifig) {
+    return saveBricks(tableId, ownerId, data);
+  } else {
+    return saveMinifigs(tableId, ownerId, data);
+  }
+}
+
+async function saveBricks(tableId, ownerId, bricks) {
   try {
     const bricksToInsert = [];
     const metadataToUpsert = [];
@@ -108,6 +122,97 @@ export async function POST(req, { params }) {
     console.error("Error saving bricks:", e);
     return Response.json(
       { error: "Failed to save bricks: " + e.message },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Saves minifig data to the database
+ *
+ * @param {string} tableId - The ID of the table
+ * @param {string} ownerId - The ID of the owner
+ * @param {Array} minifigs - Array of minifig objects to save
+ * @returns {Response} JSON response indicating success or failure
+ */
+async function saveMinifigs(tableId, ownerId, minifigs) {
+  try {
+    const minifigsToUpsert = [];
+    const minifigsMetadataToUpsert = [];
+    const minifigsPriceDataToUpsert = [];
+
+    // Process each minifig to separate user data from metadata
+    for (const minifig of minifigs) {
+      // Prepare user-specific minifig data for bulkWrite
+      minifigsToUpsert.push({
+        updateOne: {
+          filter: {
+            minifigIdRebrickable: minifig.minifigIdRebrickable,
+            tableId: tableId,
+            ownerId: ownerId,
+          },
+          update: {
+            $set: {
+              uuid: minifig.uuid,
+              minifigIdRebrickable: minifig.minifigIdRebrickable,
+              minifigIdBricklink: minifig.minifigIdBricklink,
+              minifigQuantity: minifig.minifigQuantity || 0,
+              highlighted: minifig.highlighted || false,
+              tableId,
+              ownerId,
+            },
+          },
+          upsert: true,
+        },
+      });
+
+      // Prepare minifig metadata for upsert
+      minifigsMetadataToUpsert.push({
+        updateOne: {
+          filter: { minifigIdRebrickable: minifig.minifigIdRebrickable },
+          update: {
+            $set: {
+              minifigName: minifig.minifigName,
+              minifigIdRebrickable: minifig.minifigIdRebrickable,
+              minifigIdBricklink: minifig.minifigIdBricklink,
+              minifigImage: minifig.minifigImage,
+            },
+          },
+          upsert: true,
+        },
+      });
+
+      minifigsPriceDataToUpsert.push({
+        updateOne: {
+          filter: { minifigIdRebrickable: minifig.minifigIdRebrickable },
+          update: {
+            $set: {
+              priceData: minifig.priceData || {},
+            },
+          },
+          upsert: true,
+        },
+      });
+    }
+
+    // Perform operations in parallel for efficiency
+    await Promise.all([
+      // Change from insertMany to bulkWrite since we're using updateOne operations
+      UserMinifig.bulkWrite(minifigsToUpsert),
+      // Only do the metadata bulkWrite if we have operations
+      minifigsMetadataToUpsert.length > 0
+        ? MinifigMetadata.bulkWrite(minifigsMetadataToUpsert)
+        : Promise.resolve(),
+      minifigsPriceDataToUpsert.length > 0
+        ? MinifigPriceMetadata.bulkWrite(minifigsPriceDataToUpsert)
+        : Promise.resolve(),
+    ]);
+
+    return Response.json({ success: true });
+  } catch (e) {
+    console.error("Error saving minifigs:", e);
+    return Response.json(
+      { error: "Failed to save minifigs: " + e.message },
       { status: 500 }
     );
   }

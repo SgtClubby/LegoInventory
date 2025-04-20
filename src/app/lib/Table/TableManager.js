@@ -48,7 +48,7 @@ export async function addTable(name, description, isMinifig) {
   }
 }
 
-export async function deleteTable(id) {
+export async function deleteTable(table) {
   try {
     const res = await fetch(`/api/table/tables`, {
       method: "DELETE",
@@ -56,7 +56,7 @@ export async function deleteTable(id) {
         "Content-Type": "application/json",
         "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
       },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify(table),
     });
     const data = await res.json();
     if (data && data.length > 0) {

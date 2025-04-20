@@ -22,12 +22,6 @@ export default function DeletePieceModal() {
   const handleDeletePiece = async (uuid) => {
     const tableId = selectedTable.id;
 
-    // Optimistically remove from UI first
-    setPiecesByTable((prev) => {
-      const updatedPieces = prev[tableId]?.filter((p) => p.uuid !== uuid) || [];
-      return { ...prev, [tableId]: updatedPieces };
-    });
-
     try {
       // Then delete from database
       const response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
@@ -40,17 +34,14 @@ export default function DeletePieceModal() {
       if (!response.ok) {
         throw new Error(`Failed to delete piece: ${response.statusText}`);
       }
-    } catch (error) {
-      console.error("Error deleting piece:", error);
 
-      // If deletion fails, restore the piece in UI
       setPiecesByTable((prev) => {
-        const restoredPiece = pieces.find((p) => p.uuid === uuid);
-        if (!restoredPiece) return prev;
-
-        const updatedPieces = [...(prev[tableId] || []), restoredPiece];
+        const updatedPieces =
+          prev[tableId]?.filter((p) => p.uuid !== uuid) || [];
         return { ...prev, [tableId]: updatedPieces };
       });
+    } catch (error) {
+      console.error("Error deleting piece:", error);
     }
   };
 

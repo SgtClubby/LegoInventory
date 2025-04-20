@@ -14,7 +14,7 @@ import TableAddModal from "@/Components/Modals/TableAddModal";
 import TableDeleteModal from "@/Components/Modals/TableDeleteModal";
 
 // Functions & Helpers
-import { fetchPiecesFromTable } from "@/lib/Pieces/PiecesManager";
+import { fetchTable } from "@/lib/Pieces/PiecesManager";
 import useInit from "@/hooks/useInit";
 import {
   Add,
@@ -119,7 +119,7 @@ const MainApp = () => {
   useEffect(() => {
     if (selectedTable) {
       console.log(`Fetching pieces for table ${selectedTable.id}...`);
-      fetchPiecesFromTable(selectedTable.id)
+      fetchTable(selectedTable.id)
         .then((savedData) => {
           if (savedData) {
             setPiecesByTable((prev) => ({

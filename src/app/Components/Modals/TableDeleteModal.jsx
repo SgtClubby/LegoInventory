@@ -38,7 +38,7 @@ export default function TableDeleteModal({ toggleModal }) {
     );
 
     setAvailableTables(updatedTables);
-    deleteTable(selectedTable.id);
+    deleteTable(selectedTable);
     setDeleteShowModal(false);
     setSelectedTable(
       updatedTables.find((t) => t.id === "1") || updatedTables[0] || null

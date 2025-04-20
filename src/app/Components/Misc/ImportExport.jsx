@@ -1,6 +1,7 @@
 // src/app/Components/Misc/ImportExport.jsx
 
 import React, { useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { useLego } from "@/Context/LegoContext";
 import {
   handleExport,
@@ -26,73 +27,194 @@ export default function ImportExport() {
     message: "",
   });
 
+  /**
+   * Handles the import process when a file is selected
+   *
+   * @param {Event} event - The file input change event
+   */
   const handleImportWrapper = (event) => {
     try {
       setImportStatus({ success: null, message: "Processing import..." });
 
-      handleImport(event, (importedData) => {
-        console.log(importedData);
+      handleImport(event, async (importedData) => {
         const importType = detectStructureType(importedData);
 
-        console.log(importType);
+        // Validate the import data structure type
+        if (importType === "invalid") {
+          setImportStatus({
+            success: false,
+            message: `Invalid import!`,
+          });
+          setTimeout(
+            () => setImportStatus({ success: null, message: "" }),
+            3500
+          );
+          return;
+        }
 
-        const isImportMinifig = importedData.some(
-          (piece) => piece.isMinifig === true
-        );
+        // Check for table type mismatches
+        if (importType === "minifig" && !isMinifig) {
+          setImportStatus({
+            success: false,
+            message: `Invalid import! This table is for pieces only.`,
+          });
+          setTimeout(
+            () => setImportStatus({ success: null, message: "" }),
+            3500
+          );
+          return;
+        }
 
-        importedData = importedData.map((piece) => {
-          delete piece.isMinifig; // Remove isMinifig identity property from imported data
+        if (importType === "piece" && isMinifig) {
+          setImportStatus({
+            success: false,
+            message: `Invalid import! This table is for minifigs only.`,
+          });
+          setTimeout(
+            () => setImportStatus({ success: null, message: "" }),
+            3500
+          );
+          return;
+        }
+
+        // Add necessary fields to each item
+        const processedImportData = importedData.map((piece) => {
           return {
             ...piece,
+            uuid: uuidv4(),
             tableId: selectedTable.id,
             ownerId: selectedTable.ownerId,
             highlighted: false,
           };
         });
 
-        if (isImportMinifig !== isMinifig) {
-          setImportStatus({
-            success: false,
-            // it has to be short
-            message: `Fail: This table is for ${
-              isMinifig ? "minifigs" : "pieces"
-            } only!`,
-          });
+        // First save to database and update UI immediately for better responsiveness
+        await fetch(`/api/table/${selectedTable?.id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(processedImportData),
+        });
 
-          // Reset error status after 5 seconds
-          setTimeout(
-            () => setImportStatus({ success: null, message: "" }),
-            5000
-          );
-          return;
-        }
-
+        // Update the UI state with the imported data
         setPiecesByTable((prev) => ({
           ...prev,
-          [selectedTable.id]: importedData,
+          [selectedTable.id]: processedImportData,
         }));
 
+        // Show success message to user
         setImportStatus({
           success: true,
-          message: `Successfully imported ${importedData.length} ${
+          message: `Successfully imported ${processedImportData.length} ${
             isMinifig ? "minifigs" : "pieces"
           }!`,
         });
+
+        // If these are minifigs, fetch price data in the background
+        if (isMinifig) {
+          // Extract the rebrickable IDs for price fetching
+          const minifigData = processedImportData.map((minifig) => ({
+            minifigIdRebrickable: minifig.minifigIdRebrickable,
+            minifigIdBricklink: minifig.minifigIdBricklink || null,
+          }));
+
+          // Fetch price data asynchronously - don't wait for it
+          fetchPriceDataInBackground(minifigData);
+        }
 
         // Reset status after 3 seconds
         setTimeout(() => setImportStatus({ success: null, message: "" }), 3000);
       });
     } catch (error) {
+      console.error("Import error:", error);
       setImportStatus({
         success: false,
         message: `Import failed: ${error.message}`,
       });
-
-      // Reset status after 3 seconds
       setTimeout(() => setImportStatus({ success: null, message: "" }), 3000);
     }
   };
 
+  /**
+   * Fetches price data for minifigs in the background without blocking the UI
+   * Updates the piecesByTable state when price data is received
+   *
+   * @param {Array} minifigData - Array of minifig objects with IDs
+   */
+  const fetchPriceDataInBackground = async (minifigData) => {
+    try {
+      // Only process items with valid IDs
+      const validMinifigs = minifigData.filter((m) => m.minifigIdRebrickable);
+
+      if (validMinifigs.length === 0) return;
+
+      console.log(
+        `Fetching price data for ${validMinifigs.length} minifigs in the background...`
+      );
+
+      // Start the API request but don't block UI rendering
+      fetch(`/api/bricklink/price`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(validMinifigs),
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            console.warn(
+              "Background price fetch encountered an issue:",
+              response.statusText
+            );
+            return;
+          }
+
+          const results = await response.json();
+          console.log(
+            `Successfully fetched price data for ${results.length} minifigs`
+          );
+
+          // Update the piecesByTable state with the new price data
+          setPiecesByTable((prev) => {
+            // Make sure we still have data for this table
+            if (!prev[selectedTable.id]) return prev;
+
+            // Map through existing pieces and update with price data where applicable
+            const updatedPieces = prev[selectedTable.id].map((piece) => {
+              // Find matching price data for this minifig
+              const matchingResult = results.find(
+                (result) => result.id === piece.minifigIdRebrickable
+              );
+
+              // Only update if we found matching price data
+              if (matchingResult && matchingResult.priceData) {
+                return {
+                  ...piece,
+                  priceData: matchingResult.priceData,
+                };
+              }
+
+              // Otherwise return the piece unchanged
+              return piece;
+            });
+
+            // Return updated state
+            return { ...prev, [selectedTable.id]: updatedPieces };
+          });
+        })
+        .catch((error) => {
+          console.error("Background price fetch error:", error);
+        });
+    } catch (error) {
+      console.error("Error in background price fetching:", error);
+      // Don't show errors to the user for background processes
+    }
+  };
+
+  /**
+   * Handles exporting data to a JSON file
+   */
   const handleExportWrapper = () => {
     try {
       const currentPieces = piecesByTable[selectedTable?.id] || [];
@@ -102,14 +224,11 @@ export default function ImportExport() {
           success: false,
           message: "No pieces to export",
         });
-
-        // Reset status after 3 seconds
         setTimeout(() => setExportStatus({ success: null, message: "" }), 3000);
         return;
       }
 
       setExportStatus({ success: null, message: "Processing export..." });
-
       handleExport(currentPieces, isMinifig);
 
       setExportStatus({
@@ -118,16 +237,12 @@ export default function ImportExport() {
           isMinifig ? "minifigs" : "pieces"
         }!`,
       });
-
-      // Reset status after 3 seconds
       setTimeout(() => setExportStatus({ success: null, message: "" }), 3000);
     } catch (error) {
       setExportStatus({
         success: false,
         message: `Export failed: ${error.message}`,
       });
-
-      // Reset status after 3 seconds
       setTimeout(() => setExportStatus({ success: null, message: "" }), 3000);
     }
   };

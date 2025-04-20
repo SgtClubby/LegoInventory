@@ -2,7 +2,7 @@
 
 "use client";
 import { useEffect } from "react";
-import { fetchPiecesFromTable } from "@/lib/Pieces/PiecesManager";
+import { fetchTable } from "@/lib/Pieces/PiecesManager";
 import { fetchTables } from "@/lib/Table/TableManager";
 import { useLego } from "@/Context/LegoContext";
 
@@ -29,7 +29,7 @@ export default function useInit() {
           setSelectedTable(firstTable);
 
           console.log(`Fetching pieces for table ${firstTable.id}...`);
-          const savedData = await fetchPiecesFromTable(firstTable.id);
+          const savedData = await fetchTable(firstTable.id);
           if (savedData) {
             setPiecesByTable((prev) => ({
               ...prev,

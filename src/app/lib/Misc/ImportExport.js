@@ -63,14 +63,14 @@ export function handleImport(event, callback) {
 }
 
 // Handler for exporting data to JSON
-export function handleExport(pieces, isMinifig) {
+export function handleExport(pieces) {
   if (pieces.length === 0) {
     alert("No pieces to export");
     return;
   }
 
   // Filter out unnecessary properties
-  const filteredPieces = pieces.map((piece) => {
+  const exportData = pieces.map((piece) => {
     const {
       uuid,
       tableId,

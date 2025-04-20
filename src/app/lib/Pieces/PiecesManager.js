@@ -21,7 +21,28 @@ export async function addPieceToTable(pieceData, tableId) {
   return null;
 }
 
-export async function fetchPiecesFromTable(tableId) {
+export async function addMinifigsToTable(minifigData, tableId) {
+  try {
+    const res = await fetch(`/api/table/${tableId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
+      },
+      body: JSON.stringify(minifigData),
+    });
+    const data = await res.json();
+
+    if (data) {
+      return data;
+    }
+  } catch (err) {
+    console.error(`Error adding piece:`, err);
+  }
+  return null;
+}
+
+export async function fetchTable(tableId) {
   try {
     const res = await fetch(`/api/table/${tableId}`, {
       method: "GET",
@@ -39,28 +60,6 @@ export async function fetchPiecesFromTable(tableId) {
   }
   return null;
 }
-
-export async function deleteTable(uuid) {
-  try {
-    const res = await fetch(`/api/table/tables`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-      },
-      body: JSON.stringify({ uuid }),
-    });
-    const data = await res.json();
-    if (data && data.length > 0) {
-      return data;
-    }
-  } catch (err) {
-    console.error(`Error deleting table:`, err);
-  }
-  return null;
-}
-
-// src/app/lib/Pieces/PiecesManager.js
 
 // Add a Map to store active requests
 const activeRequests = new Map();

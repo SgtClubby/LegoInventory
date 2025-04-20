@@ -1,7 +1,7 @@
 // src/app/api/table/tables/route.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
-import { UserBrick, Table } from "@/lib/Mongo/Schema";
+import { UserBrick, Table, UserMinifig } from "@/lib/Mongo/Schema";
 
 /**
  * GET all tables for a user
@@ -124,19 +124,24 @@ export async function DELETE(req) {
   await dbConnect();
 
   const ownerId = req.headers.get("ownerId") || "default";
-  const { id } = await req.json();
+  const table = await req.json();
 
-  if (!id) {
-    return Response.json({ error: "Missing table ID" }, { status: 400 });
+  if (!table) {
+    return Response.json({ error: "Missing table entry!" }, { status: 400 });
   }
 
-  try {
-    // Delete the table and all user bricks associated with it
-    await Promise.all([
-      Table.deleteOne({ id, ownerId }),
-      UserBrick.deleteMany({ tableId: id, ownerId }),
-    ]);
+  // Destructuring table properties
+  const { id, isMinifig } = table;
 
+  try {
+    Table.deleteOne({ id, ownerId });
+    if (isMinifig) {
+      // If it's a minifig table, delete associated UserMinifig documents
+      UserMinifig.deleteMany({ tableId: id, ownerId });
+    } else {
+      // If it's a piece table, delete associated UserBrick documents
+      UserBrick.deleteMany({ tableId: id, ownerId });
+    }
     return Response.json({ success: true });
   } catch (e) {
     console.error("Error deleting table:", e);
