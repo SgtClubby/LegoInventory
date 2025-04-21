@@ -1,16 +1,14 @@
 // src/app/lib/Pieces/PiecesManager.js
 
+import { apiFetch } from "../API/FetchUtils";
+
 export async function addPieceToTable(pieceData, tableId) {
   try {
-    const res = await fetch(`/api/table/${tableId}`, {
+    const data = await apiFetch(`/table/${tableId}/bricks`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-      },
+
       body: JSON.stringify(pieceData),
     });
-    const data = await res.json();
 
     if (data) {
       return data;
@@ -23,15 +21,10 @@ export async function addPieceToTable(pieceData, tableId) {
 
 export async function addMinifigsToTable(minifigData, tableId) {
   try {
-    const res = await fetch(`/api/table/${tableId}`, {
+    const data = await apiFetch(`/table/${tableId}/minifigs`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-      },
       body: JSON.stringify(minifigData),
     });
-    const data = await res.json();
 
     if (data) {
       return data;
@@ -42,16 +35,17 @@ export async function addMinifigsToTable(minifigData, tableId) {
   return null;
 }
 
-export async function fetchTable(tableId) {
+export async function fetchPieceDataFromTable(table) {
   try {
-    const res = await fetch(`/api/table/${tableId}`, {
+    let url = `/table/${table.id}/bricks`;
+    if (table.isMinifig) {
+      url = `/table/${table.id}/minifigs`;
+    }
+
+    const data = await apiFetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-      },
     });
-    const data = await res.json();
+
     if (data && data.length > 0) {
       return data;
     }
@@ -79,33 +73,19 @@ export async function fetchPartDetails(partId) {
     const abortController = new AbortController();
     activeRequests.set(requestKey, abortController);
 
-    const res = await fetch(`/api/part/${partId}/details`, {
+    const data = await apiFetch(`/part/${partId}/details`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-      },
-      // Add the signal to the fetch request
       signal: abortController.signal,
     });
 
     // Request completed, remove from active requests
     activeRequests.delete(requestKey);
 
-    if (res.status === 404) {
-      console.warn(`Part "${partId}" not found.`);
-      return null;
+    if (data.error) {
+      throw new Error(`Failed to fetch part details: ${data.error}`);
     }
 
-    if (!res.ok) {
-      console.log(
-        `Failed to fetch part details for "${partId}":`,
-        res.statusText
-      );
-      throw new Error(`Failed to fetch part details: ${res.statusText}`);
-    }
-
-    return await res.json();
+    return data;
   } catch (err) {
     // Check if this was an abort error (which we can ignore)
     if (err.name === "AbortError") {
@@ -133,33 +113,18 @@ export async function fetchPartColors(partId) {
     const abortController = new AbortController();
     activeRequests.set(requestKey, abortController);
 
-    const res = await fetch(`/api/part/${partId}/colors`, {
+    const data = await apiFetch(`/part/${partId}/colors`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-      },
-      // Add the signal to the fetch request
       signal: abortController.signal,
     });
 
     // Request completed, remove from active requests
     activeRequests.delete(requestKey);
 
-    if (res.status === 404) {
-      console.warn(`Part "${partId}" not found.`);
-      return null;
+    if (data.error) {
+      throw new Error(`Failed to fetch part details: ${data.error}`);
     }
 
-    if (!res.ok) {
-      console.log(
-        `Failed to fetch part details for "${partId}":`,
-        res.statusText
-      );
-      throw new Error(`Failed to fetch part details: ${res.statusText}`);
-    }
-
-    const data = await res.json();
     if (data && data.length > 0) {
       return data;
     }

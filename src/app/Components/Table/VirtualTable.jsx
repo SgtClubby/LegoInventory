@@ -13,7 +13,7 @@ import PieceRow from "@/Components/Table/PieceRow";
 // Icons
 import BrickIcon from "@/Components/Misc/BrickIcon";
 import { HeightRounded, NorthRounded, SouthRounded } from "@mui/icons-material";
-import { useLego } from "@/Context/LegoContext";
+import { useLegoState } from "@/Context/LegoStateContext";
 import MinifigIcon from "@/Components/Misc/MinifigIcon";
 
 /**
@@ -38,10 +38,10 @@ export default function VirtualTable({
   const desktopContainerRef = useRef(null);
   const mobileContainerRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(600);
-  const { selectedTable } = useLego();
+  const { selectedTable } = useLegoState();
   const { isMinifig } = selectedTable || {};
 
-  const { setDeleteModalOpen, setPieceToDelete } = useLego();
+  const { setDeleteModalOpen, setPieceToDelete } = useLegoState();
   // Update container height on mount and resize
   useEffect(() => {
     const updateContainerHeight = () => {

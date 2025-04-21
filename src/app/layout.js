@@ -1,8 +1,9 @@
 // src/app/layout.js
 
 import "./globals.css";
-import { LegoProvider } from "@/Context/LegoContext";
-import { StatusProvider } from "@/Context/StatusContext";
+import { LegoStateProvider } from "@/Context/LegoStateContext";
+import { StatusProvider } from "@/Context/StatusContext.tsx";
+import { ModalProvider } from "./Context/ModalContext";
 
 export const metadata = {
   title: "LEGO Inventory",
@@ -13,9 +14,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <body>
-        <StatusProvider>
-          <LegoProvider>{children}</LegoProvider>
-        </StatusProvider>
+        <ModalProvider>
+          <StatusProvider>
+            <LegoStateProvider>{children}</LegoStateProvider>
+          </StatusProvider>
+        </ModalProvider>
       </body>
     </html>
   );

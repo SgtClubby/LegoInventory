@@ -93,15 +93,18 @@ class BricklinkController extends BaseController {
       const existingMinifigCache = await cacheManager.getMinifigMetadata(
         minifigIdRebrickable
       );
-      if (existingMinifigCache) {
+
+      if (
+        existingMinifigCache?.priceData &&
+        existingMinifigCache.minifigIdBricklink
+      ) {
         console.log(
-          "Cache hit for minifigIdRebrickable:",
-          minifigIdRebrickable
+          `[Bricklink Price Data] CACHE HIT! Cache hit for ${minifigIdRebrickable}:`
         );
 
         // Format the price data for response
-        const formattedPriceData = existingMinifigCache?.priceData
-          ? this.formatPriceData(existingPriceDataCache.priceData)
+        const formattedPriceData = existingMinifigCache
+          ? this.formatPriceData(existingMinifigCache.priceData)
           : this.getDefaultPriceData();
 
         const cacheResult = {
@@ -227,12 +230,9 @@ class BricklinkController extends BaseController {
             // Check if we already have price data in the database
             const existingData = await cacheManager.getMinifigMetadata(
               minifigIdRebrickable
-            )?.priceData;
+            );
 
-            if (
-              existingData &&
-              Object.keys(existingData.priceData || {}).length > 0
-            ) {
+            if (existingData && existingData.priceData) {
               console.log(
                 `[Batch ${batchId}] Using cached price data for ${minifigIdRebrickable}`
               );
@@ -278,7 +278,7 @@ class BricklinkController extends BaseController {
               {
                 minifigIdRebrickable,
                 minifigIdBricklink: result.minifigIdBricklink,
-                minifigName: result.minifigName,
+                minifigName: item.minifigName,
                 minifigImage: item.minifigImage,
               },
               result.priceData

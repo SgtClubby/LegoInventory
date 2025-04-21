@@ -7,14 +7,15 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Add, InsertPhotoRounded } from "@mui/icons-material";
 import SearchNewPiece from "@/Components/Search/SearchNewPiece";
 import colors from "@/Colors/colors.js";
-import { useLego } from "@/Context/LegoContext";
+import { useLegoState } from "@/Context/LegoStateContext";
 import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import getColorStyle from "@/lib/Color/getColorStyle";
-import { useStatus } from "@/Context/StatusContext";
+import { useStatus } from "@/Context/StatusContext.tsx";
 import TableSelectDropdown from "@/Components/Misc/TableSelectDropdown";
+import { apiFetch } from "@/lib/API/FetchUtils";
 
 export default function AddNewPiece() {
-  const { setPiecesByTable, selectedTable, setActiveTab } = useLego();
+  const { setPiecesByTable, selectedTable, setActiveTab } = useLegoState();
   const { showSuccess, showError, showWarning } = useStatus();
 
   const [searchNewPieceResult, setSearchNewPieceResult] = useState(null);
@@ -72,8 +73,13 @@ export default function AddNewPiece() {
 
       const fetchColors = async () => {
         try {
-          const response = await fetch(`/api/part/${elementId}/colors`);
-          const colorData = await response.json();
+          const colorData = await apiFetch(`/part/${elementId}/colors`);
+          if (colorData.error) {
+            showError("No colors found for this piece.", {
+              autoCloseDelay: 5000,
+            });
+            return;
+          }
           setNewItem((current) => ({
             ...current,
             availableColors: colorData,
@@ -105,12 +111,12 @@ export default function AddNewPiece() {
     ) {
       const fetchImage = async () => {
         try {
-          const response = await fetch(
-            `/api/image/${newItem.elementId}/${newItem.elementColorId}`
+          const imageData = await apiFetch(
+            `/image/${newItem.elementId}/${newItem.elementColorId}`
           );
-          const data = await response.json();
-          if (data && data.elementImage) {
-            setImage(data.elementImage);
+
+          if (imageData && imageData.elementImage) {
+            setImage(imageData.elementImage);
             setFade(false);
           }
         } catch (error) {
@@ -202,12 +208,12 @@ export default function AddNewPiece() {
   };
 
   const ColorDropdown = () => {
-    const availableColorIds = newItem.availableColors.map(
-      (color) => color.colorId
+    const availableColorIds = newItem.availableColors.map((color) =>
+      color.colorId.toString()
     );
     const sortedColors = [...colors].sort((a, b) => {
-      const aAvailable = availableColorIds.includes(a.colorId);
-      const bAvailable = availableColorIds.includes(b.colorId);
+      const aAvailable = availableColorIds.includes(a.colorId.toString());
+      const bAvailable = availableColorIds.includes(b.colorId.toString());
       if (aAvailable && !bAvailable) return -1;
       if (!aAvailable && bAvailable) return 1;
       return a.colorName.localeCompare(b.colorName);
@@ -222,7 +228,9 @@ export default function AddNewPiece() {
         )}
         <div className="py-1 px-1">
           {sortedColors.map((color) => {
-            const isAvailable = availableColorIds.includes(color.colorId);
+            const isAvailable = availableColorIds.includes(
+              color.colorId.toString()
+            );
             return (
               <div
                 key={color.colorName}

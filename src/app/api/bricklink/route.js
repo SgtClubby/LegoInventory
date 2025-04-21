@@ -122,11 +122,9 @@ export async function POST(request) {
       );
 
       const existingPriceDataCache = await MinifigPriceMetadata.findOne(
-        {
-          minifigIdRebrickable: minifigIdRebrickable,
-        },
+        { minifigIdRebrickable },
         { minifigIdRebrickable: 0 }
-      );
+      ).lean();
 
       const cleanDecimal = (decimal) => {
         if (decimal && typeof decimal.toString === "function") {
@@ -135,29 +133,12 @@ export async function POST(request) {
         return decimal;
       };
 
-      console.log(existingPriceDataCache);
-
       const { priceData } = existingPriceDataCache;
-
-      const parsedPriceData = Object.fromEntries(
-        Object.entries(priceData).map(([key, value]) => {
-          if (
-            value &&
-            typeof value === "object" &&
-            typeof value.toString === "function"
-          ) {
-            return [key, cleanDecimal(value)];
-          }
-          return [key, value];
-        })
-      );
-
-      console.log(parsedPriceData);
 
       const cacheResult = {
         minifigIdBricklink: existingMinifigCache.minifigIdBricklink,
         minifigName: existingMinifigCache.minifigName,
-        priceData: parsedPriceData || {
+        priceData: priceData || {
           currencyCode: "USD",
           currencySymbol: "$",
           minPriceNew: "N/A",
@@ -168,6 +149,9 @@ export async function POST(request) {
           avgPriceUsed: "N/A",
         },
       };
+
+      console.log("Cache result:", cacheResult);
+
       return jsonResponse(cacheResult);
     }
 

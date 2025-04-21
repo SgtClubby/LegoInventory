@@ -34,25 +34,26 @@ class TableController extends BaseController {
 
       // Create default tables if needed
       if (!hasMainTable) {
-        mainPieceTable = new Table({
+        const initPieceTable = await Table.create({
           id: "1",
           name: "Piece Table",
           description: "This is the default piece table.",
           isMinifig: false,
           ownerId,
         });
-        await mainPieceTable.save();
+        mainPieceTable = this.trimNewTableDocument(initPieceTable);
       }
 
       if (!hasMinifigTable) {
-        mainMinifigTable = new Table({
+        const initMinifigTable = await Table.create({
           id: "2",
           name: "Minifig Table",
           description: "This is the default minifig table.",
           isMinifig: true,
           ownerId,
         });
-        await mainMinifigTable.save();
+
+        mainMinifigTable = this.trimNewTableDocument(initMinifigTable);
       }
 
       // Return all tables including any newly created ones
@@ -78,6 +79,18 @@ class TableController extends BaseController {
       console.error("Error fetching tables:", e);
       return this.errorResponse("Failed to fetch tables", 500);
     }
+  }
+
+  trimNewTableDocument(document) {
+    return document.toObject({
+      versionKey: false, // removes __v
+      transform: (_, ret) => {
+        delete ret._id; // removes Mongo _id
+        delete ret.createdAt; // remove timestamp fields
+        delete ret.updatedAt;
+        return ret;
+      },
+    });
   }
 
   /**

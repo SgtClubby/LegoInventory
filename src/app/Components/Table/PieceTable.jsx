@@ -3,26 +3,19 @@
 // Functions and Helpers
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { debounce } from "lodash";
-import { useLego } from "@/Context/LegoContext";
+import { useLegoState } from "@/Context/LegoStateContext";
 import { fetchPartDetails, fetchPartColors } from "@/lib/Pieces/PiecesManager";
 import colors from "@/Colors/colors.js";
 
 // Components
 import VirtualTable from "@/Components/Table/VirtualTable";
-import SearchPiece from "@/Components/Search/SearchPiece";
+import SearchTablePiece from "@/Components/Search/SearchTablePiece";
 import FilterTabs from "@/Components/Misc/FilterTabs";
 import TableSelectDropdown from "@/Components/Misc/TableSelectDropdown";
+import { apiFetch } from "@/lib/API/FetchUtils";
 
-export default function PieceTable({ newTableName, setNewTableName }) {
-  const {
-    availableTables,
-    selectedTable,
-    setSelectedTable,
-    piecesByTable,
-    setPiecesByTable,
-    setAddShowModal,
-    setDeleteShowModal,
-  } = useLego();
+export default function PieceTable() {
+  const { selectedTable, piecesByTable, setPiecesByTable } = useLegoState();
 
   // State management
   const [searchTerm, setSearchTerm] = useState("");
@@ -72,31 +65,26 @@ export default function PieceTable({ newTableName, setNewTableName }) {
   const updatePieceInDb = useCallback(
     debounce(async (uuid, tableId, updates, isMinifig = true) => {
       try {
-        let response;
+        console.log("[DBUpdate] Updating piece:", uuid, updates, isMinifig);
+
+        let data;
+
         if (isMinifig) {
           console.log("[DBUpdate] Updating Minifig:", uuid, updates);
-          response = await fetch(`/api/table/${tableId}/minifig/${uuid}`, {
+          data = await apiFetch(`/table/${tableId}/minifigs/${uuid}`, {
             method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
             body: JSON.stringify(updates),
           });
         } else {
           console.log("[DBUpdate] Updating Brick:", uuid, updates);
-          response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
+          data = await apiFetch(`/table/${tableId}/bricks/${uuid}`, {
             method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
             body: JSON.stringify(updates),
           });
         }
 
-        if (!response.ok) {
-          throw new Error(
-            `Failed to update piece: ${response.status} ${response.statusText}`
-          );
+        if (data.error) {
+          throw new Error(data.error || "Failed to update piece");
         }
 
         // Remove from pending updates after successful save
@@ -592,7 +580,7 @@ export default function PieceTable({ newTableName, setNewTableName }) {
               <div className="flex flex-col md:flex-row gap-3 w-full">
                 <div className="flex-1 w-full md:w-[50%] ">
                   {/* Search Input */}
-                  <SearchPiece
+                  <SearchTablePiece
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                   />

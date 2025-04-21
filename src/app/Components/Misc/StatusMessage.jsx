@@ -17,9 +17,9 @@ import {
  * @param {string} props.type - Message type: "success", "error", "warning", "info"
  * @param {string} props.message - The message text to display
  * @param {boolean} props.show - Whether the message is visible
- * @param {function} props.onClose - Function to call when the message is closed
- * @param {number} props.autoCloseDelay - Time in ms before auto-closing (default: 5000, 0 to disable)
  * @param {string} props.position - Position on screen: "top", "bottom" (default: "top")
+ * @param {function} props.onClose - Function to call when the message is closed
+ * @param {number | undefined} props.autoCloseDelay - Time in ms before auto-closing (default: 5000, 0 to disable)
  * @returns {JSX.Element} The status message component
  */
 export default function StatusMessage({

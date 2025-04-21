@@ -1,11 +1,12 @@
 // src/app/hooks/useImportSetSubmit.js
 
 "use client";
-import { useLego } from "@/Context/LegoContext";
-import { addTable } from "@/lib/Table/TableManager";
+import { useLegoState } from "@/Context/LegoStateContext";
+import { addNewTable } from "@/lib/Table/TableManager";
 import { v4 as uuidv4 } from "uuid";
-import { useStatus } from "@/Context/StatusContext";
+import { useStatus } from "@/Context/StatusContext.tsx";
 import { useState } from "react";
+import { apiFetch } from "@/lib/API/FetchUtils";
 
 /**
  * Hook for handling set import functionality with improved error handling and state management
@@ -19,7 +20,7 @@ export function useImportSetSubmit() {
     setAvailableTables,
     setSelectedTable,
     setPiecesByTable,
-  } = useLego();
+  } = useLegoState();
 
   const { showSuccess, showError, showWarning } = useStatus();
   const [isImporting, setIsImporting] = useState(false);
@@ -46,22 +47,21 @@ export function useImportSetSubmit() {
 
       // Fetch set parts with cached color data
       setImportProgress(20);
-      const res = await fetch(`/api/set/${details.setId}/parts`, {
+      const setData = await apiFetch(`/set/${details.setId}/parts`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Failed to fetch set data: ${res.status} ${errorText}`);
+      if (setData.error) {
+        showError(`Failed to fetch set parts: ${setData.error}`, {
+          position: "top",
+          autoCloseDelay: 5000,
+        });
+        return { success: false, error: setData.error };
       }
 
       setImportProgress(40);
-      const data = await res.json();
 
-      if (!data || !data.results || data.results.length === 0) {
+      if (!setData || !setData.results || setData.results.length === 0) {
         showWarning(
           `No parts found for set "${details.setName}", might be an error, try again later...`,
           {
@@ -82,7 +82,7 @@ export function useImportSetSubmit() {
         setSelectedTable(originalTable);
       }
 
-      const { results, stats } = data;
+      const { results, stats } = setData;
 
       console.log(
         `Set contains ${results.length} parts. ${
@@ -96,7 +96,7 @@ export function useImportSetSubmit() {
       console.log(`Creating new table: ${tableName}`);
 
       setImportProgress(60);
-      const newTable = await addTable(tableName, tableDescription, false);
+      const newTable = await addNewTable(tableName, tableDescription, false);
 
       if (!newTable || newTable.error) {
         resetTableState();
@@ -135,25 +135,17 @@ export function useImportSetSubmit() {
         `Saving ${importedPieces.length} pieces to table ${newTable.id}`
       );
 
-      const ready = await fetch(`/api/table/${newTable.id}`, {
+      const readyData = await apiFetch(`/table/${newTable.id}/bricks`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(importedPieces),
       });
 
-      if (!ready.ok) {
+      if (readyData.error) {
         resetTableState();
-        const errorText = await ready.text();
-        throw new Error(
-          `Failed to save set pieces: ${ready.status} ${errorText}`
-        );
+        throw new Error(`Failed to save set pieces: ${readyData.error}`);
       }
 
-      const readyData = await ready.json();
-
-      if (!readyData.success) {
+      if (readyData.success) {
         resetTableState();
         throw new Error("Failed to save pieces");
       }
@@ -234,11 +226,8 @@ async function postProcessColorCache(
     }, 2000);
 
     try {
-      const response = await fetch("/api/set/postProcessColor/", {
+      const postProcessData = await apiFetch("/set/postProcessColor/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           pieceIds: piecesNeedingColors,
           ownerId: "default",
@@ -246,13 +235,10 @@ async function postProcessColorCache(
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Processing failed with status ${response.status}`);
+      if (postProcessData.error) {
+        throw new Error(postProcessData.error);
       }
-
-      const result = await response.json();
-
-      if (result.success) {
+      if (postProcessData.success) {
         showSuccess(
           `Additional color and image data has been processed. Refresh to see updated images.`,
           {
@@ -261,7 +247,9 @@ async function postProcessColorCache(
           }
         );
       } else {
-        throw new Error(result.error || "Unknown error during processing");
+        throw new Error(
+          postProcessData.error || "Unknown error during processing"
+        );
       }
     } catch (err) {
       console.error("Error during post-processing:", err);

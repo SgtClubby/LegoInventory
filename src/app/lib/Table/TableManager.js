@@ -1,18 +1,17 @@
 // src/app/lib/Table/TableManager.js
 
-import { fetchJSON } from "@/lib/API/FetchUtils";
-import apiUrlBuilder from "@/lib/API/ApiUrlBuilder";
+import { apiFetch } from "@/lib/API/FetchUtils";
 
 /**
  * Fetches all available tables for the current user
  *
  * @returns {Promise<Array|null>} Array of tables or null on error
  */
-export async function fetchTables() {
+export async function fetchAvailableTables() {
+  console.log("Fetching available tables...");
   try {
-    const url = apiUrlBuilder.local("table/tables");
-    const data = await fetchJSON(
-      url,
+    const data = await apiFetch(
+      "/tables",
       {
         method: "GET",
         headers: {
@@ -23,6 +22,11 @@ export async function fetchTables() {
         retries: 2,
       }
     );
+
+    if (data.error) {
+      console.error("No data returned from fetchAvailableTables");
+      return null;
+    }
 
     if (Array.isArray(data)) {
       return data;
@@ -44,15 +48,14 @@ export async function fetchTables() {
  * @param {boolean} isMinifig - Whether this is a minifig table
  * @returns {Promise<Object|null>} Created table or null on error
  */
-export async function addTable(name, description, isMinifig) {
+export async function addNewTable(name, description, isMinifig) {
   try {
     if (!name || typeof name !== "string") {
       throw new Error("Table name is required");
     }
 
-    const url = apiUrlBuilder.local("table/tables");
-    const response = await fetchJSON(
-      url,
+    const response = await apiFetch(
+      "/tables",
       {
         method: "POST",
         headers: {
@@ -68,6 +71,8 @@ export async function addTable(name, description, isMinifig) {
         retries: 1,
       }
     );
+
+    console.log("Response from addNewTable:", response);
 
     if (response && response.id) {
       return response;
@@ -92,9 +97,8 @@ export async function deleteTable(table) {
       throw new Error("Invalid table");
     }
 
-    const url = apiUrlBuilder.local("table/tables?id=" + table.id);
-    const response = await fetchJSON(
-      url,
+    const response = await apiFetch(
+      `/tables?id=${table.id}`,
       {
         method: "DELETE",
         headers: {
@@ -140,9 +144,8 @@ export async function updateTable(table, updates) {
       return table; // No valid updates
     }
 
-    const url = apiUrlBuilder.local(`table/${table.id}`);
-    const response = await fetchJSON(
-      url,
+    const response = await apiFetch(
+      `/table/${table.id}`,
       {
         method: "PATCH",
         headers: {

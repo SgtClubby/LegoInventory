@@ -17,6 +17,7 @@ import {
   SearchRounded,
 } from "@mui/icons-material";
 import LoaderIcon from "@/Components/Misc/LoaderIcon";
+import { apiFetch } from "@/lib/API/FetchUtils";
 
 export default function SearchNewPiece({ setSearchNewPieceResult }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -110,15 +111,9 @@ export default function SearchNewPiece({ setSearchNewPieceResult }) {
     // Set new timeout for debounced search
     searchTimeout.current = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/search/part/${searchTerm}`, {
+        const data = await apiFetch(`/search/part/${searchTerm}`, {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-          },
         });
-
-        const data = await response.json();
 
         if (data && data.length > 0) {
           setResults(data);

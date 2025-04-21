@@ -22,12 +22,12 @@ export async function GET(req) {
         description: "Manage all pieces/minifigs in a specific table",
       },
       {
-        path: "/table/{tableId}/brick/{brickId}",
+        path: "/table/{tableId}/bricks/{brickId}",
         methods: ["PATCH", "DELETE"],
         description: "Manage individual bricks in a table",
       },
       {
-        path: "/table/{tableId}/minifig/{minifigId}",
+        path: "/table/{tableId}/minifigs/{minifigId}",
         methods: ["PATCH", "DELETE"],
         description: "Manage individual minifigs in a table",
       },

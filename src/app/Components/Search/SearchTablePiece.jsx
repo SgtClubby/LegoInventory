@@ -1,3 +1,5 @@
+// src/app/Components/Search/SearchTablePiece.jsx
+
 // src/app/Components/Search/SearchPiece.jsx
 
 // Functions and Helpers
@@ -5,12 +7,12 @@ import { useState, useRef } from "react";
 
 // Icons
 import { ClearRounded, SearchRounded } from "@mui/icons-material";
-import { useLego } from "@/Context/LegoContext";
+import { useLegoState } from "@/Context/LegoStateContext";
 
-export default function SearchPiece({ searchTerm, setSearchTerm }) {
+export default function SearchTablePiece({ searchTerm, setSearchTerm }) {
   const inputRef = useRef(null);
   const [isFocused, setIsFocused] = useState(false);
-  const { selectedTable } = useLego();
+  const { selectedTable } = useLegoState();
   const isMinifig = selectedTable?.isMinifig;
 
   // Clear search handler

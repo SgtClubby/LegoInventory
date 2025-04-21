@@ -146,13 +146,7 @@ class SearchController extends BaseController {
         minifigImage: result.set_img_url,
       }));
 
-      return this.successResponse({
-        results: formattedResults,
-        note:
-          formattedResults.length === 0
-            ? "No exact matches found. Try refining your search."
-            : undefined,
-      });
+      return this.successResponse(formattedResults);
     } catch (error) {
       // Check if this was an abort error (which we can ignore)
       if (error.name === "AbortError") {

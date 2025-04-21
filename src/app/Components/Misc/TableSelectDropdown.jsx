@@ -9,9 +9,10 @@ import {
   ExpandMoreRounded,
   TableRowsRounded,
 } from "@mui/icons-material";
-import { useLego } from "@/Context/LegoContext";
+import { useLegoState } from "@/Context/LegoStateContext";
 import MinifigIcon from "./MinifigIcon";
 import BrickIcon from "./BrickIcon";
+import { useModalState } from "@/Context/ModalContext";
 
 /**
  * A dropdown component that displays available tables with tabs to switch between minifig and regular tables
@@ -28,13 +29,8 @@ export default function TableSelectDropdown() {
   const [prevActiveTab, setPrevActiveTab] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const {
-    selectedTable,
-    setSelectedTable,
-    availableTables,
-    setAddShowModal,
-    setShowDeleteTableModal,
-  } = useLego();
+  const { selectedTable, setSelectedTable, availableTables } = useLegoState();
+  const { setAddShowModal, setShowDeleteTableModal } = useModalState();
 
   const dropdownRef = useRef(null);
   const regularTabContentRef = useRef(null);

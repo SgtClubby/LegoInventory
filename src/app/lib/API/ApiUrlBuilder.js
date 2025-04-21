@@ -106,7 +106,7 @@ class ApiUrlBuilder {
     const apiPath = path.startsWith("/") ? path : `/${path}`;
 
     // Build the base URL
-    let url = `/api${apiPath}`;
+    let url = `/api/v1${apiPath}`;
 
     // Add query parameters if present
     if (Object.keys(queryParams).length > 0) {

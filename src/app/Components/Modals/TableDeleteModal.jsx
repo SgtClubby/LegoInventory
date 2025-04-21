@@ -1,21 +1,29 @@
 // src/app/Components/Modals/TableDeleteModal.jsx
 
-import { useLego } from "@/Context/LegoContext";
-import { deleteTable } from "@/lib/Table/TableManager";
-import { DeleteForeverRounded, DeleteRounded } from "@mui/icons-material";
+// Helpers
 import { useEffect } from "react";
 
+// Contexts
+import { useLegoState } from "@/Context/LegoStateContext";
+import { deleteTable } from "@/lib/Table/TableManager";
+
+// Icons
+import { DeleteForeverRounded, DeleteRounded } from "@mui/icons-material";
+import { useModalState } from "@/Context/ModalContext";
+
 export default function TableDeleteModal({ toggleModal }) {
+  // Contexts
   const {
     availableTables,
     setAvailableTables,
-    setShowDeleteTableModal,
     selectedTable,
     setSelectedTable,
     setPiecesByTable,
-  } = useLego();
+  } = useLegoState();
 
-  const tableName = selectedTable?.name || tableName;
+  const { setShowDeleteTableModal } = useModalState();
+
+  const tableName = selectedTable?.name;
 
   useEffect(() => {
     const handleEscapeKey = (e) => {

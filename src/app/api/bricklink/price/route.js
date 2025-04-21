@@ -123,8 +123,8 @@ export async function POST(request) {
       }
 
       // Validate each item in the batch
-      for (const item of body) {
-        if (!item.minifigIdRebrickable) {
+      for (const minifig of body) {
+        if (!minifig.minifigIdRebrickable) {
           return errorResponse(
             "Missing minifigIdRebrickable in one or more items",
             400
@@ -150,7 +150,11 @@ export async function POST(request) {
       });
     } else {
       // For single requests, process normally and return the result
-      const { minifigIdRebrickable, minifigIdBricklink } = body;
+      const {
+        minifigIdRebrickable,
+        minifigIdBricklink,
+        minifigName = null,
+      } = body;
 
       if (!minifigIdRebrickable) {
         return errorResponse("Missing minifigIdRebrickable", 400);
@@ -511,6 +515,10 @@ async function fetchBricklinkId(minifigIdRebrickable) {
         minifigName: 1,
       }
     ).lean();
+
+    if (existingData.minifigName) {
+      minifigName = existingData?.minifigName;
+    }
 
     if (!existingData || !existingData.minifigName) {
       console.error(`No minifig name found for ${minifigIdRebrickable}`);

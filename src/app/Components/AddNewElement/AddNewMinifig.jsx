@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { apiFetch } from "@/lib/API/FetchUtils";
 
 // Icons
 import {
@@ -16,11 +17,11 @@ import SearchNewMinifig from "@/Components/Search/SearchNewMinifig";
 import TableSelectDropdown from "@/Components/Misc/TableSelectDropdown";
 
 // Contexts and Helpers
-import { useLego } from "@/Context/LegoContext";
-import { useStatus } from "@/Context/StatusContext";
+import { useLegoState } from "@/Context/LegoStateContext";
+import { useStatus } from "@/Context/StatusContext.tsx";
 
 export default function AddNewMinifig() {
-  const { setPiecesByTable, selectedTable, setActiveTab } = useLego();
+  const { setPiecesByTable, selectedTable, setActiveTab } = useLegoState();
   const { showSuccess, showError, showWarning } = useStatus();
 
   // State
@@ -97,29 +98,14 @@ export default function AddNewMinifig() {
       async function fetchBricklinkData() {
         setBlDataLoading(true);
 
-        const res = await fetch(`/api/bricklink`, {
+        const bricklinkData = await apiFetch(`/bricklink`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify({
             minifigIdRebrickable,
             minifigName,
             minifigImage,
           }),
         });
-
-        if (!res.ok) {
-          setBlDataLoading(false);
-          setBlDataLoadingFailed(true);
-          showError(
-            `Error fetching BrickLink data: ${res.statusText} ${res.status}`,
-            { autoCloseDelay: 5000 }
-          );
-          return;
-        }
-
-        const bricklinkData = await res.json();
 
         if (bricklinkData.error) {
           setBlDataLoading(false);
@@ -129,6 +115,9 @@ export default function AddNewMinifig() {
           });
           return;
         }
+
+        console.log("BrickLink data:", bricklinkData);
+
         // Update price data if available
         if (bricklinkData?.priceData) {
           const priceData = bricklinkData.priceData;
@@ -188,16 +177,16 @@ export default function AddNewMinifig() {
 
     // Save new minifig via API call
     try {
-      const response = await fetch(`/api/table/${tableId}/minifig`, {
+      const save = await apiFetch(`/table/${tableId}/minifigs`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(updatedNewMinifig),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to add minifig");
+      if (save.error) {
+        showError(`Error saving minifig: ${save.error}`, {
+          autoCloseDelay: 5000,
+        });
+        return;
       }
 
       showSuccess("Minifig added successfully!", {

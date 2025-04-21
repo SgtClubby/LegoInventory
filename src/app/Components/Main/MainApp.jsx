@@ -12,19 +12,17 @@ import ImportExport from "@/Components/Misc/ImportExport";
 import AddNewForm from "@/Components/AddNewElement/AddNewForm";
 import TableAddModal from "@/Components/Modals/TableAddModal";
 import TableDeleteModal from "@/Components/Modals/TableDeleteModal";
+import DeletePieceModal from "@/Components/Modals/DeletePieceModal";
+import Footer from "@/Components/Misc/Footer";
+import Tabs from "@/Components/Main/Tabs";
 
 // Functions & Helpers
-import { fetchTable } from "@/lib/Pieces/PiecesManager";
+import { fetchPieceDataFromTable } from "@/lib/Pieces/PiecesManager";
 import useInit from "@/hooks/useInit";
-import {
-  Add,
-  FilterListRounded,
-  ImportExportRounded,
-  VerticalAlignBottomRounded,
-} from "@mui/icons-material";
-import Footer from "@/Components/Misc/Footer";
-import { useLego } from "@/Context/LegoContext";
-import DeletePieceModal from "@/Components/Modals/DeletePieceModal";
+
+// Contexts
+import { useLegoState } from "@/Context/LegoStateContext";
+import { useModalState } from "@/Context/ModalContext";
 
 /**
  * Main application component for the Lego manager
@@ -45,9 +43,9 @@ const MainApp = () => {
     export: useRef(null),
   });
 
+  const { activeTab, setActiveTab } = useLegoState();
+
   const {
-    activeTab,
-    setActiveTab,
     setShowImportModal,
     showImportModal,
     showAddModal,
@@ -57,7 +55,7 @@ const MainApp = () => {
     deleteModalOpen,
     setDeleteModalOpen,
     pieceToDelete,
-  } = useLego();
+  } = useModalState();
 
   const tabOrder = ["all", "add", "import", "export"];
   // Initialization: Load Tables
@@ -118,8 +116,8 @@ const MainApp = () => {
   // Fetch pieces when selected table changes
   useEffect(() => {
     if (selectedTable) {
-      console.log(`Fetching pieces for table ${selectedTable.id}...`);
-      fetchTable(selectedTable.id)
+      console.log(`[API] Fetching pieces for table ${selectedTable.id}...`);
+      fetchPieceDataFromTable(selectedTable)
         .then((savedData) => {
           if (savedData) {
             setPiecesByTable((prev) => ({
@@ -127,13 +125,13 @@ const MainApp = () => {
               [selectedTable.id]: savedData,
             }));
             console.log(
-              `Fetched ${savedData.length} pieces for table ${selectedTable.id}`
+              `[API] Fetched ${savedData.length} pieces for table ${selectedTable.id}`
             );
           }
         })
         .catch((error) => {
           console.error(
-            `Failed to fetch pieces for table ${selectedTable.id}:`,
+            `[API] Failed to fetch pieces for table ${selectedTable.id}:`,
             error
           );
         });
@@ -176,22 +174,22 @@ const MainApp = () => {
       // Tab is becoming active
       if (direction === "right") {
         // Slide in from right when moving forward
-        return `${baseClasses} opacity-100 md:translate-x-0 translate-y-0`;
+        return `${baseClasses} opacity-100 sm:translate-x-0 translate-y-0`;
       } else {
         // Slide in from left when moving backward
-        return `${baseClasses} opacity-100 md:translate-x-0 translate-y-0`;
+        return `${baseClasses} opacity-100 sm:translate-x-0 translate-y-0`;
       }
     } else if (isActive && !isAnimating) {
       // Tab is active and not animating
-      return `${baseClasses} opacity-100 md:translate-x-0 translate-y-0`;
+      return `${baseClasses} opacity-100 sm:translate-x-0 translate-y-0`;
     } else if (wasActive) {
       // Tab was active and is being replaced
       if (direction === "right") {
         // Slide out to left when moving forward
-        return `${baseClasses} opacity-0 md:-translate-x-full translate-y-full md:translate-y-0`;
+        return `${baseClasses} opacity-0 sm:-translate-x-full -translate-y-full sm:translate-y-0`;
       } else {
         // Slide out to right when moving backward
-        return `${baseClasses} opacity-0 md:translate-x-full -translate-y-full md:-translate-y-0`;
+        return `${baseClasses} opacity-0 sm:translate-x-full translate-y-full sm:-translate-y-0`;
       }
     } else {
       // Inactive tab - position based on direction relative to active tab
@@ -201,8 +199,8 @@ const MainApp = () => {
       // If this tab is to the left of the active tab, position it left
       // Otherwise, position it right
       return tabIndex < activeIndex
-        ? `${baseClasses} opacity-0 md:-translate-x-full translate-y-full md:translate-y-0 pointer-events-none`
-        : `${baseClasses} opacity-0 md:translate-x-full -translate-y-full md:translate-y-0 pointer-events-none`;
+        ? `${baseClasses} opacity-0 sm:-translate-x-full -translate-y-full sm:translate-y-0 pointer-events-none`
+        : `${baseClasses} opacity-0 sm:translate-x-full translate-y-full sm:translate-y-0 pointer-events-none`;
     }
   };
 
@@ -215,63 +213,7 @@ const MainApp = () => {
         <Header />
 
         {/* Main Tabs */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div
-            className={`p-3 md:p-5 rounded-xl border ${
-              activeTab === "all"
-                ? "bg-blue-600/30 border-blue-500"
-                : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
-            } cursor-pointer transition-all duration-300 flex flex-col items-center justify-center`}
-            onClick={() => handleTabChange("all")}
-          >
-            <FilterListRounded className="h-7 w-7 mb-2" fontSize="large" />
-
-            <span className="font-medium">
-              {selectedTable?.isMinifig ? "Browse Minifigs" : "Browse Pieces"}
-            </span>
-          </div>
-
-          <div
-            className={`p-3 md:p-5 rounded-xl border ${
-              activeTab === "add"
-                ? "bg-emerald-600/30 border-emerald-500"
-                : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
-            } cursor-pointer transition-all duration-300 flex flex-col items-center justify-center`}
-            onClick={() => handleTabChange("add")}
-          >
-            <Add className="h-7 w-7 mb-2" fontSize="large" />
-            <span className="font-medium">
-              {selectedTable?.isMinifig ? "Add New Minifig" : "Add New Piece"}
-            </span>
-          </div>
-
-          <div
-            className={`p-3 md:p-5 rounded-xl border ${
-              activeTab === "import"
-                ? "bg-amber-600/30 border-amber-500"
-                : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
-            } cursor-pointer transition-all duration-300 flex flex-col items-center justify-center`}
-            onClick={() => handleTabChange("import")}
-          >
-            <VerticalAlignBottomRounded
-              className="h-7 w-7 mb-2"
-              fontSize="large"
-            />
-            <span className="font-medium">Import Set</span>
-          </div>
-
-          <div
-            className={`p-3 md:p-5 rounded-xl border ${
-              activeTab === "export"
-                ? "bg-rose-600/30 border-rose-500"
-                : "bg-slate-800/60 border-slate-700 hover:bg-slate-800/90"
-            } cursor-pointer transition-all duration-300 flex flex-col items-center justify-center`}
-            onClick={() => handleTabChange("export")}
-          >
-            <ImportExportRounded className="h-7 w-7 mb-2" fontSize="large" />
-            <span className="font-medium">Import/Export</span>
-          </div>
-        </div>
+        <Tabs handleTabChange={handleTabChange} />
 
         {/* Tab Content Container - Dynamic height with overflow hidden during transitions */}
         <div

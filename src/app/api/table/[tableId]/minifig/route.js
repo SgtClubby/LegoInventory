@@ -51,22 +51,38 @@ export async function GET(req, { params }) {
       }
     ).lean();
 
+    // Fetch metadata for all needed minifigs in a single query
+    const minifigPricedataList = await MinifigPriceMetadata.find(
+      { minifigIdRebrickable: { $in: minifigIdsRebrickable } },
+      {
+        _id: 0,
+        __v: 0,
+        createdAt: 0,
+        updatedAt: 0,
+      }
+    ).lean();
+
     // Create a lookup map for faster access
     const metadataMap = {};
     minifigMetadataList.forEach((meta) => {
       metadataMap[meta.minifigIdRebrickable] = meta;
     });
 
+    const priceDataMap = {};
+    minifigPricedataList.forEach((meta) => {
+      priceDataMap[meta.minifigIdRebrickable] = meta;
+    });
+
     // Combine user data with metadata
     const completeMinifigs = userMinifigs.map((userMinifig) => {
       const metadata = metadataMap[userMinifig.minifigIdRebrickable] || {};
-
+      const priceData = priceDataMap[userMinifig.minifigIdRebrickable] || {};
       return {
         ...userMinifig,
         minifigName: metadata.minifigName || "Unknown Minifig",
         minifigImage: metadata.minifigImage || null,
-        priceData: metadata.priceData || {
-          minifigIdRebrickable: minifig.minifigIdRebrickable,
+        priceData: priceData.priceData || {
+          minifigIdRebrickable: metadata.minifigIdRebrickable,
           avgPriceNew: "N/A",
           maxPriceNew: "N/A",
           minPriceNew: "N/A",

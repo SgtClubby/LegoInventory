@@ -1,20 +1,32 @@
 // src/app/Components/Modals/TableAddModal.jsx
 
+// Icons
 import { Add, DehazeRounded } from "@mui/icons-material";
-import { addTable } from "@/lib/Table/TableManager";
+
+// Helpers
+import { addNewTable } from "@/lib/Table/TableManager";
 import { useEffect, useState } from "react";
-import { useLego } from "@/Context/LegoContext";
-import { useStatus } from "@/Context/StatusContext";
+
+// Contexts
+import { useLegoState } from "@/Context/LegoStateContext";
+import { useStatus } from "@/Context/StatusContext.tsx";
+import { useModalState } from "@/Context/ModalContext";
+
+// Components
 import ToggleSwitch from "@/Components/Misc/ToggleSwitch";
 
 export default function TableAddModal({ toggleModal }) {
+  // Contexts
+  const { availableTables, setAvailableTables, setSelectedTable } =
+    useLegoState();
+  const { showAddModal, setAddShowModal } = useModalState();
+  const { showSuccess } = useStatus();
+
+  // States
   const [isValid, setIsValid] = useState(false);
   const [newTableName, setNewTableName] = useState("");
   const [newTableDescription, setnNewTableDescription] = useState("");
-  const { availableTables, setAvailableTables, showAddModal, setAddShowModal } =
-    useLego();
   const [isMinifig, setIsMinifig] = useState(showAddModal.isMinifig);
-  const { showSuccess } = useStatus();
 
   // Validate input
   useEffect(() => {
@@ -46,7 +58,7 @@ export default function TableAddModal({ toggleModal }) {
   };
 
   const handleSubmit = async () => {
-    const newTable = await addTable(
+    const newTable = await addNewTable(
       newTableName || `Table ${availableTables.length + 1}`,
       newTableDescription || "",
       isMinifig
@@ -66,6 +78,7 @@ export default function TableAddModal({ toggleModal }) {
     }
 
     setAvailableTables([...availableTables, newTable]);
+    setSelectedTable(newTable);
     showSuccess(`Table "${newTableName}" has been added successfully!`, {
       position: "top",
       autoCloseDelay: 3000,

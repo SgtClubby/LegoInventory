@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { useLego } from "@/Context/LegoContext";
+import { useLegoState } from "@/Context/LegoStateContext";
 import {
   handleExport,
   handleImport,
@@ -14,9 +14,11 @@ import {
   SimCardDownloadRounded,
   VerticalAlignBottomRounded,
 } from "@mui/icons-material";
+import { apiFetch } from "@/lib/API/FetchUtils";
+import { useStatus } from "@/Context/StatusContext.tsx";
 
 export default function ImportExport() {
-  const { piecesByTable, setPiecesByTable, selectedTable } = useLego();
+  const { piecesByTable, setPiecesByTable, selectedTable } = useLegoState();
   const isMinifig = selectedTable?.isMinifig;
   const [importStatus, setImportStatus] = useState({
     success: null,
@@ -89,11 +91,15 @@ export default function ImportExport() {
         });
 
         // First save to database and update UI immediately for better responsiveness
-        await fetch(`/api/table/${selectedTable?.id}`, {
+
+        let url = `/table/${selectedTable?.id}/bricks`;
+        if (isMinifig) {
+          url = `/table/${selectedTable?.id}/minifigs`;
+        }
+
+        // Send the processed data to the API
+        await apiFetch(url, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify(processedImportData),
         });
 
@@ -117,6 +123,7 @@ export default function ImportExport() {
           const minifigData = processedImportData.map((minifig) => ({
             minifigIdRebrickable: minifig.minifigIdRebrickable,
             minifigIdBricklink: minifig.minifigIdBricklink || null,
+            minifigName: minifig.minifigName,
           }));
 
           // Fetch price data asynchronously - don't wait for it
@@ -154,61 +161,20 @@ export default function ImportExport() {
       );
 
       // Start the API request but don't block UI rendering
-      fetch(`/api/bricklink/price`, {
+      apiFetch(`/bricklink/price`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(validMinifigs),
-      })
-        .then(async (response) => {
-          if (!response.ok) {
-            console.warn(
-              "Background price fetch encountered an issue:",
-              response.statusText
-            );
-            return;
-          }
-
-          const results = await response.json();
-          console.log(
-            `Successfully fetched price data for ${results.length} minifigs`
+      }).then(async (data) => {
+        if (data.error) {
+          console.warn(
+            "Background price fetch encountered an issue:",
+            data.error
           );
-
-          // Update the piecesByTable state with the new price data
-          setPiecesByTable((prev) => {
-            // Make sure we still have data for this table
-            if (!prev[selectedTable.id]) return prev;
-
-            // Map through existing pieces and update with price data where applicable
-            const updatedPieces = prev[selectedTable.id].map((piece) => {
-              // Find matching price data for this minifig
-              const matchingResult = results.find(
-                (result) => result.id === piece.minifigIdRebrickable
-              );
-
-              // Only update if we found matching price data
-              if (matchingResult && matchingResult.priceData) {
-                return {
-                  ...piece,
-                  priceData: matchingResult.priceData,
-                };
-              }
-
-              // Otherwise return the piece unchanged
-              return piece;
-            });
-
-            // Return updated state
-            return { ...prev, [selectedTable.id]: updatedPieces };
-          });
-        })
-        .catch((error) => {
-          console.error("Background price fetch error:", error);
-        });
+          return;
+        }
+      });
     } catch (error) {
-      console.error("Error in background price fetching:", error);
-      // Don't show errors to the user for background processes
+      console.error("Error fetching price data:", error);
     }
   };
 
@@ -248,7 +214,7 @@ export default function ImportExport() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1  gap-6">
       {/* Import Section */}
       <div className="bg-slate-800/70 p-5 rounded-xl border border-slate-700 shadow-lg">
         <h3 className="text-xl font-semibold text-white mb-4 flex items-center">

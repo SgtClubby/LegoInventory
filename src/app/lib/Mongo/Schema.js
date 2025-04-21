@@ -1,5 +1,6 @@
 // src/app/lib/Mongo/Schema.js
 import mongoose from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 const { Schema } = mongoose;
 
@@ -31,46 +32,14 @@ const colorSchema = new Schema(
  */
 const priceDataSchema = new Schema(
   {
-    avgPriceNew: {
-      type: mongoose.Types.Decimal128,
-      default: null,
-      get: (val) => (val ? Number(val.toString()) : null),
-    },
-    maxPriceNew: {
-      type: mongoose.Types.Decimal128,
-      default: null,
-      get: (val) => (val ? Number(val.toString()) : null),
-    },
-    minPriceNew: {
-      type: mongoose.Types.Decimal128,
-      default: null,
-      get: (val) => (val ? Number(val.toString()) : null),
-    },
-    avgPriceUsed: {
-      type: mongoose.Types.Decimal128,
-      default: null,
-      get: (val) => (val ? Number(val.toString()) : null),
-    },
-    maxPriceUsed: {
-      type: mongoose.Types.Decimal128,
-      default: null,
-      get: (val) => (val ? Number(val.toString()) : null),
-    },
-    minPriceUsed: {
-      type: mongoose.Types.Decimal128,
-      default: null,
-      get: (val) => (val ? Number(val.toString()) : null),
-    },
-    currencyCode: {
-      type: String,
-      default: "USD",
-      trim: true,
-    },
-    currencySymbol: {
-      type: String,
-      default: "$",
-      trim: true,
-    },
+    avgPriceNew: { type: Number, default: null },
+    maxPriceNew: { type: Number, default: null },
+    minPriceNew: { type: Number, default: null },
+    avgPriceUsed: { type: Number, default: null },
+    maxPriceUsed: { type: Number, default: null },
+    minPriceUsed: { type: Number, default: null },
+    currencyCode: { type: String, default: "USD", trim: true },
+    currencySymbol: { type: String, default: "$", trim: true },
   },
   { _id: false }
 );
@@ -192,6 +161,7 @@ const userMinifigSchema = new Schema(
     uuid: {
       type: String,
       required: true,
+      default: () => uuidv4(),
       trim: true,
     },
     minifigIdRebrickable: {
@@ -240,6 +210,7 @@ const userBrickSchema = new Schema(
     uuid: {
       type: String,
       required: true,
+      default: () => uuidv4(),
       trim: true,
     },
     elementId: {

@@ -30,12 +30,10 @@ function getConnectionString() {
 
 // Create cache object if it doesn't exist
 const cacheObj = { conn: null, promise: null };
-let cached = global.mongoose || cacheObj;
-
-// Ensure the cached object is properly initialized
-if (!cached) {
-  cached = global.mongoose = cacheObj;
+if (!global.mongoose) {
+  global.mongoose = cacheObj;
 }
+let cached = global.mongoose;
 
 /**
  * Connects to MongoDB with enhanced error handling

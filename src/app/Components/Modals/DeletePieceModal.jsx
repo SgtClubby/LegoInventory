@@ -1,38 +1,48 @@
 // src/app/Components/Modals/DeletePieceModal.jsx
 
-import { useLego } from "@/Context/LegoContext";
-import { useStatus } from "@/Context/StatusContext";
+// Contexts
+import { useLegoState } from "@/Context/LegoStateContext";
+import { useModalState } from "@/Context/ModalContext";
+import { useStatus } from "@/Context/StatusContext.tsx";
+
+// Icons
 import { DeleteForeverRounded, DeleteRounded } from "@mui/icons-material";
+
+// Helpers
+import { apiFetch } from "@/lib/API/FetchUtils";
 import { useEffect } from "react";
 
 export default function DeletePieceModal() {
-  const {
-    setPiecesByTable,
-    piecesByTable,
-    pieceToDelete,
-    setPieceToDelete,
-    setDeleteModalOpen,
-    selectedTable,
-  } = useLego();
+  // Contexts
+  const { setPiecesByTable, setPieceToDelete, selectedTable } = useLegoState();
+  const { setDeleteModalOpen, pieceToDelete } = useModalState();
   const { showSuccess } = useStatus();
 
+  // One time states
   const isMinifig = selectedTable?.isMinifig;
   const piece = pieceToDelete?.piece;
+  const tableId = selectedTable.id;
 
   const handleDeletePiece = async (uuid) => {
-    const tableId = selectedTable.id;
-
     try {
       // Then delete from database
-      const response = await fetch(`/api/table/${tableId}/brick/${uuid}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      // Check if the piece is a minifig or not
+      let deleteReq;
 
-      if (!response.ok) {
-        throw new Error(`Failed to delete piece: ${response.statusText}`);
+      if (isMinifig) {
+        // If it's a minifig, delete the minifig from the database
+        deleteReq = await apiFetch(`/table/${tableId}/minifigs/${uuid}`, {
+          method: "DELETE",
+        });
+      } else {
+        // If it's a piece, delete the piece from the database
+        deleteReq = await apiFetch(`/table/${tableId}/bricks/${uuid}`, {
+          method: "DELETE",
+        });
+      }
+
+      if (deleteReq.error) {
+        throw new Error(deleteReq.error || "Failed to delete piece");
       }
 
       setPiecesByTable((prev) => {

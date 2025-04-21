@@ -1,5 +1,7 @@
 // src/app/lib/API/ApiHelpers.js
 
+import { isArray } from "util";
+
 /**
  * Safely extracts parameters from route params
  * Handles NextJS App Router parameter format correctly
@@ -50,13 +52,22 @@ export function errorResponse(message, status = 400) {
  * @returns {Response} Success response
  */
 export function successResponse(data = {}, message = "Operation successful") {
-  return jsonResponse({
-    request: {
-      success: true,
-      message,
-    },
-    ...data,
-  });
+  const responseData = {
+    success: data ? true : false,
+    message,
+    data: null,
+  };
+
+  if (data) {
+    if (Array.isArray(data)) {
+      responseData.data = data.map((item) => ({
+        ...item,
+      }));
+    } else {
+      responseData.data = data;
+    }
+  }
+  return jsonResponse(responseData);
 }
 
 /**

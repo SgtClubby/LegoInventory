@@ -2,9 +2,8 @@
 
 "use client";
 import { useEffect } from "react";
-import { fetchTable } from "@/lib/Pieces/PiecesManager";
-import { fetchTables } from "@/lib/Table/TableManager";
-import { useLego } from "@/Context/LegoContext";
+import { fetchAvailableTables } from "@/lib/Table/TableManager";
+import { useLegoState } from "@/Context/LegoStateContext";
 
 export default function useInit() {
   const {
@@ -14,28 +13,19 @@ export default function useInit() {
     setAvailableTables,
     selectedTable,
     setSelectedTable,
-  } = useLego();
+  } = useLegoState();
 
   useEffect(() => {
     const init = async () => {
       try {
         console.log("Fetching tables...");
-        const fetchedTables = await fetchTables();
-        if (fetchedTables?.length > 0) {
-          setAvailableTables(fetchedTables);
+        const tableData = await fetchAvailableTables();
+        console.log("Tables fetched:", tableData);
+        if (tableData?.length > 0) {
+          setAvailableTables(tableData);
 
-          const firstTable =
-            fetchedTables.find((t) => t.id == 1) || fetchedTables[0];
+          const firstTable = tableData.find((t) => t.id == 1) || tableData[0];
           setSelectedTable(firstTable);
-
-          console.log(`Fetching pieces for table ${firstTable.id}...`);
-          const savedData = await fetchTable(firstTable.id);
-          if (savedData) {
-            setPiecesByTable((prev) => ({
-              ...prev,
-              [firstTable.id]: savedData,
-            }));
-          }
         }
       } catch (err) {
         console.error("Initialization failed:", err);

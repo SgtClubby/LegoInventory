@@ -17,7 +17,8 @@ import {
 } from "@mui/icons-material";
 import LoaderIcon from "../Misc/LoaderIcon";
 import BrickIcon from "../Misc/BrickIcon";
-import { useStatus } from "@/Context/StatusContext";
+import { useStatus } from "@/Context/StatusContext.tsx";
+import { apiFetch } from "@/lib/API/FetchUtils";
 
 export default function SearchSet({ setSetSearchResult }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,17 +113,9 @@ export default function SearchSet({ setSetSearchResult }) {
     // Set new timeout for debounced search
     searchTimeout.current = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/search/set/${searchTerm}`, {
+        const data = await apiFetch(`/search/set/${searchTerm}`, {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "LegoInventoryBot/1.0 (+Clomby)",
-          },
         });
-
-        const data = await response.json();
-
-        console.log("Search results:", data);
 
         if (data && data.length > 0) {
           setResults(data);

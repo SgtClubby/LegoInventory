@@ -3,9 +3,22 @@
 @import "tailwindcss";
 @tailwind utilities;
 
+/**
+ * Root variables
+ */
 :root {
+  /* Theme colors */
   --background: #ededed;
   --foreground: #0a0a0a;
+
+  /* Animation settings */
+  --animation-duration-fast: 150ms;
+  --animation-duration-normal: 300ms;
+  --animation-duration-slow: 500ms;
+  --animation-easing-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --animation-easing-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-easing-in: ease-in;
+  --animation-easing-out: ease-out;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,6 +33,9 @@
 }
 
 @layer components {
+  /**
+   * Shadow utilities
+   */
   .shadow-btm {
     @apply shadow-[0px_8px_8px_rgba(0,0,0,0.3)];
   }
@@ -36,16 +52,24 @@
     @apply shadow-[8px_0px_8px_rgba(0,0,0,0.3)];
   }
 
+  /**
+   * Button styles
+   */
   .blue-btn {
     @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition;
   }
+
   .red-btn {
     @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition;
   }
+
   .cancel-btn {
     @apply text-gray-300 hover:text-gray-100 transition bg-none;
   }
 
+  /**
+   * Text and UI utilities
+   */
   .optionShadow {
     text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
   }
@@ -67,54 +91,18 @@
     margin-right: 8px;
   }
 
-  @keyframes modalAppear {
-    from {
-      transform: scale(0.95);
-      opacity: 0;
-    }
-    to {
-      transform: scale(1);
-      opacity: 1;
-    }
+  /**
+   * Tab content base style
+   */
+  .tab-content {
+    position: relative;
+    width: 100%;
   }
 
-  .animate-modalAppear {
-    animation: modalAppear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-
-  @keyframes slideDown {
-    from {
-      transform: translateY(-10px);
-      max-height: 0;
-    }
-    to {
-      transform: translateY(0);
-      max-height: 800px;
-    }
-  }
-
-  @keyframes slideDown {
-    from {
-      transform: translateY(-10px);
-      max-height: 0;
-    }
-    to {
-      transform: translateY(0);
-      max-height: 800px;
-    }
-  }
-
-  @keyframes slideUp {
-    from {
-      transform: translateY(0);
-      max-height: 800px;
-    }
-    to {
-      transform: translateY(-10px);
-      max-height: 0;
-    }
-  }
-
+  /**
+   * Animation keyframes
+   */
+  /* Fade animations */
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -133,22 +121,54 @@
     }
   }
 
-  .animate-slideDown {
-    animation: slideDown 150ms ease-out forwards;
+  /* Scale animations */
+  @keyframes modalAppear {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 
-  .animate-slideUp {
-    animation: slideUp 150ms ease-in forwards;
+  @keyframes pulseHighlight {
+    0% {
+      box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.1);
+    }
+    70% {
+      box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    }
   }
 
-  .animate-fadeIn {
-    animation: fadeIn 150ms ease-out forwards;
+  /* Vertical slide animations */
+  @keyframes slideDown {
+    from {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
-  .animate-fadeOut {
-    animation: fadeOut 150ms ease-in forwards;
+  @keyframes slideUp {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
   }
 
+  /* Positioned slide animations with transform-translate */
   @keyframes slideInDown {
     from {
       transform: translate(-50%, -20px);
@@ -193,159 +213,188 @@
     }
   }
 
-  @keyframes pulseHighlight {
-    0% {
-      box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.1);
+  /* Horizontal slide animations */
+  @keyframes slideInFromRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
     }
-    70% {
-      box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    to {
+      transform: translateX(0);
+      opacity: 1;
     }
   }
 
-  .animate-slideInDown {
-    animation: slideInDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  @keyframes slideInFromLeft {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
   }
 
-  .animate-slideOutUp {
-    animation: slideOutUp 0.3s ease-in forwards;
+  @keyframes slideOutToRight {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
   }
 
-  .animate-slideInUp {
-    animation: slideInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  @keyframes slideOutToLeft {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
   }
 
-  .animate-slideOutDown {
-    animation: slideOutDown 0.3s ease-in forwards;
+  /**
+   * Animation classes
+   */
+  /* Fade animations */
+  .animate-fadeIn {
+    animation: fadeIn var(--animation-duration-fast) var(--animation-easing-out)
+      forwards;
+  }
+
+  .animate-fadeOut {
+    animation: fadeOut var(--animation-duration-fast) var(--animation-easing-in)
+      forwards;
+  }
+
+  /* Scale animations */
+  .animate-modalAppear {
+    animation: modalAppear var(--animation-duration-normal)
+      var(--animation-easing-bounce);
   }
 
   .animate-pulseHighlight {
     animation: pulseHighlight 1.5s infinite;
   }
 
-  /* Add these animation classes to your globals.css file */
+  /* Vertical slide animations */
+  .animate-slideDown {
+    animation: slideDown var(--animation-duration-normal)
+      var(--animation-easing-smooth);
+  }
 
-  @layer components {
-    /* Tab animations */
-    @keyframes slideInFromRight {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
+  .animate-slideUp {
+    animation: slideUp var(--animation-duration-normal)
+      var(--animation-easing-smooth);
+  }
 
-    @keyframes slideInFromLeft {
-      from {
-        transform: translateX(-100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
+  /* Positioned slide animations */
+  .animate-slideInDown {
+    animation: slideInDown var(--animation-duration-normal)
+      var(--animation-easing-bounce) forwards;
+  }
 
-    @keyframes slideOutToRight {
-      from {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      to {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-    }
+  .animate-slideOutUp {
+    animation: slideOutUp var(--animation-duration-normal)
+      var(--animation-easing-in) forwards;
+  }
 
-    @keyframes slideOutToLeft {
-      from {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      to {
-        transform: translateX(-100%);
-        opacity: 0;
-      }
-    }
+  .animate-slideInUp {
+    animation: slideInUp var(--animation-duration-normal)
+      var(--animation-easing-bounce) forwards;
+  }
 
-    .animate-slideInFromRight {
-      animation: slideInFromRight 500ms ease-in-out forwards;
-      position: relative;
-      z-index: 10;
-    }
+  .animate-slideOutDown {
+    animation: slideOutDown var(--animation-duration-normal)
+      var(--animation-easing-in) forwards;
+  }
 
-    .animate-slideInFromLeft {
-      animation: slideInFromLeft 500ms ease-in-out forwards;
-      position: relative;
-      z-index: 10;
-    }
+  /* Horizontal slide animations */
+  .animate-slideInFromRight {
+    animation: slideInFromRight var(--animation-duration-slow)
+      var(--animation-easing-out) forwards;
+    position: relative;
+    z-index: 10;
+  }
 
-    .animate-slideOutToRight {
-      animation: slideOutToRight 500ms ease-in-out forwards;
-      position: absolute;
-      width: 100%;
-      top: 0;
-      left: 0;
-      z-index: 0;
-    }
+  .animate-slideInFromLeft {
+    animation: slideInFromLeft var(--animation-duration-slow)
+      var(--animation-easing-out) forwards;
+    position: relative;
+    z-index: 10;
+  }
 
-    .animate-slideOutToLeft {
-      animation: slideOutToLeft 500ms ease-in-out forwards;
-      position: absolute;
-      width: 100%;
-      top: 0;
-      left: 0;
-      z-index: 0;
-    }
+  .animate-slideOutToRight {
+    animation: slideOutToRight var(--animation-duration-slow)
+      var(--animation-easing-out) forwards;
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 0;
+  }
 
-    /* Tab content base style */
-    .tab-content {
-      position: relative;
-      width: 100%;
-    }
-    /* Example CSS for slide right (entering from the right, exiting to the left) */
-    .slide-right-enter {
-      opacity: 0;
-      transform: translateX(100%);
-    }
-    .slide-right-enter-active {
-      opacity: 1;
-      transform: translateX(0);
-      transition: all 500ms ease;
-    }
-    .slide-right-exit {
-      opacity: 1;
-      transform: translateX(0);
-    }
-    .slide-right-exit-active {
-      opacity: 0;
-      transform: translateX(-100%);
-      transition: all 500ms ease;
-    }
+  .animate-slideOutToLeft {
+    animation: slideOutToLeft var(--animation-duration-slow)
+      var(--animation-easing-out) forwards;
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 0;
+  }
 
-    /* Example CSS for slide left (entering from the left, exiting to the right) */
-    .slide-left-enter {
-      opacity: 0;
-      transform: translateX(-100%);
-    }
-    .slide-left-enter-active {
-      opacity: 1;
-      transform: translateX(0);
-      transition: all 500ms ease;
-    }
-    .slide-left-exit {
-      opacity: 1;
-      transform: translateX(0);
-    }
-    .slide-left-exit-active {
-      opacity: 0;
-      transform: translateX(100%);
-      transition: all 500ms ease;
-    }
+  /**
+   * Transition classes for React transitions
+   */
+  /* Slide right (entering from right, exiting to left) */
+  .slide-right-enter {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  .slide-right-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: all var(--animation-duration-slow) ease;
+  }
+
+  .slide-right-exit {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .slide-right-exit-active {
+    opacity: 0;
+    transform: translateX(-100%);
+    transition: all var(--animation-duration-slow) ease;
+  }
+
+  /* Slide left (entering from left, exiting to right) */
+  .slide-left-enter {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+
+  .slide-left-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: all var(--animation-duration-slow) ease;
+  }
+
+  .slide-left-exit {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .slide-left-exit-active {
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all var(--animation-duration-slow) ease;
   }
 }

@@ -159,25 +159,34 @@ class MinifigController extends BaseController {
         );
       }
 
-      const minifigsToInsert = [];
+      const userMinifigsToInsert = [];
       const minifigMetadataToUpsert = [];
       const minifigPriceMetadataToUpsert = [];
 
       // Process each minifig
       for (const minifig of minifigs) {
         // Prepare user-specific minifig data
-        minifigsToInsert.push({
-          uuid: minifig.uuid,
-          minifigIdRebrickable: minifig.minifigIdRebrickable,
-          minifigIdBricklink: minifig?.minifigIdBricklink || "",
-          minifigQuantity: minifig.minifigQuantity || 0,
-          highlighted: minifig.highlighted || false,
-          tableId,
-          ownerId,
+        userMinifigsToInsert.push({
+          updateOne: {
+            filter: { minifigIdRebrickable: minifig.minifigIdRebrickable },
+            update: {
+              $set: {
+                uuid: minifig.uuid,
+                minifigIdRebrickable: minifig.minifigIdRebrickable,
+                minifigIdBricklink: minifig?.minifigIdBricklink || "",
+                minifigQuantity: minifig.minifigQuantity || 0,
+                highlighted: false,
+                tableId,
+                ownerId,
+              },
+            },
+            upsert: true,
+          },
         });
 
         // Prepare minifig metadata for upsert if we have metadata
         if (minifig.minifigName) {
+          console.log(minifig.minifigName);
           minifigMetadataToUpsert.push({
             updateOne: {
               filter: { minifigIdRebrickable: minifig.minifigIdRebrickable },
@@ -186,7 +195,7 @@ class MinifigController extends BaseController {
                   minifigName: minifig.minifigName,
                   minifigIdRebrickable: minifig.minifigIdRebrickable,
                   minifigIdBricklink: minifig.minifigIdBricklink,
-                  minifigImage: minifig.minifigImage || "",
+                  minifigImage: minifig.minifigImage,
                 },
               },
               upsert: true,
@@ -221,7 +230,7 @@ class MinifigController extends BaseController {
 
       // Perform operations in parallel for efficiency
       await Promise.all([
-        UserMinifig.insertMany(minifigsToInsert),
+        UserMinifig.bulkWrite(userMinifigsToInsert),
         // Only do the metadata bulkWrite if we have operations
         minifigMetadataToUpsert.length > 0
           ? MinifigMetadata.bulkWrite(minifigMetadataToUpsert)
@@ -232,7 +241,7 @@ class MinifigController extends BaseController {
       ]);
 
       return this.successResponse(
-        { count: minifigsToInsert.length },
+        { count: userMinifigsToInsert.length },
         "Minifigs added successfully"
       );
     } catch (error) {

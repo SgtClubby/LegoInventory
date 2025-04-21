@@ -1,14 +1,14 @@
 // src/app/Components/Misc/Header.jsx
 
 import React from "react";
-import { useLego } from "@/Context/LegoContext";
+import { useLegoState } from "@/Context/LegoStateContext";
 import {
   ChecklistRtlRounded,
   FormatListBulletedRounded,
 } from "@mui/icons-material";
 
 export default function Header() {
-  const { piecesByTable, selectedTable } = useLego();
+  const { piecesByTable, selectedTable } = useLegoState();
 
   // Calculate stats for the whole collection
   const totalPieces = Object.values(piecesByTable).reduce(

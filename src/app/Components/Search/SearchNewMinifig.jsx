@@ -13,6 +13,7 @@ import { debounce } from "lodash";
 import { Search } from "@mui/icons-material";
 import { ArrowCircleDownRounded, ClearRounded } from "@mui/icons-material";
 import LoaderIcon from "@/Components/Misc/LoaderIcon";
+import { apiFetch } from "@/lib/API/FetchUtils";
 
 export default function SearchNewMinifig({
   setSearchNewMinifigResult,
@@ -98,6 +99,8 @@ export default function SearchNewMinifig({
     if (!query) {
       setResults([]);
       setIsDropdownOpen(false);
+    } else if (query.length < 3) {
+      setIsDropdownOpen(true);
     }
   }, [query]);
 
@@ -106,8 +109,9 @@ export default function SearchNewMinifig({
    */
   const debouncedSearch = useRef(
     debounce(async (searchQuery) => {
+      setResults([]);
+
       if (!searchQuery || searchQuery.length < 3) {
-        setResults([]);
         setIsDropdownOpen(false);
         return;
       }
@@ -116,22 +120,25 @@ export default function SearchNewMinifig({
       setLoading(true);
 
       try {
-        const url = `/api/search/minifig/${encodeURIComponent(searchQuery)}`;
-        const response = await fetch(url);
+        const url = `/search/minifig/${encodeURIComponent(searchQuery)}`;
+        const data = await apiFetch(url);
 
         // If this isn't the latest request, don't process its results
         if (currentRequestId !== latestRequestId.current) return;
 
-        if (!response.ok) {
-          throw new Error(`Search failed: ${response.status}`);
+        if (data.error) {
+          console.error("Error fetching minifigs:", data.error);
+          setResults([]);
+          setIsDropdownOpen(false);
+          return;
         }
-
-        const data = await response.json();
 
         // Double-check if this is still the latest request
         if (currentRequestId !== latestRequestId.current) return;
 
-        const searchResults = !data?.aborted ? data.results || [] : [];
+        console.log("Search results:", data);
+
+        const searchResults = !data?.aborted ? data || [] : [];
         setResults(searchResults);
         setIsDropdownOpen(searchResults.length > 0);
         setSelectedIndex(-1); // Reset selected index on new results
@@ -280,8 +287,8 @@ export default function SearchNewMinifig({
 
             {/* Loading state */}
             {loading && (
-              <div className="px-4 py-3 text-center text-slate-400">
-                <div className="inline-block animate-spin mr-2 h-4 w-4 border-t-2 border-emerald-500 rounded-full"></div>
+              <div className="flex items-center justify-center px-4 py-3 text-center text-slate-400">
+                <LoaderIcon className="mr-2 h-4 w-4 text-emerald-500" />
                 Searching minifigs...
               </div>
             )}
