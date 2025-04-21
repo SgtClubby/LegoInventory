@@ -4,7 +4,6 @@ Incorporate data from https://brickset.com/api/v3.asmx?op=getInstructions2 for s
 Add support for set images
 
 Minor rebrickable/brickset api wrapper? (iguess finished, still need testing)
-
-Element cache wrapper
+Element cache wrapper (iguess finished, still need testing)
 
 standardize function names to either use piece or element (mix of both now depending on context)
