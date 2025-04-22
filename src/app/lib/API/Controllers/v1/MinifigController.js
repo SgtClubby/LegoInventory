@@ -6,10 +6,14 @@ import {
   UserMinifig,
   MinifigMetadata,
   MinifigPriceMetadata,
+  MinifigPriceHistory,
   Table,
 } from "@/lib/Mongo/Schema";
 import cacheManager from "@/lib/Cache/CacheManager";
 import priceDataHandler from "@/lib/Services/PriceDataHandler";
+import priceHistoryService from "@/lib/Services/PriceHistoryService";
+import config from "@/lib/Config/config";
+import BricklinkController from "./BricklinkController";
 
 /**
  * Controller for managing minifigs
@@ -64,16 +68,20 @@ class MinifigController extends BaseController {
 
       // Fetch metadata for all needed minifigs in a single query
       const minifigMetadataList = await MinifigMetadata.find(
-        { minifigIdRebrickable: { $in: minifigIdsRebrickable } },
-        { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }
+        {
+          minifigIdRebrickable: { $in: minifigIdsRebrickable },
+        },
+        { _id: 0, __v: 0, updatedAt: 0 }
       ).lean();
 
       const minifigPriceMetadataList = await MinifigPriceMetadata.find(
-        { minifigIdRebrickable: { $in: minifigIdsRebrickable } },
-        { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }
+        {
+          minifigIdRebrickable: { $in: minifigIdsRebrickable },
+        },
+        { _id: 0, __v: 0, updatedAt: 0 }
       ).lean();
 
-      // Create lookup maps for faster access
+      // Create metadata lookup map for faster access
       const metadataMap = {};
       minifigMetadataList.forEach((meta) => {
         metadataMap[meta.minifigIdRebrickable] = meta;
@@ -84,31 +92,49 @@ class MinifigController extends BaseController {
         priceMetadataMap[meta.minifigIdRebrickable] = meta;
       });
 
-      // Combine user data with metadata
+      // Prepare minifigs with basic metadata
       const completeMinifigs = userMinifigs.map((userMinifig) => {
         const metadata = metadataMap[userMinifig.minifigIdRebrickable] || {};
-        const priceMetadata =
+        const priceData =
           priceMetadataMap[userMinifig.minifigIdRebrickable] || {};
-
-        if (userMinifig.invalid) {
-          return {
-            ...userMinifig,
-            minifigImage: null,
-            minifigName: "Invalid/Missing ID",
-          };
-        }
-
-        const formattedPriceData = priceDataHandler.formatPriceData(
-          priceMetadata.priceData || {}
-        );
-
         return {
           ...userMinifig,
-          minifigImage: metadata.minifigImage,
           minifigName: metadata.minifigName || "Unknown Minifig",
-          priceData: formattedPriceData,
+          minifigImage: metadata.minifigImage || null,
+          priceData: priceData.priceData || null,
         };
       });
+
+      const expiredMinifigPrices = [];
+
+      // Check for expired prices and add to list
+      Object.keys(completeMinifigs).forEach(async (minifigId) => {
+        const minifig = completeMinifigs[minifigId];
+        const priceMetadata = priceMetadataMap[minifig.minifigIdRebrickable];
+        if (!minifig.priceData || priceMetadata?.isExpired) {
+          expiredMinifigPrices.push({
+            minifigIdRebrickable: minifig.minifigIdRebrickable,
+            minifigIdBricklink: minifig.minifigIdBricklink,
+            minifigName: minifig.minifigName,
+            minifigImage: minifig.minifigImage,
+          });
+          priceHistoryService.archiveCurrentPriceData(
+            minifig.minifigIdRebrickable
+          );
+        }
+      });
+
+      // Start background processing without awaiting result
+      if (expiredMinifigPrices.length > 0) {
+        const batchId = Date.now().toString(36);
+        console.log(
+          `Starting background processing for batch ${batchId} with ${expiredMinifigPrices.length} minifigs`
+        );
+        BricklinkController.processBatchesInBackground(
+          expiredMinifigPrices,
+          batchId
+        );
+      }
 
       // Sort minifigs by name
       completeMinifigs.sort((a, b) => {
@@ -186,7 +212,6 @@ class MinifigController extends BaseController {
 
         // Prepare minifig metadata for upsert if we have metadata
         if (minifig.minifigName) {
-          console.log(minifig.minifigName);
           minifigMetadataToUpsert.push({
             updateOne: {
               filter: { minifigIdRebrickable: minifig.minifigIdRebrickable },
@@ -204,6 +229,18 @@ class MinifigController extends BaseController {
         }
 
         if (minifig.priceData) {
+          // Check if we have an exisitng price for this minifig
+          const existingPrice = await MinifigPriceMetadata.findOne(
+            { minifigIdRebrickable: minifig.minifigIdRebrickable },
+            { _id: 0, expiresAt: 1, createdAt: 1 }
+          ).lean();
+
+          if (existingPrice) {
+            await priceHistoryService.archiveCurrentPriceData(
+              minifig.minifigIdRebrickable
+            );
+          }
+
           minifigPriceMetadataToUpsert.push({
             updateOne: {
               filter: { minifigIdRebrickable: minifig.minifigIdRebrickable },
@@ -220,6 +257,8 @@ class MinifigController extends BaseController {
                     currencyCode: minifig.priceData.currencyCode || "USD",
                     currencySymbol: minifig.priceData.currencySymbol || "$",
                   },
+                  isExpired: false,
+                  expiresAt: new Date(Date.now() + config.cacheExpiry.price),
                 },
               },
               upsert: true,
@@ -285,9 +324,21 @@ class MinifigController extends BaseController {
 
       // Handle price data separately if provided
       if (body.priceData) {
+        // Archive current price data to history before updating
+        await priceHistoryService.archiveCurrentPriceData(
+          currentMinifig.minifigIdRebrickable
+        );
+
+        // Update with new price data
         await MinifigPriceMetadata.updateOne(
           { minifigIdRebrickable: currentMinifig.minifigIdRebrickable },
-          { $set: { priceData: body.priceData } },
+          {
+            $set: {
+              priceData: body.priceData,
+              isExpired: false,
+              expiresAt: new Date(Date.now() + config.cacheExpiry.price),
+            },
+          },
           { upsert: true }
         );
 

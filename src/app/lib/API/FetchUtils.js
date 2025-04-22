@@ -1,9 +1,7 @@
 // src/app/lib/API/FetchUtils.js
 
+import config from "@/lib/Config/config";
 import rebrickableRateLimiter from "@/lib/API/RateLimiter";
-import apiUrlBuilder from "./ApiUrlBuilder";
-import { errorResponse, jsonResponse } from "./ApiHelpers";
-import getCallerInfo from "../Misc/DebugCaller";
 
 /**
  * Options for fetch with retry functionality
@@ -147,7 +145,7 @@ export async function fetchJSON(url, options = {}, retryOptions = {}) {
  */
 export async function fetchRebrickable(url, options = {}, retryOptions = {}) {
   // Add authorization header if not present
-  const apiKey = process.env.REBRICKABLE_APIKEY;
+  const apiKey = config.rebrickableApiKey;
 
   if (!apiKey) {
     throw new Error("Rebrickable API key is not configured");
@@ -174,29 +172,4 @@ export async function fetchRebrickable(url, options = {}, retryOptions = {}) {
   };
 
   return fetchJSON(fullUrl, { ...options, headers }, finalRetryOptions);
-}
-
-export async function apiFetch(path, options = {}) {
-  const debug = getCallerInfo(); // {file: 'webpack-internal:///(app-pages-browser)/./src/app/Components/Misc/ImportExport.jsx', line: 169, column: 93}
-  const caller = debug.file.split(")/.").pop();
-  const url = apiUrlBuilder.local(path);
-
-  console.log("[API] Who called:", caller);
-  console.log("[API] Fetch:", options.method || "GET", url);
-  console.log("[API] Fetch Query:", url.split("?")?.[1] || "No query");
-  console.log("[API] Fetch Headers:", options.headers || "No headers");
-  console.log(
-    "[API] Fetch body:",
-    options.body ? JSON.parse(options.body) : "No body"
-  );
-
-  const result = await fetchJSON(url, options);
-
-  if (result.error) {
-    console.error("[API] Fetch Error:", result.error);
-    throw new Error(result.error);
-  }
-
-  console.log(`[API] ${url} Fetched Data:`, result.data);
-  return result.data;
 }

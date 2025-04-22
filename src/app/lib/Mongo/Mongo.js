@@ -1,5 +1,7 @@
 // src/app/lib/Mongo/Mongo.js
 
+import config from "@/lib/Config/config";
+
 import mongoose from "mongoose";
 
 /**
@@ -9,18 +11,18 @@ import mongoose from "mongoose";
  */
 function getConnectionString() {
   // Check required environment variables
-  if (!process.env.MONGODB_URI) {
+  if (!config.mongoDbUri) {
     throw new Error("MONGODB_URI environment variable is not defined");
   }
 
-  if (!process.env.MONGODB_DB) {
+  if (!config.mongoDbName) {
     throw new Error("MONGODB_DB environment variable is not defined");
   }
 
   // Build connection string with optional params
-  const uri = process.env.MONGODB_URI;
-  const db = process.env.MONGODB_DB;
-  const params = process.env.MONGODB_PARAMS || "";
+  const uri = config.mongoDbUri;
+  const db = config.mongoDbName;
+  const params = config.mongoDbParams || "";
 
   // Make sure the URI doesn't end with a slash if we're appending the DB name
   const baseUri = uri.endsWith("/") ? uri.slice(0, -1) : uri;

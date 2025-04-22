@@ -225,10 +225,7 @@ const PieceRow = ({
 
           {/* Minifig Mobile View */}
           <MinifigMobileView
-            originalProps={{
-              piece,
-              selectedTable,
-            }}
+            piece={piece}
             handleChange={handleChange}
             handleDeleteClick={handleDeleteClick}
             fields={fields}

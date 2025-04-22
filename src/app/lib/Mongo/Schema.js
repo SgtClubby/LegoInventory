@@ -1,6 +1,7 @@
 // src/app/lib/Mongo/Schema.js
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
+import config from "@/lib/Config/config";
 
 const { Schema } = mongoose;
 
@@ -75,7 +76,7 @@ const brickMetadataSchema = new Schema(
     // Automatic expiration for cache data
     expiresAt: {
       type: Date,
-      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      default: () => new Date(Date.now() + config.cacheExpiry.brick), // Default: 30 days
       expires: 0,
     },
   },
@@ -116,7 +117,7 @@ const minifigMetadataSchema = new Schema(
     // Automatic expiration for cache data
     expiresAt: {
       type: Date,
-      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      default: () => new Date(Date.now() + config.cacheExpiry.minifig), // Default: 7 days
       expires: 0,
     },
   },
@@ -139,11 +140,39 @@ const minifigPriceSchema = new Schema(
       trim: true,
     },
     priceData: priceDataSchema,
-
-    // Price data expires faster
+    isExpired: {
+      type: Boolean,
+      default: false,
+    },
+    // We don't use TTL index for automatic deletion
+    // Instead we mark as expired and keep for historical data
     expiresAt: {
       type: Date,
-      default: () => new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days
+      default: () => new Date(Date.now() + config.cacheExpiry.price), // Default: 2 days
+    },
+  },
+  {
+    timestamps: true,
+    toJSON: { getters: true },
+  }
+);
+
+/**
+ * Schema for storing historical minifig price data
+ */
+const minifigPriceHistorySchema = new Schema(
+  {
+    minifigIdRebrickable: {
+      type: String,
+      required: true,
+      index: true,
+      trim: true,
+    },
+    priceData: priceDataSchema,
+    // Automatically delete old price history after 5x the price cache expiry time
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + config.cacheExpiry.price * 5), // Default: 5x the price cache expiry time
       expires: 0,
     },
   },
@@ -350,3 +379,6 @@ export const MinifigMetadata =
 export const MinifigPriceMetadata =
   mongoose.models.MinifigPrice ||
   mongoose.model("MinifigPrice", minifigPriceSchema);
+export const MinifigPriceHistory =
+  mongoose.models.MinifigPriceHistory ||
+  mongoose.model("MinifigPriceHistory", minifigPriceHistorySchema);

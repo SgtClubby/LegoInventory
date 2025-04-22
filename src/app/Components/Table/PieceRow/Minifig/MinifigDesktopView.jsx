@@ -8,6 +8,7 @@ import {
 } from "@mui/icons-material";
 
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
+import PriceTrend from "./PriceTrend";
 
 /**
  * Desktop view for minifig items in the table with improved responsiveness
@@ -185,26 +186,50 @@ export default function MinifigDesktopView({
               <div className="space-y-1 bg-slate-800/50 rounded-md p-2 border border-slate-700/30">
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-400">Max:</span>
-                  <span className="text-xs text-slate-200">
+                  <span className="text-xs text-slate-200 flex items-center">
                     {fields.priceData?.maxPriceNew
                       ? `$${fields.priceData.maxPriceNew}`
                       : "N/A"}
+                    {fields.priceData?.trends?.maxPriceNew && (
+                      <span className="ml-1">
+                        <PriceTrend
+                          trend={fields.priceData.trends.maxPriceNew}
+                          size="small"
+                        />
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-400">Avg:</span>
-                  <span className="text-xs font-medium text-slate-200">
+                  <span className="text-xs font-medium text-slate-200 flex items-center">
                     {fields.priceData?.avgPriceNew
                       ? `$${fields.priceData.avgPriceNew}`
                       : "N/A"}
+                    {fields.priceData?.trends?.avgPriceNew && (
+                      <span className="ml-1">
+                        <PriceTrend
+                          trend={fields.priceData.trends.avgPriceNew}
+                          size="small"
+                        />
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-400">Min:</span>
-                  <span className="text-xs text-slate-200">
+                  <span className="text-xs text-slate-200 flex items-center">
                     {fields.priceData?.minPriceNew
                       ? `$${fields.priceData.minPriceNew}`
                       : "N/A"}
+                    {fields.priceData?.trends?.minPriceNew && (
+                      <span className="ml-1">
+                        <PriceTrend
+                          trend={fields.priceData.trends.minPriceNew}
+                          size="small"
+                        />
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -216,26 +241,50 @@ export default function MinifigDesktopView({
               <div className="space-y-1 bg-slate-800/50 rounded-md p-2 border border-slate-700/30">
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-400">Max:</span>
-                  <span className="text-xs text-slate-200">
+                  <span className="text-xs text-slate-200 flex items-center">
                     {fields.priceData?.maxPriceUsed
                       ? `$${fields.priceData.maxPriceUsed}`
                       : "N/A"}
+                    {fields.priceData?.trends?.maxPriceUsed && (
+                      <span className="ml-1">
+                        <PriceTrend
+                          trend={fields.priceData.trends.maxPriceUsed}
+                          size="small"
+                        />
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-400">Avg:</span>
-                  <span className="text-xs font-medium text-slate-200">
+                  <span className="text-xs font-medium text-slate-200 flex items-center">
                     {fields.priceData?.avgPriceUsed
                       ? `$${fields.priceData.avgPriceUsed}`
                       : "N/A"}
+                    {fields.priceData?.trends?.avgPriceUsed && (
+                      <span className="ml-1">
+                        <PriceTrend
+                          trend={fields.priceData.trends.avgPriceUsed}
+                          size="small"
+                        />
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-400">Min:</span>
-                  <span className="text-xs text-slate-200">
+                  <span className="text-xs text-slate-200 flex items-center">
                     {fields.priceData?.minPriceUsed
                       ? `$${fields.priceData.minPriceUsed}`
                       : "N/A"}
+                    {fields.priceData?.trends?.minPriceUsed && (
+                      <span className="ml-1">
+                        <PriceTrend
+                          trend={fields.priceData.trends.minPriceUsed}
+                          size="small"
+                        />
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>

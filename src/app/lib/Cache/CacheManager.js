@@ -1,6 +1,7 @@
 // src/app/lib/Cache/CacheManager.js
 
 import dbConnect from "@/lib/Mongo/Mongo";
+import config from "@/lib/Config/config";
 import {
   BrickMetadata,
   MinifigMetadata,
@@ -14,7 +15,7 @@ class CacheManager {
   constructor() {
     this.memoryCache = new Map();
     this.memoryCacheExpiry = new Map();
-    this.DEFAULT_MEMORY_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+    this.DEFAULT_MEMORY_TTL = config.cacheExpiry.memory; // Default: 5 minutes in milliseconds
   }
 
   /**
@@ -73,7 +74,7 @@ class CacheManager {
       await dbConnect();
       const metadata = await BrickMetadata.findOne(
         { elementId, invalid: false },
-        { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }
+        { _id: 0, __v: 0, updatedAt: 0 }
       ).lean();
 
       if (metadata) {
@@ -131,22 +132,39 @@ class CacheManager {
       await dbConnect();
       const metadata = await MinifigMetadata.findOne(
         { minifigIdRebrickable: minifigId },
-        { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }
+        { _id: 0, __v: 0, updatedAt: 0 }
       ).lean();
 
       const priceData = await MinifigPriceMetadata.findOne(
         { minifigIdRebrickable: minifigId },
-        { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }
+        { _id: 0, __v: 0, updatedAt: 0 }
       ).lean();
 
       if (metadata) {
         const result = {
           ...metadata,
-          priceData: priceData?.priceData || null,
         };
 
-        this.setMemoryCache(cacheKey, result);
-        return result;
+        const priceMetadata = {
+          priceData: null,
+        };
+
+        if (priceData?.priceData) {
+          priceMetadata.priceData = priceData.priceData;
+        }
+
+        // add to memory cache only if the price data is not null
+        if (priceMetadata.priceData) {
+          this.setMemoryCache(cacheKey, {
+            ...result,
+            priceData: priceMetadata.priceData,
+          });
+        }
+
+        return {
+          ...result,
+          priceData: priceMetadata.priceData,
+        };
       }
 
       return null;
@@ -180,7 +198,13 @@ class CacheManager {
       if (priceData) {
         await MinifigPriceMetadata.updateOne(
           { minifigIdRebrickable: metadata.minifigIdRebrickable },
-          { $set: { priceData } },
+          {
+            $set: {
+              priceData,
+              isExpired: false,
+              expiresAt: new Date(Date.now() + config.cacheExpiry.price),
+            },
+          },
           { upsert: true }
         );
       }

@@ -6,7 +6,7 @@ import { addNewTable } from "@/lib/Table/TableManager";
 import { v4 as uuidv4 } from "uuid";
 import { useStatus } from "@/Context/StatusContext.tsx";
 import { useState } from "react";
-import { apiFetch } from "@/lib/API/FetchUtils";
+import { apiFetch } from "@/lib/API/client/apiFetch";
 
 /**
  * Hook for handling set import functionality with improved error handling and state management

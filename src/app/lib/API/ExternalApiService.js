@@ -3,6 +3,7 @@
 import { fetchRebrickable, fetchWithRetry } from "@/lib/API/FetchUtils";
 import apiUrlBuilder from "@/lib/API/ApiUrlBuilder";
 import cacheManager from "@/lib/Cache/CacheManager";
+import config from "@/lib/Config/config";
 import { load } from "cheerio";
 import { findBestMatch } from "string-similarity";
 
@@ -14,6 +15,7 @@ class ExternalApiService {
    * Default User-Agent for external requests
    */
   static USER_AGENT =
+    config.userAgent ||
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3";
 
   /**

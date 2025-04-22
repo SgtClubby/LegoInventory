@@ -18,7 +18,7 @@ import {
 import LoaderIcon from "../Misc/LoaderIcon";
 import BrickIcon from "../Misc/BrickIcon";
 import { useStatus } from "@/Context/StatusContext.tsx";
-import { apiFetch } from "@/lib/API/FetchUtils";
+import { apiFetch } from "@/lib/API/client/apiFetch";
 
 export default function SearchSet({ setSetSearchResult }) {
   const [searchTerm, setSearchTerm] = useState("");

@@ -4,6 +4,7 @@ import BaseController from "../BaseController";
 import dbConnect from "@/lib/Mongo/Mongo";
 import externalApiService from "@/lib/API/ExternalApiService";
 import cacheManager from "@/lib/Cache/CacheManager";
+import priceHistoryService from "@/lib/Services/PriceHistoryService";
 
 /**
  * Controller for BrickLink API interactions
@@ -81,7 +82,9 @@ class BricklinkController extends BaseController {
 
       const { minifigIdRebrickable, minifigName, minifigImage } = body;
 
-      // Validate required parameters
+      // Validate required parameters, we need both
+      // minifigIdRebrickable and minifigName.
+      // bricklinkId is fetched, but can be supplied for faster fetches.
       if (!minifigIdRebrickable || !minifigName) {
         return this.errorResponse(
           "Missing minifigIdRebrickable or minifigName",
@@ -96,7 +99,7 @@ class BricklinkController extends BaseController {
 
       if (
         existingMinifigCache?.priceData &&
-        existingMinifigCache.minifigIdBricklink
+        existingMinifigCache?.minifigIdBricklink
       ) {
         console.log(
           `[Bricklink Price Data] CACHE HIT! Cache hit for ${minifigIdRebrickable}:`
@@ -136,20 +139,39 @@ class BricklinkController extends BaseController {
       // Structure the result
       const result = {
         minifigIdBricklink: bricklinkMinifigId,
-        minifigName: priceData.minifigName || minifigName,
+        minifigName: minifigName || priceData.minifigName,
         priceData: priceData.priceData,
       };
 
-      // Update cache
-      cacheManager.setMinifigMetadata(
-        {
-          minifigIdRebrickable,
-          minifigIdBricklink: result.minifigIdBricklink,
-          minifigImage,
-          minifigName: result.minifigName,
-        },
-        result.priceData
+      // Get existing metadata to preserve values if needed
+      const existingMetadata = await cacheManager.getMinifigMetadata(
+        minifigIdRebrickable
       );
+
+      // Prepare metadata object, preserving existing values if needed
+      const metadataToUpdate = {
+        minifigIdRebrickable,
+        minifigIdBricklink: result.minifigIdBricklink,
+      };
+
+      // Use result.minifigName if available, otherwise use provided name or existing
+      if (result.minifigName) {
+        metadataToUpdate.minifigName = result.minifigName;
+      } else if (minifigName) {
+        metadataToUpdate.minifigName = minifigName;
+      } else if (existingMetadata?.minifigName) {
+        metadataToUpdate.minifigName = existingMetadata.minifigName;
+      }
+
+      // Use provided image if available, otherwise preserve existing
+      if (minifigImage) {
+        metadataToUpdate.minifigImage = minifigImage;
+      } else if (existingMetadata?.minifigImage) {
+        metadataToUpdate.minifigImage = existingMetadata.minifigImage;
+      }
+
+      // Update cache
+      await cacheManager.setMinifigMetadata(metadataToUpdate, result.priceData);
 
       return this.successResponse(result);
     } catch (error) {
@@ -232,12 +254,14 @@ class BricklinkController extends BaseController {
               minifigIdRebrickable
             );
 
-            if (existingData && existingData.priceData) {
-              console.log(
-                `[Batch ${batchId}] Using cached price data for ${minifigIdRebrickable}`
-              );
-              processedCount++;
-              continue; // Skip to next item
+            if (existingData?.priceData) {
+              if (!existingData?.priceData?.isExpired && existingData?.priceData) {
+                console.log(
+                  `[Batch ${batchId}] Using cached price data for ${minifigIdRebrickable}`
+                );
+                processedCount++;
+                continue; // Skip to next item
+              }
             }
 
             // Process this minifig
@@ -273,14 +297,44 @@ class BricklinkController extends BaseController {
               continue;
             }
 
+            // Get existing metadata to preserve name and image if not provided
+            const existingMetadata = await cacheManager.getMinifigMetadata(
+              minifigIdRebrickable
+            );
+
+            // Prepare metadata object, preserving existing values if needed
+            const metadataToUpdate = {
+              minifigIdRebrickable,
+              minifigIdBricklink:
+                result.minifigIdBricklink ||
+                existingMetadata?.minifigIdBricklink,
+            };
+
+            // Use result.minifigName if available (from BrickLink direct fetch)
+            if (result.minifigName) {
+              metadataToUpdate.minifigName = result.minifigName;
+            }
+            // Otherwise use item.minifigName if available
+            else if (item.minifigName) {
+              metadataToUpdate.minifigName = item.minifigName;
+            }
+            // Otherwise preserve existing name
+            else if (existingMetadata?.minifigName) {
+              metadataToUpdate.minifigName = existingMetadata.minifigName;
+            }
+
+            // Use item.minifigImage if available
+            if (item.minifigImage) {
+              metadataToUpdate.minifigImage = item.minifigImage;
+            }
+            // Otherwise preserve existing image
+            else if (existingMetadata?.minifigImage) {
+              metadataToUpdate.minifigImage = existingMetadata.minifigImage;
+            }
+
             // Store result in database
             await cacheManager.setMinifigMetadata(
-              {
-                minifigIdRebrickable,
-                minifigIdBricklink: result.minifigIdBricklink,
-                minifigName: item.minifigName,
-                minifigImage: item.minifigImage,
-              },
+              metadataToUpdate,
               result.priceData
             );
 

@@ -29,6 +29,6 @@
     "**/*.tsx",
     "**/*.js",
     "**/*.jsx"
-  ],
+, "scripts/update-prices.js"  ],
   "exclude": ["node_modules"]
 }

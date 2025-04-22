@@ -1,6 +1,6 @@
 // src/app/lib/Pieces/PiecesManager.js
 
-import { apiFetch } from "../API/FetchUtils";
+import { apiFetch } from "@/lib/API/client/apiFetch";
 
 export async function addPieceToTable(pieceData, tableId) {
   try {

@@ -1,6 +1,6 @@
 // src/app/lib/Table/TableManager.js
 
-import { apiFetch } from "@/lib/API/FetchUtils";
+import { apiFetch } from "@/lib/API/client/apiFetch";
 
 /**
  * Fetches all available tables for the current user

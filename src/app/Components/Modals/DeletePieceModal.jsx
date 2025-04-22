@@ -9,7 +9,7 @@ import { useStatus } from "@/Context/StatusContext.tsx";
 import { DeleteForeverRounded, DeleteRounded } from "@mui/icons-material";
 
 // Helpers
-import { apiFetch } from "@/lib/API/FetchUtils";
+import { apiFetch } from "@/lib/API/client/apiFetch";
 import { useEffect } from "react";
 
 export default function DeletePieceModal() {

@@ -12,7 +12,7 @@ import { addPieceToTable } from "@/lib/Pieces/PiecesManager";
 import getColorStyle from "@/lib/Color/getColorStyle";
 import { useStatus } from "@/Context/StatusContext.tsx";
 import TableSelectDropdown from "@/Components/Misc/TableSelectDropdown";
-import { apiFetch } from "@/lib/API/FetchUtils";
+import { apiFetch } from "@/lib/API/client/apiFetch";
 
 export default function AddNewPiece() {
   const { setPiecesByTable, selectedTable, setActiveTab } = useLegoState();

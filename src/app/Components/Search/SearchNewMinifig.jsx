@@ -13,7 +13,7 @@ import { debounce } from "lodash";
 import { Search } from "@mui/icons-material";
 import { ArrowCircleDownRounded, ClearRounded } from "@mui/icons-material";
 import LoaderIcon from "@/Components/Misc/LoaderIcon";
-import { apiFetch } from "@/lib/API/FetchUtils";
+import { apiFetch } from "@/lib/API/client/apiFetch";
 
 export default function SearchNewMinifig({
   setSearchNewMinifigResult,

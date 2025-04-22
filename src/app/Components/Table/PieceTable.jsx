@@ -12,7 +12,7 @@ import VirtualTable from "@/Components/Table/VirtualTable";
 import SearchTablePiece from "@/Components/Search/SearchTablePiece";
 import FilterTabs from "@/Components/Misc/FilterTabs";
 import TableSelectDropdown from "@/Components/Misc/TableSelectDropdown";
-import { apiFetch } from "@/lib/API/FetchUtils";
+import { apiFetch } from "@/lib/API/client/apiFetch";
 
 export default function PieceTable() {
   const { selectedTable, piecesByTable, setPiecesByTable } = useLegoState();

@@ -14,7 +14,7 @@ import {
   SimCardDownloadRounded,
   VerticalAlignBottomRounded,
 } from "@mui/icons-material";
-import { apiFetch } from "@/lib/API/FetchUtils";
+import { apiFetch } from "@/lib/API/client/apiFetch";
 import { useStatus } from "@/Context/StatusContext.tsx";
 
 export default function ImportExport() {
@@ -124,6 +124,7 @@ export default function ImportExport() {
             minifigIdRebrickable: minifig.minifigIdRebrickable,
             minifigIdBricklink: minifig.minifigIdBricklink || null,
             minifigName: minifig.minifigName,
+            minifigImage: minifig.minifigImage,
           }));
 
           // Fetch price data asynchronously - don't wait for it
