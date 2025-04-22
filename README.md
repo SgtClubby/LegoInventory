@@ -128,6 +128,14 @@ This project is licensed under the MIT License. See the [LICENSE](./LICENSE) fil
 - [TanStack Virtual](https://tanstack.com/virtual) for efficient rendering of large lists
 - [Lodash](https://lodash.com/) for utility functions
 
-## Disclaimer
+## BrickLink Data Usage Disclaimer
+This project uses limited web scraping to extract publicly available data from BrickLink.com in order to supplement some LEGO minifig metadata and general price information.
 
+- BrickLink does not provide a public API for the specific data accessed.
+- Scraping is performed conservatively, with extensive cachinging, rate-limiting, and logic designed to minimize requests sent and server load.
+- No scraping is done for resale, redistribution, or commercial purposes—data is used solely within this app for personal LEGO minifig inventory management.
+- If you are a BrickLink representative and have concerns about this usage, please open an issue or contact me directly so we can address it respectfully.
+- We encourage users to support BrickLink and its sellers by visiting the official site for purchases and detailed product listings.
+
+## Disclaimers
 LEGO® is a trademark of the LEGO Group, which does not sponsor, authorize or endorse this application.
